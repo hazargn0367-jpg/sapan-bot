@@ -10,7 +10,7 @@ sys.stdout.reconfigure(line_buffering=True)
 TELEGRAM_BOT_TOKEN = "8663767442:AAEFpBh0V1eu5tBrWWc0Ki2EmVdS9f_rHiQ"
 TELEGRAM_CHAT_ID = "1494316515"
 
-# En hacimli ve aktif 100 ortak parite
+# En hacimli 100 parite
 POPULAR_PAIRS = [
     "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", 
     "AVAXUSDT", "DOTUSDT", "LINKUSDT", "MATICUSDT", "LTCUSDT", "UNIUSDT", "ATOMUSDT",
@@ -18,14 +18,14 @@ POPULAR_PAIRS = [
     "VETUSDT", "ICPUSDT", "FILUSDT", "GRTUSDT", "SANDUSDT", "MANAUSDT", "AXSUSDT",
     "CHZUSDT", "EOSUSDT", "AAVEUSDT", "THETAUSDT", "EGLDUSDT", "XTZUSDT", "CAKEUSDT",
     "CRVUSDT", "SNXUSDT", "ENJUSDT", "BATUSDT", "ZILUSDT", "KSMUSDT", "RUNEUSDT",
-    "ARBUSDT", "OPUSDT", "SUIUSDT", "SEiusdt", "TIAUSDT", "INJUSDT", "RENDERUSDT",
+    "ARBUSDT", "OPUSDT", "SUIUSDT", "SEIUSDT", "TIAUSDT", "INJUSDT", "RENDERUSDT",
     "FETUSDT", "AGIXUSDT", "OCEANUSDT", "IMXUSDT", "GALAUSDT", "FLOWUSDT", "KAVAUSDT",
-    "CRVUSDT", "GMTUSDT", "PEPEUSDT", "SHIBUSDT", "FLOKIUSDT", "BONKUSDT", "WIFUSDT",
-    "BCHUSDT", "TRXUSDT", "NEARUSDT", "ICPUSDT", "STXUSDT", "ARUSDT", "MINAUSDT",
-    "RNDRUSDT", "ORDIUSDT", "SATSUSDT", "RATSUSDT", "ACEUSDT", "PORTALUSDT", "PIXELUSDT",
-    "STRKUSDT", "ETHFIUSDT", "ENAUSDT", "BBUSDT", "NOTUSDT", "IOUSDT", "ZKUSDT",
-    "BLURUSDT", "PENDLEUSDT", "MAVUSDT", "CYBERUSDT", "HBARUSDT", "RPLUSDT", "HOOKUSDT",
-    "HIGHUSDT", "IDUSDT", "NFPUSDT", "AIUSDT", "XAIUSDT", "ACEUSDT", "ALTUSDT"
+    "GMTUSDT", "PEPEUSDT", "SHIBUSDT", "FLOKIUSDT", "BONKUSDT", "WIFUSDT", "BCHUSDT",
+    "TRXUSDT", "STXUSDT", "ARUSDT", "MINAUSDT", "RNDRUSDT", "ORDIUSDT", "SATSUSDT",
+    "RATSUSDT", "ACEUSDT", "PORTALUSDT", "PIXELUSDT", "STRKUSDT", "ETHFIUSDT", "ENAUSDT",
+    "BBUSDT", "NOTUSDT", "IOUSDT", "ZKUSDT", "BLURUSDT", "PENDLEUSDT", "MAVUSDT",
+    "CYBERUSDT", "HBARUSDT", "HOOKUSDT", "HIGHUSDT", "IDUSDT", "NFPUSDT", "AIUSDT",
+    "XAIUSDT", "ALTUSDT"
 ]
 
 def send_telegram_message(message):
@@ -42,33 +42,23 @@ def send_telegram_message(message):
     except Exception as e:
         print(f"Telegram mesajı gönderilemedi: {e}")
 
-def get_mexc_klines(symbol, interval="1h", limit=50):
-    """MEXC kline verilerini güvenli ve doğrudan çeker"""
-    mexc_raw = symbol.replace("USDT", "_USDT")
-    url = f"https://contract.mexc.com/api/v1/contract/kline/{mexc_raw}?interval={interval}&limit={limit}"
+def get_binance_klines(symbol, interval="1h", limit=50):
+    """Binance Futures API üzerinden mum verilerini hatasız çeker"""
+    url = f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit={limit}"
     try:
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
-            res = response.json()
-            # MEXC API'nin farklı veri dönüş formatlarını destekleme
-            data = res.get("data")
-            if data:
-                closes = []
-                # Eğer liste içindeyse
-                if isinstance(data, list):
-                    for x in data:
-                        if isinstance(x, list) and len(x) > 4:
-                            closes.append(float(x[4]))
-                        elif isinstance(x, dict) and 'close' in x:
-                            closes.append(float(x['close']))
+            data = response.json()
+            if isinstance(data, list):
+                closes = [float(x[4]) for x in data]
                 return closes
-    except Exception as e:
+    except Exception:
         pass
     return []
 
 def scan_market():
     """Piyasayı tarar ve sinyalleri Telegram'a bildirir"""
-    print("\n--- 100 Popüler Parite Taranıyor ---")
+    print("\n--- Piyasa Taranıyor ---")
     total_pairs = len(POPULAR_PAIRS)
     print(f"Toplam {total_pairs} Parite Tarama İşlemine Alındı.")
     
@@ -76,19 +66,18 @@ def scan_market():
     checked_count = 0
     
     for symbol in POPULAR_PAIRS:
-        closes = get_mexc_klines(symbol, interval="1h", limit=50)
-        time.sleep(0.05)
+        closes = get_binance_klines(symbol, interval="1h", limit=50)
+        time.sleep(0.02)
         
         if not closes or len(closes) < 21:
             continue
             
         checked_count += 1
         
-        # Basit EMA Trend Kontrolü
+        # EMA Hesaplaması
         ema_fast = np.mean(closes[-9:])
         ema_slow = np.mean(closes[-21:])
         
-        # Test amaçlı veya normal koşul
         if ema_fast > ema_slow:
             signal_count += 1
             signal_msg = f"🟢 Sapan Sinyali: {symbol} (Fast: {ema_fast:.4f} > Slow: {ema_slow:.4f})"
@@ -100,7 +89,7 @@ def scan_market():
 # --- 7/24 ÇALIŞAN ANA DÖNGÜ ---
 if __name__ == "__main__":
     print("Sapan Bot başarıyla başlatıldı ve 7/24 döngüye girdi.")
-    send_telegram_message("🤖 Sapan Bot başarıyla başlatıldı ve 100 parite taramasına başladı!")
+    send_telegram_message("🤖 Sapan Bot başarıyla başlatıldı ve taramaya başladı!")
     
     while True:
         try:
