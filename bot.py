@@ -1,6 +1,7 @@
 import sys
 import time
 import requests
+import pandas as pd
 import numpy as np
 
 # Çıktıların log ekranına gecikmeden anında düşmesini sağlar
@@ -42,23 +43,30 @@ def send_telegram_message(message):
     except Exception as e:
         print(f"Telegram mesajı gönderilemedi: {e}")
 
-def get_binance_klines(symbol, interval="1h", limit=50):
-    """Binance Futures API üzerinden mum verilerini hatasız çeker"""
+def get_binance_klines(symbol, interval="1h", limit=250):
+    """Binance Futures API üzerinden detaylı mum verilerini çeker"""
     url = f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit={limit}"
     try:
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             if isinstance(data, list):
-                closes = [float(x[4]) for x in data]
-                return closes
+                df = pd.DataFrame(data, columns=[
+                    'timestamp', 'open', 'high', 'low', 'close', 'volume', 
+                    'close_time', 'qav', 'num_trades', 'taker_base_vol', 'taker_gt_high', 'ignore'
+                ])
+                df['open'] = df['open'].astype(float)
+                df['high'] = df['high'].astype(float)
+                df['low'] = df['low'].astype(float)
+                df['close'] = df['close'].astype(float)
+                return df
     except Exception:
         pass
-    return []
+    return None
 
 def scan_market():
-    """Piyasayı tarar ve sinyalleri Telegram'a bildirir"""
-    print("\n--- Piyasa Taranıyor ---")
+    """Piyasayı tarar ve EMA 20-50-100-200 trendi üstünde EMA 20'ye düzeltme (temas) anını yakalar"""
+    print("\n--- EMA Trend & Pullback (EMA 20 Temas) Taranıyor ---")
     total_pairs = len(POPULAR_PAIRS)
     print(f"Toplam {total_pairs} Parite Tarama İşlemine Alındı.")
     
@@ -66,21 +74,48 @@ def scan_market():
     checked_count = 0
     
     for symbol in POPULAR_PAIRS:
-        closes = get_binance_klines(symbol, interval="1h", limit=50)
+        df = get_binance_klines(symbol, interval="1h", limit=250)
         time.sleep(0.02)
         
-        if not closes or len(closes) < 21:
+        if df is None or len(df) < 210:
             continue
             
         checked_count += 1
         
-        # EMA Hesaplaması
-        ema_fast = np.mean(closes[-9:])
-        ema_slow = np.mean(closes[-21:])
+        # 20, 50, 100, 200 EMA Hesaplamaları
+        df['ema20'] = df['close'].ewm(span=20, adjust=False).mean()
+        df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
+        df['ema100'] = df['close'].ewm(span=100, adjust=False).mean()
+        df['ema200'] = df['close'].ewm(span=200, adjust=False).mean()
         
-        if ema_fast > ema_slow:
+        current = df.iloc[-1]
+        prev = df.iloc[-2]
+        
+        # 1. Paralel Yükseliş Trendi Şartı (20 > 50 > 100 > 200)
+        is_bullish_trend = (
+            (current['ema20'] > current['ema50']) and 
+            (current['ema50'] > current['ema100']) and 
+            (current['ema100'] > current['ema200']) and
+            (prev['ema20'] > prev['ema50']) # Trendin devam ettiğini doğrulamak için
+        )
+        
+        if not is_bullish_trend:
+            continue
+            
+        # 2. Düzeltme (Pullback) ve EMA 20'ye Değme Şartı
+        # Mumun en düşük seviyesi (low) EMA 20'ye değmiş veya hafifçe içine girmiş olmalı
+        # (Yani low <= ema20 ve high >= ema20)
+        touched_ema20 = (current['low'] <= current['ema20']) and (current['high'] >= current['ema20'])
+        
+        if touched_ema20:
             signal_count += 1
-            signal_msg = f"🟢 Sapan Sinyali: {symbol} (Fast: {ema_fast:.4f} > Slow: {ema_slow:.4f})"
+            signal_msg = (
+                f"🎯 **EMA 20 DÜZELTME (PULLBACK) SİNYALİ** 🎯\n"
+                f"Parite: `{symbol}`\n"
+                f"Fiyat (Low): `{current['low']}`\n"
+                f"EMA 20: `{current['ema20']:.4f}`\n"
+                f"Trend: 20 > 50 > 100 > 200 (Paralel Yükseliş)"
+            )
             print(signal_msg)
             send_telegram_message(signal_msg)
             
@@ -88,8 +123,8 @@ def scan_market():
 
 # --- 7/24 ÇALIŞAN ANA DÖNGÜ ---
 if __name__ == "__main__":
-    print("Sapan Bot başarıyla başlatıldı ve 7/24 döngüye girdi.")
-    send_telegram_message("🤖 Sapan Bot başarıyla başlatıldı ve taramaya başladı!")
+    print("EMA Trend Pullback Botu başarıyla başlatıldı!")
+    send_telegram_message("🤖 EMA Trend Pullback Botu aktif ve taramaya başladı!")
     
     while True:
         try:
