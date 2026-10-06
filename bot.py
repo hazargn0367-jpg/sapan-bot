@@ -43,8 +43,8 @@ def send_telegram_message(message):
     except Exception as e:
         print(f"Telegram mesajı gönderilemedi: {e}")
 
-def get_binance_klines(symbol, interval="1h", limit=250):
-    """Binance Futures API üzerinden detaylı mum verilerini çeker"""
+def get_binance_klines(symbol, interval="15m", limit=250):
+    """Binance Futures API üzerinden 15 dakikalık mum verilerini çeker"""
     url = f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit={limit}"
     try:
         response = requests.get(url, timeout=5)
@@ -65,8 +65,8 @@ def get_binance_klines(symbol, interval="1h", limit=250):
     return None
 
 def scan_market():
-    """Piyasayı tarar ve EMA 20-50-100-200 trendi üstünde EMA 20'ye düzeltme (temas) anını yakalar"""
-    print("\n--- EMA Trend & Pullback (EMA 20 Temas) Taranıyor ---")
+    """15m periyotta trend, düzeltme ve EMA 20 temaslarını iki yönlü tarar"""
+    print("\n--- 15m Çift Yönlü EMA 20 Pullback Taranıyor ---")
     total_pairs = len(POPULAR_PAIRS)
     print(f"Toplam {total_pairs} Parite Tarama İşlemine Alındı.")
     
@@ -74,7 +74,7 @@ def scan_market():
     checked_count = 0
     
     for symbol in POPULAR_PAIRS:
-        df = get_binance_klines(symbol, interval="1h", limit=250)
+        df = get_binance_klines(symbol, interval="15m", limit=250)
         time.sleep(0.02)
         
         if df is None or len(df) < 210:
@@ -82,49 +82,68 @@ def scan_market():
             
         checked_count += 1
         
-        # 20, 50, 100, 200 EMA Hesaplamaları
+        # EMA Hesaplamaları
         df['ema20'] = df['close'].ewm(span=20, adjust=False).mean()
         df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
         df['ema100'] = df['close'].ewm(span=100, adjust=False).mean()
         df['ema200'] = df['close'].ewm(span=200, adjust=False).mean()
         
         current = df.iloc[-1]
-        prev = df.iloc[-2]
+        ema_val = current['ema20']
         
-        # 1. Paralel Yükseliş Trendi Şartı (20 > 50 > 100 > 200)
+        # --- 1. YÜKSELİŞ (LONG) TRENDİ & PULLBACK ---
         is_bullish_trend = (
             (current['ema20'] > current['ema50']) and 
             (current['ema50'] > current['ema100']) and 
-            (current['ema100'] > current['ema200']) and
-            (prev['ema20'] > prev['ema50']) # Trendin devam ettiğini doğrulamak için
+            (current['ema100'] > current['ema200'])
         )
         
-        if not is_bullish_trend:
-            continue
-            
-        # 2. Düzeltme (Pullback) ve EMA 20'ye Değme Şartı
-        # Mumun en düşük seviyesi (low) EMA 20'ye değmiş veya hafifçe içine girmiş olmalı
-        # (Yani low <= ema20 ve high >= ema20)
-        touched_ema20 = (current['low'] <= current['ema20']) and (current['high'] >= current['ema20'])
+        if is_bullish_trend:
+            recent_high = df['high'].iloc[-6:-1].max()
+            if current['close'] < recent_high:
+                # EMA 20 Temas Kontrolü (Low seviyesi EMA 20'ye değiyor)
+                if (current['low'] <= ema_val * 1.002) and (current['high'] >= ema_val * 0.998):
+                    signal_count += 1
+                    signal_msg = (
+                        f"🟢 **15m YÜKSELİŞ (LONG) EMA 20 TEMAS** 🟢\n"
+                        f"Parite: `{symbol}`\n"
+                        f"Mum Düşük (Low): `{current['low']}`\n"
+                        f"EMA 20: `{ema_val:.4f}`\n"
+                        f"Durum: Boğa trendinde tepe sonrası düzeltme!"
+                    )
+                    print(signal_msg)
+                    send_telegram_message(signal_msg)
+                    continue
+
+        # --- 2. DÜŞÜŞ (SHORT) TRENDİ & PULLBACK ---
+        is_bearish_trend = (
+            (current['ema20'] < current['ema50']) and 
+            (current['ema50'] < current['ema100']) and 
+            (current['ema100'] < current['ema200'])
+        )
         
-        if touched_ema20:
-            signal_count += 1
-            signal_msg = (
-                f"🎯 **EMA 20 DÜZELTME (PULLBACK) SİNYALİ** 🎯\n"
-                f"Parite: `{symbol}`\n"
-                f"Fiyat (Low): `{current['low']}`\n"
-                f"EMA 20: `{current['ema20']:.4f}`\n"
-                f"Trend: 20 > 50 > 100 > 200 (Paralel Yükseliş)"
-            )
-            print(signal_msg)
-            send_telegram_message(signal_msg)
+        if is_bearish_trend:
+            recent_low = df['low'].iloc[-6:-1].min()
+            if current['close'] > recent_low:
+                # EMA 20 Temas Kontrolü (High seviyesi EMA 20'ye değiyor)
+                if (current['high'] >= ema_val * 0.998) and (current['low'] <= ema_val * 1.002):
+                    signal_count += 1
+                    signal_msg = (
+                        f"🔴 **15m DÜŞÜŞ (SHORT) EMA 20 TEMAS** 🔴\n"
+                        f"Parite: `{symbol}`\n"
+                        f"Mum Yüksek (High): `{current['high']}`\n"
+                        f"EMA 20: `{ema_val:.4f}`\n"
+                        f"Durum: Ayı trendinde dip sonrası tepki!"
+                    )
+                    print(signal_msg)
+                    send_telegram_message(signal_msg)
             
     print(f"Tarama bitti. İşlenen: {checked_count}/{total_pairs} | Sinyal: {signal_count}")
 
 # --- 7/24 ÇALIŞAN ANA DÖNGÜ ---
 if __name__ == "__main__":
-    print("EMA Trend Pullback Botu başarıyla başlatıldı!")
-    send_telegram_message("🤖 EMA Trend Pullback Botu aktif ve taramaya başladı!")
+    print("15m Çift Yönlü Pullback Botu başarıyla başlatıldı!")
+    send_telegram_message("🤖 15m Çift Yönlü Pullback Botu aktif ve taramaya başladı!")
     
     while True:
         try:
