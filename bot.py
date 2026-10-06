@@ -58,13 +58,14 @@ def get_mexc_klines(symbol, interval="1h", limit=50):
     """MEXC altyapısını kullanarak mum verilerini (kline) çeker"""
     url = f"https://contract.mexc.com/api/v1/contract/kline/{symbol}?interval={interval}&limit={limit}"
     try:
-        response = requests.get(url, timeout=10).json()
+        response = requests.get(url, timeout=5).json()
         if response.get("success") and "data" in response:
             data = response["data"]
             closes = [float(x[4]) for x in data]
             return closes
     except Exception as e:
-        print(f"{symbol} veri çekme hatası: {e}")
+        # Tekil hataların tüm döngüyü bozmaması için sessizce geçiyoruz
+        pass
     return []
 
 def scan_market():
@@ -82,10 +83,14 @@ def scan_market():
     
     for index, symbol in enumerate(pairs, 1):
         closes = get_mexc_klines(symbol, interval="1h", limit=50)
+        
+        # API rate-limit ve takılmaları önlemek için çok kısa bir es veriyoruz
+        time.sleep(0.05)
+        
         if len(closes) < 20:
             continue
             
-        # Basit EMA Trend Kontrolü (Stratejine göre burayı düzenleyebilirsin)
+        # Basit EMA Trend Kontrolü
         ema_fast = np.mean(closes[-9:])
         ema_slow = np.mean(closes[-21:])
         
@@ -100,8 +105,6 @@ def scan_market():
 # --- 7/24 ÇALIŞAN ANA DÖNGÜ ---
 if __name__ == "__main__":
     print("Sapan Bot başarıyla başlatıldı ve 7/24 döngüye girdi.")
-    
-    # Botun çalıştığını test etmek için ilk açılışta Telegram'a bildirim atalım
     send_telegram_message("🤖 Sapan Bot başarıyla başlatıldı ve 7/24 ortak parite taramasına başladı!")
     
     while True:
