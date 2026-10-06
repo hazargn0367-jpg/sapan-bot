@@ -6,15 +6,12 @@ import numpy as np
 # Çıktıların log ekranına gecikmeden anında düşmesini sağlar
 sys.stdout.reconfigure(line_buffering=True)
 
-# --- AYARLAR ---
-TELEGRAM_BOT_TOKEN = "BURAYA_BOT_TOKEN_YAZ"
-TELEGRAM_CHAT_ID = "BURAYA_CHAT_ID_YAZ"
+# --- TELEGRAM AYARLARI ---
+TELEGRAM_BOT_TOKEN = "8663767442:AAEFpBh0V1eu5tBrWWc0Ki2EmVdS9f_rHiQ"
+TELEGRAM_CHAT_ID = "1494316515"
 
 def send_telegram_message(message):
     """Telegram üzerinden sinyal gönderir"""
-    if "BURAYA" in TELEGRAM_BOT_TOKEN:
-        print(f"[Telegram Simülasyonu]: {message}")
-        return
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
@@ -22,7 +19,8 @@ def send_telegram_message(message):
         "parse_mode": "Markdown"
     }
     try:
-        requests.post(url, json=payload, timeout=5)
+        response = requests.post(url, json=payload, timeout=5)
+        return response.json()
     except Exception as e:
         print(f"Telegram mesajı gönderilemedi: {e}")
 
@@ -30,6 +28,7 @@ def get_common_futures_symbols():
     """Binance ve MEXC'de ortak olan aktif USDT vadeli pariteleri bulur"""
     try:
         print("Binance ve MEXC API'lerinden ortak pariteler çekiliyor...")
+        
         # 1. Binance'deki aktif vadeli pariteleri çek
         binance_url = "https://fapi.binance.com/fapi/v1/exchangeInfo"
         b_resp = requests.get(binance_url, timeout=10).json()
@@ -69,7 +68,7 @@ def get_mexc_klines(symbol, interval="1h", limit=50):
     return []
 
 def scan_market():
-    """Piyasayı tarar ve Sapan sinyallerini arar"""
+    """Piyasayı tarar ve sinyalleri Telegram'a bildirir"""
     print("\n--- Bot Taranıyor ---")
     pairs = get_common_futures_symbols()
     if not pairs:
@@ -86,7 +85,7 @@ def scan_market():
         if len(closes) < 20:
             continue
             
-        # Basit EMA Trend Kontrol Örneği
+        # Basit EMA Trend Kontrolü (Stratejine göre burayı düzenleyebilirsin)
         ema_fast = np.mean(closes[-9:])
         ema_slow = np.mean(closes[-21:])
         
@@ -101,6 +100,10 @@ def scan_market():
 # --- 7/24 ÇALIŞAN ANA DÖNGÜ ---
 if __name__ == "__main__":
     print("Sapan Bot başarıyla başlatıldı ve 7/24 döngüye girdi.")
+    
+    # Botun çalıştığını test etmek için ilk açılışta Telegram'a bildirim atalım
+    send_telegram_message("🤖 Sapan Bot başarıyla başlatıldı ve 7/24 ortak parite taramasına başladı!")
+    
     while True:
         try:
             scan_market()
