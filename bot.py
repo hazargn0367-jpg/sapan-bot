@@ -78,7 +78,6 @@ def scan_market():
             
         success_count += 1
         
-        # Pandas yerleşik ewm fonksiyonu ile EMA hesaplama (numba / pandas_ta bağımlılığı yok)
         df["EMA20"] = df["close"].ewm(span=20, adjust=False).mean()
         df["EMA50"] = df["close"].ewm(span=50, adjust=False).mean()
         df["EMA100"] = df["close"].ewm(span=100, adjust=False).mean()
@@ -147,8 +146,8 @@ def scan_market():
                 f"• EMA 100: {round(ema100, 4)}\n"
                 f"• EMA 200: {round(ema200, 4)}\n\n"
                 f"💡 Açıklama: {desc}\n\n"
-                f"🔗 <a href='{bin_link}'>Grafiği Tarayıcıda Aç</a>"
-            ).replace("bin_link", binance_link)
+                f"🔗 <a href='{binance_link}'>Grafiği Tarayıcıda Aç</a>"
+            )
 
             print(f"🎯 Temiz Sapan Sinyali: {clean_symbol}", flush=True)
             if send_telegram_message(BOT_TOKEN, CHAT_ID, message):
