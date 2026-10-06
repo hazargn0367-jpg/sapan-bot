@@ -25,11 +25,11 @@ def send_telegram_message(message):
         print(f"Telegram mesajı gönderilemedi: {e}")
 
 def get_common_futures_symbols():
-    """Binance ve MEXC'de ortak olan aktif USDT vadeli pariteleri bulur"""
+    """Binance ve MEXC'de ortak olan aktif vadeli pariteleri bulur"""
     try:
         print("Binance ve MEXC API'lerinden ortak pariteler çekiliyor...")
         
-        # 1. Binance'deki aktif vadeli pariteleri çek
+        # 1. Binance'deki aktif vadeli pariteleri çek (Örn: BTCUSDT)
         binance_url = "https://fapi.binance.com/fapi/v1/exchangeInfo"
         b_resp = requests.get(binance_url, timeout=10).json()
         binance_symbols = {
@@ -37,26 +37,40 @@ def get_common_futures_symbols():
             if s['contractType'] == 'PERPETUAL' and s['quoteAsset'] == 'USDT' and s['status'] == 'TRADING'
         }
         
-        # 2. MEXC'deki aktif vadeli pariteleri çek
+        # 2. MEXC'deki aktif vadeli pariteleri çek ve hem alt çizgili hem normal versiyonlarını sakla
         mexc_url = "https://contract.mexc.com/api/v1/contract/detail"
         m_resp = requests.get(mexc_url, timeout=10).json()
-        mexc_symbols = {
-            item['symbol'].replace('_', '') for item in m_resp['data'] 
-            if item.get('quoteCoin') == 'USDT' and item.get('state') == 0
-        }
         
-        # 3. İki borsada da ortak olanları kesiştir
-        common_symbols = list(binance_symbols.intersection(mexc_symbols))
-        common_symbols.sort()
-        print(f"Ortak parite tespiti başarılı. Toplam: {len(common_symbols)}")
-        return common_symbols
+        mexc_dict = {} # Key: alt çizgili (BTC_USDT), Value: alt çizgisiz (BTCUSDT)
+        for item in m_resp['data']:
+            if item.get('quoteCoin') == 'USDT' and item.get('state') == 0:
+                raw_symbol = item['symbol'] # Örn: BTC_USDT
+                clean_symbol = raw_symbol.replace('_', '') # Örn: BTCUSDT
+                mexc_dict[clean_symbol] = raw_symbol
+                
+        mexc_symbols = set(mexc_dict.keys())
+        
+        # 3. İki borsada da ortak olanları kesiştir ve MEXC'nin orijinal alt çizgili formatını eşle
+        common_clean = binance_symbols.intersection(mexc_symbols)
+        
+        # Fonksiyon hem taranacak temiz ismi hem de MEXC kline için alt çizgili ismi döndürecek
+        valid_pairs = []
+        for sym in common_clean:
+            valid_pairs.append({
+                "clean": sym,                # Loglar için (Örn: BTCUSDT)
+                "mexc_raw": mexc_dict[sym]   # MEXC API'si için (Örn: BTC_USDT)
+            })
+            
+        valid_pairs = sorted(valid_pairs, key=lambda x: x['clean'])
+        print(f"Ortak parite tespiti başarılı. Toplam: {len(valid_pairs)}")
+        return valid_pairs
     except Exception as e:
         print(f"Pariteler eşitlenirken hata oluştu: {e}")
         return []
 
-def get_mexc_klines(symbol, interval="1h", limit=50):
-    """MEXC altyapısını kullanarak mum verilerini (kline) çeker"""
-    url = f"https://contract.mexc.com/api/v1/contract/kline/{symbol}?interval={interval}&limit={limit}"
+def get_mexc_klines(mexc_raw_symbol, interval="1h", limit=50):
+    """MEXC kline endpoint'ine DOĞRU formatta (alt çizgili: BTC_USDT) istek atar"""
+    url = f"https://contract.mexc.com/api/v1/contract/kline/{mexc_raw_symbol}?interval={interval}&limit={limit}"
     try:
         response = requests.get(url, timeout=5).json()
         if response.get("success") and "data" in response:
@@ -64,7 +78,6 @@ def get_mexc_klines(symbol, interval="1h", limit=50):
             closes = [float(x[4]) for x in data]
             return closes
     except Exception as e:
-        # Tekil hataların tüm döngüyü bozmaması için sessizce geçiyoruz
         pass
     return []
 
@@ -81,10 +94,14 @@ def scan_market():
     
     signal_count = 0
     
-    for index, symbol in enumerate(pairs, 1):
-        closes = get_mexc_klines(symbol, interval="1h", limit=50)
+    for index, pair in enumerate(pairs, 1):
+        clean_name = pair["clean"]
+        mexc_raw = pair["mexc_raw"]
         
-        # API rate-limit ve takılmaları önlemek için çok kısa bir es veriyoruz
+        # Doğru alt çizgili formatla veri çekiliyor
+        closes = get_mexc_klines(mexc_raw, interval="1h", limit=50)
+        
+        # API rate-limit önlemi
         time.sleep(0.05)
         
         if len(closes) < 20:
@@ -96,7 +113,7 @@ def scan_market():
         
         if ema_fast > ema_slow:
             signal_count += 1
-            signal_msg = f"🟢 Temiz Sapan Sinyali: {symbol}"
+            signal_msg = f"🟢 Temiz Sapan Sinyali: {clean_name}"
             print(signal_msg)
             send_telegram_message(signal_msg)
             
