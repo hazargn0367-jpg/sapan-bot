@@ -29,7 +29,7 @@ def get_common_futures_symbols():
     try:
         print("Binance ve MEXC API'lerinden ortak pariteler çekiliyor...")
         
-        # 1. Binance'deki aktif vadeli pariteleri çek (Örn: BTCUSDT)
+        # 1. Binance vadeli pariteleri
         binance_url = "https://fapi.binance.com/fapi/v1/exchangeInfo"
         b_resp = requests.get(binance_url, timeout=10).json()
         binance_symbols = {
@@ -37,28 +37,24 @@ def get_common_futures_symbols():
             if s['contractType'] == 'PERPETUAL' and s['quoteAsset'] == 'USDT' and s['status'] == 'TRADING'
         }
         
-        # 2. MEXC'deki aktif vadeli pariteleri çek ve hem alt çizgili hem normal versiyonlarını sakla
+        # 2. MEXC vadeli pariteleri
         mexc_url = "https://contract.mexc.com/api/v1/contract/detail"
         m_resp = requests.get(mexc_url, timeout=10).json()
         
-        mexc_dict = {} # Key: alt çizgili (BTC_USDT), Value: alt çizgisiz (BTCUSDT)
-        for item in m_resp['data']:
+        mexc_dict = {}
+        for item in m_resp.get('data', []):
             if item.get('quoteCoin') == 'USDT' and item.get('state') == 0:
                 raw_symbol = item['symbol'] # Örn: BTC_USDT
                 clean_symbol = raw_symbol.replace('_', '') # Örn: BTCUSDT
                 mexc_dict[clean_symbol] = raw_symbol
                 
-        mexc_symbols = set(mexc_dict.keys())
+        common_clean = binance_symbols.intersection(set(mexc_dict.keys()))
         
-        # 3. İki borsada da ortak olanları kesiştir ve MEXC'nin orijinal alt çizgili formatını eşle
-        common_clean = binance_symbols.intersection(mexc_symbols)
-        
-        # Fonksiyon hem taranacak temiz ismi hem de MEXC kline için alt çizgili ismi döndürecek
         valid_pairs = []
         for sym in common_clean:
             valid_pairs.append({
-                "clean": sym,                # Loglar için (Örn: BTCUSDT)
-                "mexc_raw": mexc_dict[sym]   # MEXC API'si için (Örn: BTC_USDT)
+                "clean": sym,
+                "mexc_raw": mexc_dict[sym]
             })
             
         valid_pairs = sorted(valid_pairs, key=lambda x: x['clean'])
@@ -69,15 +65,23 @@ def get_common_futures_symbols():
         return []
 
 def get_mexc_klines(mexc_raw_symbol, interval="1h", limit=50):
-    """MEXC kline endpoint'ine DOĞRU formatta (alt çizgili: BTC_USDT) istek atar"""
+    """MEXC kline verisini güvenli şekilde çeker"""
     url = f"https://contract.mexc.com/api/v1/contract/kline/{mexc_raw_symbol}?interval={interval}&limit={limit}"
     try:
-        response = requests.get(url, timeout=5).json()
-        if response.get("success") and "data" in response:
-            data = response["data"]
-            closes = [float(x[4]) for x in data]
-            return closes
-    except Exception as e:
+        response = requests.get(url, timeout=3)
+        if response.status_code == 200:
+            res_json = response.json()
+            if res_json.get("success") and "data" in res_json:
+                data = res_json["data"]
+                # MEXC futures kline veri yapısı kontrolü (liste içinde liste veya objeler olabilir)
+                closes = []
+                for x in data:
+                    if isinstance(x, list) and len(x) > 4:
+                        closes.append(float(x[4]))
+                    elif isinstance(x, dict) and 'close' in x:
+                        closes.append(float(x['close']))
+                return closes
+    except Exception:
         pass
     return []
 
@@ -93,33 +97,34 @@ def scan_market():
     print(f"Toplam {total_pairs} Ortak Parite Tarama İşlemine Alındı.")
     
     signal_count = 0
+    checked_count = 0
     
-    for index, pair in enumerate(pairs, 1):
+    for pair in pairs:
         clean_name = pair["clean"]
         mexc_raw = pair["mexc_raw"]
         
-        # Doğru alt çizgili formatla veri çekiliyor
         closes = get_mexc_klines(mexc_raw, interval="1h", limit=50)
+        time.sleep(0.04) # Rate limit koruması
         
-        # API rate-limit önlemi
-        time.sleep(0.05)
-        
-        if len(closes) < 20:
+        if len(closes) < 21:
             continue
             
-        # Basit EMA Trend Kontrolü
+        checked_count += 1
+        
+        # EMA Hesaplaması
         ema_fast = np.mean(closes[-9:])
         ema_slow = np.mean(closes[-21:])
         
+        # Sapan stratejisi koşulu (Hızlı EMA Yavaş EMA'yı yukarı kestiğinde veya üstündeyken)
         if ema_fast > ema_slow:
             signal_count += 1
-            signal_msg = f"🟢 Temiz Sapan Sinyali: {clean_name}"
+            signal_msg = f"🟢 Sapan Sinyali: {clean_name} (Fast EMA: {ema_fast:.4f} > Slow EMA: {ema_slow:.4f})"
             print(signal_msg)
             send_telegram_message(signal_msg)
             
-    print(f"Tarama bitti. İşlenen: {total_pairs}/{total_pairs} | Sinyal: {signal_count}")
+    print(f"Tarama bitti. İşlenen/Başarılı: {checked_count}/{total_pairs} | Sinyal: {signal_count}")
 
-# --- 7/24 ÇALIŞAN ANA DÖNGÜ ---
+# --- 7/24 ÇALIŞAN ANA DÖngÜ ---
 if __name__ == "__main__":
     print("Sapan Bot başarıyla başlatıldı ve 7/24 döngüye girdi.")
     send_telegram_message("🤖 Sapan Bot başarıyla başlatıldı ve 7/24 ortak parite taramasına başladı!")
