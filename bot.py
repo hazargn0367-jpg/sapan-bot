@@ -28,34 +28,28 @@ POPULAR_PAIRS = [
     "CYBERUSDT", "HBARUSDT", "HOOKUSDT", "HIGHUSDT", "IDUSDT", "NFPUSDT", "AIUSDT",
     "XAIUSDT", "ALTUSDT", "JUPUSDT", "PYTHUSDT", "MANTAUSDT", "WLDUSDT", "MEMEUSDT",
     "ORCAUSDT", "ACEUSDT", "TIAUSDT", "ONDOUSDT", "POLUSDT", "BOMEUSDT", "SAGAUSDT",
-    "TNSRUSDT", "OMUSDT", "SUIUSDT", "REZUSDT", "BBUSDT", "NOTUSDT", "IOUSDT",
-    "ZKUSDT", "LISTAUSDT", "ZROUSDT", "BANANAUSDT", "RENDERUSDT", "TONUSDT", "DOGSUSDT",
-    "NEIROUSDT", "TURBOUSDT", "1000SATSUSDT", "1000RATSUSDT", "1000PEPEUSDT", "1000SHIBUSDT",
-    "1000FLOKIUSDT", "1000BONKUSDT", "1000LUNCUSDT", "1000XECUSDT", "CHESSUSDT", "COTIUSDT",
-    "DARUSDT", "DENTUSDT", "DGBUSDT", "EDUUSDT", "ELFUSDT", "ENJUSDT", "ENSUSDT",
-    "FETUSDT", "FIROUSDT", "FLUXUSDT", "FTOUSDT", "FXSUSDT", "GLMRUSDT", "GMXUSDT",
-    "GNSUSDT", "GOTUSDT", "HIFIUSDT", "HFTUSDT", "HIGHUSDT", "HOOKUSDT", "ICPUSDT",
-    "IDUSDT", "ILVUSDT", "IMXUSDT", "INJUSDT", "IOSTUSDT", "IOTAUSDT", "IOTXUSDT",
-    "JASMYUSDT", "JOEUSDT", "KASUSDT", "KAVAUSDT", "KEYUSDT", "KLAYUSDT", "KNCUSDT",
-    "KSMUSDT", "LINAUSDT", "LITUSDT", "LOOKSUSDT", "LPTUSDT", "LQTYUSDT", " LRCUSDT",
-    "MAGICUSDT", "MAVUSDT", "MDTUSDT", "MINAUSDT", "MKRUSDT", "MTLUSDT", "MULTIUSDT",
-    "NEARUSDT", "NEOUSDT", "NKNUSDT", "OCEANUSDT", "OGNUSDT", "OMUSDT", "OPUSDT",
-    "ORDIUSDT", "OXTUSDT", "PENDLEUSDT", "PHBUSDT", "PHAUSDT", "PIVXUSDT", "POLYXUSDT",
-    "PPTUSDT", "QNTUSDT", "QTUMUSDT", "RADUSDT", "RAREUSDT", "REEFUSDT", "RENUSDT",
-    "RLCUSDT", "ROSEUSDT", "RSRUSDT", "RUNEUSDT", "RVNUSDT", "SAFEUSDT", "SANDUSDT",
-    "SCUSDT", "SCRTUSDT", "SKLUSDT", "SLPUSDT", "SNXUSDT", "SOCUSDT", "SSVUSDT",
-    "STGUSDT", "STMXUSDT", "STORJUSDT", "STPTUSDT", "STRAXUSDT", "STXUSDT", "SUPERUSDT",
+    "TNSRUSDT", "OMUSDT", "REZUSDT", "LISTAUSDT", "ZROUSDT", "BANANAUSDT", "TONUSDT",
+    "DOGSUSDT", "NEIROUSDT", "TURBOUSDT", "1000SATSUSDT", "1000RATSUSDT", "1000PEPEUSDT",
+    "1000SHIBUSDT", "1000FLOKIUSDT", "1000BONKUSDT", "1000LUNCUSDT", "1000XECUSDT",
+    "CHESSUSDT", "COTIUSDT", "DARUSDT", "DENTUSDT", "DGBUSDT", "EDUUSDT", "ELFUSDT",
+    "ENSUSDT", "FIROUSDT", "FLUXUSDT", "FTOUSDT", "FXSUSDT", "GLMRUSDT", "GMXUSDT",
+    "GNSUSDT", "GOTUSDT", "HIFIUSDT", "HFTUSDT", "ILVUSDT", "IOSTUSDT", "IOTAUSDT",
+    "IOTXUSDT", "JASMYUSDT", "JOEUSDT", "KASUSDT", "KEYUSDT", "KLAYUSDT", "KNCUSDT",
+    "LINAUSDT", "LITUSDT", "LOOKSUSDT", "LPTUSDT", "LQTYUSDT", "LRCUSDT", "MAGICUSDT",
+    "MDTUSDT", "MKRUSDT", "MTLUSDT", "MULTIUSDT", "NEOUSDT", "NKNUSDT", "OGNUSDT",
+    "OXTUSDT", "PHBUSDT", "PHAUSDT", "PIVXUSDT", "POLYXUSDT", "PPTUSDT", "QTUMUSDT",
+    "RADUSDT", "RAREUSDT", "REEFUSDT", "RENUSDT", "RLCUSDT", "ROSEUSDT", "RSRUSDT",
+    "RVNUSDT", "SAFEUSDT", "SCUSDT", "SCRTUSDT", "SKLUSDT", "SLPUSDT", "SOCUSDT",
+    "SSVUSDT", "STGUSDT", "STMXUSDT", "STORJUSDT", "STPTUSDT", "STRAXUSDT", "SUPERUSDT",
     "SUSHIUSDT", "SXPUSDT", "SYSUSDT", "TAOUSDT", "TRBUSDT", "TUSDT", "UFTUSDT",
-    "UMAUSDT", "UNFIUSDT", "OCEANUSDT", "OGNUSDT", "OMUSDT", "OPUSDT", "ORDIUSDT"
+    "UMAUSDT", "UNFIUSDT"
 ]
 
-# Listede olabilecek mükerrer (çift) kayıtları temizleyelim ve benzersiz yapalım
 POPULAR_PAIRS = sorted(list(set(POPULAR_PAIRS)))
 
 notified_signals = {}
 
 def send_telegram_message(token, chat_id, message):
-    """Telegram üzerinden HTML formatlı sinyal gönderir"""
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {
         "chat_id": chat_id,
@@ -70,7 +64,6 @@ def send_telegram_message(token, chat_id, message):
         return False
 
 def get_binance_klines(symbol, interval="15m", limit=100):
-    """Binance Futures API üzerinden 15 dakikalık mum verilerini çeker"""
     url = f"https://fapi.binance.com/fapi/v1/klines?symbol={symbol}&interval={interval}&limit={limit}"
     try:
         response = requests.get(url, timeout=5)
@@ -104,7 +97,6 @@ def scan_market():
             
         success_count += 1
         
-        # EMA Hesaplamaları
         df['ema20'] = df['close'].ewm(span=20, adjust=False).mean()
         df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
         df['ema100'] = df['close'].ewm(span=100, adjust=False).mean()
@@ -121,7 +113,6 @@ def scan_market():
         ema100 = current['ema100']
         ema200 = current['ema200']
         
-        # Fark hesapları ve genişleme filtreleri
         diff_20_50 = ema20 - ema50
         diff_50_100 = ema50 - ema100
         
@@ -131,21 +122,24 @@ def scan_market():
         is_bullish_expanded = (diff_20_50 > 0.003) and (diff_50_100 > 0.003)
         is_bearish_expanded = (diff_20_50 < -0.003) and (diff_50_100 < -0.003)
         
-        # EMA 20 Temas Şartı
         ema20_touch = (low <= ema20 <= high)
         
-        # Tepe / Dip Kırılım Analizi
         recent_candles = df.iloc[-12:-1]
         prev_candles = df.iloc[-35:-12]
         
-        recent_max_high = recent_candles["high"].max()
-        previous_max_high = prev_candles["high"].max()
+        # ESKİ SİSTEM: Sadece iğnelere (high/low) bakıyordu.
+        # YENİ SİSTEM: Kırılımın iğne değil, KAPANIS (close) ile onaylanmasını zorunlu kıldım.
+        previous_max_high = prev_candles["high"].max() # Önceki zirve iğnesi
+        previous_min_low = prev_candles["low"].min()   # Önceki dip iğnesi
         
-        recent_min_low = recent_candles["low"].min()
-        previous_min_low = prev_candles["low"].min()
+        recent_max_close = recent_candles["close"].max() # Yeni hareketin en yüksek mum kapanışı
+        recent_min_close = recent_candles["close"].min() # Yeni hareketin en düşük mum kapanışı
         
-        valid_bullish_breakout = is_bullish_aligned and is_bullish_expanded and (recent_max_high > previous_max_high * 1.004)
-        valid_bearish_breakout = is_bearish_aligned and is_bearish_expanded and (recent_min_low < previous_min_low * 0.996)
+        # Bullish: Kapanış, önceki zirvenin fitilini bile geçmiş olmalı (Sağlam HH)
+        valid_bullish_breakout = is_bullish_aligned and is_bullish_expanded and (recent_max_close > previous_max_high)
+        
+        # Bearish: Kapanış, önceki dibin fitilinden bile aşağıda olmalı (Sağlam LL)
+        valid_bearish_breakout = is_bearish_aligned and is_bearish_expanded and (recent_min_close < previous_min_low)
         
         if ema20_touch and (valid_bullish_breakout or valid_bearish_breakout):
             signal_key = f"{symbol}_{candle_timestamp}"
@@ -156,11 +150,11 @@ def scan_market():
             binance_link = f"https://www.binance.com/tr/futures/{clean_symbol}"
             
             if valid_bullish_breakout:
-                trend_type = "KATI SAPAN LONG (NET HH KIRILIMI)"
-                desc = f"Fiyat yeni yüksek tepe ({recent_max_high}) yaptıktan sonra EMA20 desteğine çekildi!"
+                trend_type = "KATI SAPAN LONG (GÖVDE KAPANIŞLI HH)"
+                desc = f"Fiyat önceki tepeyi ({previous_max_high}) GÖVDE ile kırdı ({recent_max_close}) ve EMA20 desteğine çekildi!"
             else:
-                trend_type = "KATI SAPAN SHORT (NET LL KIRILIMI)"
-                desc = f"Fiyat yeni düşük dip ({recent_min_low}) yaptıktan sonra EMA20 direncine çekildi!"
+                trend_type = "KATI SAPAN SHORT (GÖVDE KAPANIŞLI LL)"
+                desc = f"Fiyat önceki dibi ({previous_min_low}) GÖVDE ile kırdı ({recent_min_close}) ve EMA20 direncine çekildi!"
                 
             message = (
                 f"🏹 <b>SAPAN STRATEJİSİ SİNYALİ!</b>\n\n"
@@ -183,8 +177,8 @@ def scan_market():
     print(f"Tarama tamamlandı. İşlenen: {success_count} | Sinyal: {match_count}")
 
 if __name__ == "__main__":
-    print("Genişletilmiş Sapan Botu başarıyla başlatıldı!")
-    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 Genişletilmiş Sapan Botu aktif ve taramaya başladı!")
+    print("Gövde Kapanışlı Sapan Botu başarıyla başlatıldı!")
+    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 Kapanış Onaylı Sapan Botu aktif ve taramaya başladı!")
     
     while True:
         try:
