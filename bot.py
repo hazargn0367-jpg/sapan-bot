@@ -44,7 +44,6 @@ POPULAR_PAIRS = [
 ]
 
 POPULAR_PAIRS = sorted(list(set(POPULAR_PAIRS)))
-
 notified_signals = {}
 
 def send_telegram_message(token, chat_id, message):
@@ -82,7 +81,7 @@ def get_binance_klines(symbol, interval="15m", limit=100):
     return None
 
 def scan_market():
-    print(f"\n--- Genişletilmiş Piyasa Taranıyor (Toplam Parite: {len(POPULAR_PAIRS)}) ---")
+    print(f"\n--- Piyasa Taranıyor | İlk Temas Korumalı (Parite: {len(POPULAR_PAIRS)}) ---")
     success_count = 0
     match_count = 0
     
@@ -105,42 +104,61 @@ def scan_market():
         low = current['low']
         high = current['high']
         current_close = current['close']
-        
         ema20 = current['ema20']
-        ema50 = current['ema50']
-        ema100 = current['ema100']
-        ema200 = current['ema200']
         
-        is_bullish_aligned = (ema20 > ema50) and (ema50 > ema100) and (ema100 > ema200)
-        is_bearish_aligned = (ema20 < ema50) and (ema50 < ema100) and (ema100 < ema200)
+        # Trend Şartları
+        is_bullish_aligned = (ema20 > current['ema50']) and (current['ema50'] > current['ema100']) and (current['ema100'] > current['ema200'])
+        is_bearish_aligned = (ema20 < current['ema50']) and (current['ema50'] < current['ema100']) and (current['ema100'] < current['ema200'])
         
-        diff_20_50 = ema20 - ema50
-        diff_50_100 = ema50 - ema100
+        diff_20_50 = ema20 - current['ema50']
+        diff_50_100 = current['ema50'] - current['ema100']
         is_bullish_expanded = (diff_20_50 > 0.003) and (diff_50_100 > 0.003)
         is_bearish_expanded = (diff_20_50 < -0.003) and (diff_50_100 < -0.003)
         
-        # EMA 20 Temas Şartı
-        ema20_touch = (low <= ema20 <= high)
-        
-        if not ema20_touch:
-            continue
+        # Anlık temas durumu
+        current_ema20_touch = (low <= ema20 <= high)
 
-        # ANA BÖLGE (ZONE) ANALİZİ - SUI'deki gibi büyük iğneleri filtreler
-        recent_candles = df.iloc[-12:-1]  # Son yaşanan güncel hareket bölgesi
-        prev_candles = df.iloc[-40:-12]   # Önceki ana yapı bölgesi
+        recent_candles = df.iloc[-12:-1]  
+        prev_candles = df.iloc[-40:-12]   
         
-        previous_max_high = prev_candles["high"].max() # Önceki ana yapının en yüksek FİTİLİ
-        previous_min_low = prev_candles["low"].min()   # Önceki ana yapının en düşük FİTİLİ
+        previous_max_high = prev_candles["high"].max() 
+        previous_min_low = prev_candles["low"].min()   
         
-        recent_max_close = recent_candles["close"].max() # Güncel hareketin en yüksek GÖVDE KAPANIŞI
-        recent_min_close = recent_candles["close"].min() # Güncel hareketin en düşük GÖVDE KAPANIŞI
+        recent_max_close_idx = recent_candles["close"].idxmax()
+        recent_min_close_idx = recent_candles["close"].idxmin()
         
-        # Bullish: Güncel hareketin kapanışı, geçmiş bölgedeki en yüksek iğneyi (tepeyi) aşmış olmalı
-        valid_bullish_breakout = is_bullish_aligned and is_bullish_expanded and (recent_max_close > previous_max_high)
+        recent_max_close = recent_candles.loc[recent_max_close_idx, "close"]
+        recent_min_close = recent_candles.loc[recent_min_close_idx, "close"]
         
-        # Bearish: Güncel hareketin kapanışı, geçmiş bölgedeki en derin iğneyi (SUI'deki dev fitili) kırmış olmalı
-        valid_bearish_breakout = is_bearish_aligned and is_bearish_expanded and (recent_min_close < previous_min_low)
+        valid_bullish_breakout = False
+        valid_bearish_breakout = False
+        desc = ""
+        trend_type = ""
         
+        # --- LONG KONTROLÜ ---
+        if is_bullish_aligned and is_bullish_expanded and (recent_max_close > previous_max_high):
+            # Zirve mumundan şu anki muma kadar olan aralığı tarar
+            candles_since_peak = df.loc[recent_max_close_idx + 1 : current.name - 1]
+            prior_touches = candles_since_peak[candles_since_peak['low'] <= candles_since_peak['ema20']]
+            
+            # Daha önce hiç değmemiş ve ŞU AN değiyorsa tetiklenir
+            if len(prior_touches) == 0 and current_ema20_touch:
+                valid_bullish_breakout = True
+                trend_type = "KATI SAPAN LONG (İLK TEMAS)"
+                desc = f"Fiyat önceki tepeyi ({previous_max_high}) GÖVDE ile kırdı ve EMA20'ye İLK DEFA temas etti!"
+
+        # --- SHORT KONTROLÜ ---
+        if is_bearish_aligned and is_bearish_expanded and (recent_min_close < previous_min_low):
+            # Dip mumundan şu anki muma kadar olan aralığı tarar
+            candles_since_dip = df.loc[recent_min_close_idx + 1 : current.name - 1]
+            prior_touches = candles_since_dip[candles_since_dip['high'] >= candles_since_dip['ema20']]
+            
+            # Daha önce hiç değmemiş ve ŞU AN değiyorsa tetiklenir
+            if len(prior_touches) == 0 and current_ema20_touch:
+                valid_bearish_breakout = True
+                trend_type = "KATI SAPAN SHORT (İLK TEMAS)"
+                desc = f"Fiyat önceki dibi ({previous_min_low}) GÖVDE ile kırdı ve EMA20'ye İLK DEFA temas etti!"
+                
         if valid_bullish_breakout or valid_bearish_breakout:
             signal_key = f"{symbol}_{candle_timestamp}"
             if notified_signals.get(symbol) == signal_key:
@@ -149,13 +167,6 @@ def scan_market():
             clean_symbol = symbol.replace("_", "")
             binance_link = f"https://www.binance.com/tr/futures/{clean_symbol}"
             
-            if valid_bullish_breakout:
-                trend_type = "KATI SAPAN LONG (ANA DİRENÇ GÖVDEYLE KIRILDI)"
-                desc = f"Fiyat önceki ana tepeyi ({previous_max_high}) GÖVDE ile kırdı ({recent_max_close}) ve EMA20'ye çekildi!"
-            else:
-                trend_type = "KATI SAPAN SHORT (ANA DESTEK GÖVDEYLE KIRILDI)"
-                desc = f"Fiyat önceki derin dibi ({previous_min_low}) GÖVDE ile kırdı ({recent_min_close}) ve EMA20'ye tepki verdi!"
-                
             message = (
                 f"🏹 <b>SAPAN STRATEJİSİ SİNYALİ!</b>\n\n"
                 f"Parite: #{clean_symbol} (15m Futures)\n"
@@ -163,9 +174,9 @@ def scan_market():
                 f"Anlık Fiyat: {current_close}\n\n"
                 f"📊 <b>EMA Değerleri:</b>\n"
                 f"• EMA 20: {round(ema20, 4)}\n"
-                f"• EMA 50: {round(ema50, 4)}\n"
-                f"• EMA 100: {round(ema100, 4)}\n"
-                f"• EMA 200: {round(ema200, 4)}\n\n"
+                f"• EMA 50: {round(current['ema50'], 4)}\n"
+                f"• EMA 100: {round(current['ema100'], 4)}\n"
+                f"• EMA 200: {round(current['ema200'], 4)}\n\n"
                 f"💡 <b>Açıklama:</b> {desc}\n\n"
                 f"🔗 <a href='{binance_link}'>Grafiği Tarayıcıda Aç</a>"
             )
@@ -177,8 +188,8 @@ def scan_market():
     print(f"Tarama tamamlandı. İşlenen: {success_count} | Sinyal: {match_count}")
 
 if __name__ == "__main__":
-    print("Ana Trend Kırılımlı Sapan Botu başarıyla başlatıldı!")
-    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 Ana Kırılım Onaylı Sapan Botu aktif ve taramaya başladı!")
+    print("İlk Temas Filtreli Sapan Botu başarıyla başlatıldı!")
+    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 İlk Temas (First Touch) Onaylı Sapan Botu aktif ve taramaya başladı!")
     
     while True:
         try:
