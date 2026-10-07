@@ -11,7 +11,7 @@ sys.stdout.reconfigure(line_buffering=True)
 BOT_TOKEN = "8663767442:AAEFpBh0V1eu5tBrWWc0Ki2EmVdS9f_rHiQ"
 CHAT_ID = "1494316515"
 
-# En hacimli 100 Binance Futures paritesi
+# En hacimli 250+ Binance Futures paritesi
 POPULAR_PAIRS = [
     "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", 
     "AVAXUSDT", "DOTUSDT", "LINKUSDT", "MATICUSDT", "LTCUSDT", "UNIUSDT", "ATOMUSDT",
@@ -26,10 +26,32 @@ POPULAR_PAIRS = [
     "RATSUSDT", "ACEUSDT", "PORTALUSDT", "PIXELUSDT", "STRKUSDT", "ETHFIUSDT", "ENAUSDT",
     "BBUSDT", "NOTUSDT", "IOUSDT", "ZKUSDT", "BLURUSDT", "PENDLEUSDT", "MAVUSDT",
     "CYBERUSDT", "HBARUSDT", "HOOKUSDT", "HIGHUSDT", "IDUSDT", "NFPUSDT", "AIUSDT",
-    "XAIUSDT", "ALTUSDT"
+    "XAIUSDT", "ALTUSDT", "JUPUSDT", "PYTHUSDT", "MANTAUSDT", "WLDUSDT", "MEMEUSDT",
+    "ORCAUSDT", "ACEUSDT", "TIAUSDT", "ONDOUSDT", "POLUSDT", "BOMEUSDT", "SAGAUSDT",
+    "TNSRUSDT", "OMUSDT", "SUIUSDT", "REZUSDT", "BBUSDT", "NOTUSDT", "IOUSDT",
+    "ZKUSDT", "LISTAUSDT", "ZROUSDT", "BANANAUSDT", "RENDERUSDT", "TONUSDT", "DOGSUSDT",
+    "NEIROUSDT", "TURBOUSDT", "1000SATSUSDT", "1000RATSUSDT", "1000PEPEUSDT", "1000SHIBUSDT",
+    "1000FLOKIUSDT", "1000BONKUSDT", "1000LUNCUSDT", "1000XECUSDT", "CHESSUSDT", "COTIUSDT",
+    "DARUSDT", "DENTUSDT", "DGBUSDT", "EDUUSDT", "ELFUSDT", "ENJUSDT", "ENSUSDT",
+    "FETUSDT", "FIROUSDT", "FLUXUSDT", "FTOUSDT", "FXSUSDT", "GLMRUSDT", "GMXUSDT",
+    "GNSUSDT", "GOTUSDT", "HIFIUSDT", "HFTUSDT", "HIGHUSDT", "HOOKUSDT", "ICPUSDT",
+    "IDUSDT", "ILVUSDT", "IMXUSDT", "INJUSDT", "IOSTUSDT", "IOTAUSDT", "IOTXUSDT",
+    "JASMYUSDT", "JOEUSDT", "KASUSDT", "KAVAUSDT", "KEYUSDT", "KLAYUSDT", "KNCUSDT",
+    "KSMUSDT", "LINAUSDT", "LITUSDT", "LOOKSUSDT", "LPTUSDT", "LQTYUSDT", " LRCUSDT",
+    "MAGICUSDT", "MAVUSDT", "MDTUSDT", "MINAUSDT", "MKRUSDT", "MTLUSDT", "MULTIUSDT",
+    "NEARUSDT", "NEOUSDT", "NKNUSDT", "OCEANUSDT", "OGNUSDT", "OMUSDT", "OPUSDT",
+    "ORDIUSDT", "OXTUSDT", "PENDLEUSDT", "PHBUSDT", "PHAUSDT", "PIVXUSDT", "POLYXUSDT",
+    "PPTUSDT", "QNTUSDT", "QTUMUSDT", "RADUSDT", "RAREUSDT", "REEFUSDT", "RENUSDT",
+    "RLCUSDT", "ROSEUSDT", "RSRUSDT", "RUNEUSDT", "RVNUSDT", "SAFEUSDT", "SANDUSDT",
+    "SCUSDT", "SCRTUSDT", "SKLUSDT", "SLPUSDT", "SNXUSDT", "SOCUSDT", "SSVUSDT",
+    "STGUSDT", "STMXUSDT", "STORJUSDT", "STPTUSDT", "STRAXUSDT", "STXUSDT", "SUPERUSDT",
+    "SUSHIUSDT", "SXPUSDT", "SYSUSDT", "TAOUSDT", "TRBUSDT", "TUSDT", "UFTUSDT",
+    "UMAUSDT", "UNFIUSDT", "OCEANUSDT", "OGNUSDT", "OMUSDT", "OPUSDT", "ORDIUSDT"
 ]
 
-# Aynı sinyalin tekrar tekrar gelmesini engellemek için hafıza sözlüğü
+# Listede olabilecek mükerrer (çift) kayıtları temizleyelim ve benzersiz yapalım
+POPULAR_PAIRS = sorted(list(set(POPULAR_PAIRS)))
+
 notified_signals = {}
 
 def send_telegram_message(token, chat_id, message):
@@ -69,8 +91,7 @@ def get_binance_klines(symbol, interval="15m", limit=100):
     return None
 
 def scan_market():
-    """Piyasayı tarar ve asıl sapan stratejini çalıştırır"""
-    print("\n--- Sapan Stratejisi Taranıyor ---")
+    print(f"\n--- Genişletilmiş Piyasa Taranıyor (Toplam Parite: {len(POPULAR_PAIRS)}) ---")
     success_count = 0
     match_count = 0
     
@@ -161,10 +182,9 @@ def scan_market():
                 
     print(f"Tarama tamamlandı. İşlenen: {success_count} | Sinyal: {match_count}")
 
-# --- 7/24 ÇALIŞAN ANA DÖNGÜ ---
 if __name__ == "__main__":
-    print("Orijinal Sapan Botu başarıyla başlatıldı ve 7/24 döngüye girdi.")
-    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 Orijinal Sapan Botu aktif ve taramaya başladı!")
+    print("Genişletilmiş Sapan Botu başarıyla başlatıldı!")
+    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 Genişletilmiş Sapan Botu aktif ve taramaya başladı!")
     
     while True:
         try:
