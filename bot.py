@@ -67,7 +67,7 @@ def get_binance_klines(symbol, interval="15m", limit=120):
     return None
 
 def scan_market():
-    print(f"\n--- Piyasa Taranıyor | Onay Mumlu Gelişmiş Sapan (Parite: {len(POPULAR_PAIRS)}) ---")
+    print(f"\n--- Piyasa Taranıyor | Çift Sistemli Sapan (Parite: {len(POPULAR_PAIRS)}) ---")
     success_count = 0
     match_count = 0
     
@@ -80,8 +80,10 @@ def scan_market():
             
         success_count += 1
         
-        # Göstergeler (EMA, ATR, Stoch RSI)
         df['ema20'] = df['close'].ewm(span=20, adjust=False).mean()
+        df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
+        df['ema100'] = df['close'].ewm(span=100, adjust=False).mean()
+        df['ema200'] = df['close'].ewm(span=200, adjust=False).mean()
         
         high_low = df['high'] - df['low']
         high_close = np.abs(df['high'] - df['close'].shift())
@@ -98,108 +100,130 @@ def scan_market():
         if len(df) < 25:
             continue
             
-        # Son kapanmış mumlar üzerinden backtest mantığıyla kontrol (Sondan 3. mum tetik mumu)
-        i = len(df) - 3
-        if i < 20:
-            continue
-            
-        touch_candle = df.iloc[i]
-        m1 = df.iloc[i+1]
-        m2 = df.iloc[i+2]
+        current = df.iloc[-1]
+        candle_timestamp = current['timestamp']
+        low = current['low']
+        high = current['high']
+        current_close = current['close']
+        ema20 = current['ema20']
+        stoch_k = current['stoch_k']
         
-        recent_slice = df.iloc[max(0, i-6):i]
-        candle_timestamp = touch_candle['timestamp']
+        # 1. SİSTEM: SAF EMA20 TEMAS KONTROLÜ (Anlık Değdiği Gibi)
+        current_ema20_touch = (low <= ema20 <= high)
+        is_bullish_trend = (ema20 > current['ema50']) and (current['ema50'] > current['ema100'])
+        is_bearish_trend = (ema20 < current['ema50']) and (current['ema50'] < current['ema100'])
         
-        valid_signal = False
-        trend_type = ""
-        entry_price = 0.0
-        stop_loss = 0.0
-        desc = ""
+        saf_signal = False
+        saf_type = ""
         
-        # --- SHORT KOŞULLARI (Stoch RSI > 70 + İlk Temas + Onay Mumu) ---
-        recent_highs = df['high'].iloc[max(0, i-10):i]
-        is_new_peak = touch_candle['high'] >= recent_highs.max() * 0.995 or recent_highs.idxmax() < i - 2
-        short_touch = (touch_candle['high'] >= touch_candle['ema20']) and (touch_candle['close'] < touch_candle['ema20'])
-        
-        if short_touch and (touch_candle['stoch_k'] > 70) and is_new_peak:
-            counter_candles = len(recent_slice[recent_slice['close'] > recent_slice['open']])
-            if counter_candles <= 2:
-                triggered = False
-                entry = 0
-                sl = touch_candle['high']
+        if current_ema20_touch:
+            if is_bullish_trend:
+                saf_signal = True
+                saf_type = "EMA20 TEMAS (LONG)"
+            elif is_bearish_trend:
+                saf_signal = True
+                saf_type = "EMA20 TEMAS (SHORT)"
                 
-                if m1['close'] < touch_candle['low']:
-                    entry = m1['close']
-                    triggered = True
-                elif m2['close'] < touch_candle['low'] and m1['high'] <= touch_candle['high']:
-                    entry = m2['close']
-                    triggered = True
-                
-                if triggered:
-                    dist = sl - entry
-                    if dist > 0 and dist <= touch_candle['atr'] * 3.0:
-                        valid_signal = True
-                        trend_type = "GELİŞMİŞ SAPAN SHORT (ONAYLI)"
-                        entry_price = entry
-                        stop_loss = sl
-                        desc = f"Stoch RSI ({round(touch_candle['stoch_k'], 1)}) > 70, EMA20 temas ve onay mumu kapanışı gerçekleşti."
+        if saf_signal:
+            signal_key_saf = f"{symbol}_{candle_timestamp}_saf"
+            if notified_signals.get(f"{symbol}_saf") != signal_key_saf:
+                clean_symbol = symbol.replace("_", "")
+                binance_link = f"https://www.binance.com/tr/futures/{clean_symbol}"
+                msg_saf = (
+                    f"🎯 <b>SAF {saf_type}</b>\n\n"
+                    f"Parite: #{clean_symbol} (15m)\n"
+                    f"Fiyat EMA20'ye Değdi: {round(ema20, 4)}\n\n"
+                    f"🔗 <a href='{binance_link}'>Grafiği Aç</a>"
+                )
+                if send_telegram_message(BOT_TOKEN, CHAT_ID, msg_saf):
+                    notified_signals[f"{symbol}_saf"] = signal_key_saf
+                    match_count += 1
 
-        # --- LONG KOŞULLARI (Stoch RSI < 30 + İlk Temas + Onay Mumu) ---
-        if not valid_signal:
-            recent_lows = df['low'].iloc[max(0, i-10):i]
-            is_new_bottom = touch_candle['low'] <= recent_lows.min() * 1.005 or recent_lows.idxmin() < i - 2
-            long_touch = (touch_candle['low'] <= touch_candle['ema20']) and (touch_candle['close'] > touch_candle['ema20'])
+        # 2. SİSTEM: BACKTESTİ YAPILAN GELİŞMİŞ ONAYLI SAPAN SİSTEMİ
+        i = len(df) - 3
+        if i >= 20:
+            touch_candle = df.iloc[i]
+            m1 = df.iloc[i+1]
+            m2 = df.iloc[i+2]
+            recent_slice = df.iloc[max(0, i-6):i]
             
-            if long_touch and (touch_candle['stoch_k'] < 30) and is_new_bottom:
-                counter_candles = len(recent_slice[recent_slice['close'] < recent_slice['open']])
+            valid_signal = False
+            trend_type = ""
+            entry_price = 0.0
+            stop_loss = 0.0
+            
+            # Short Koşulu
+            recent_highs = df['high'].iloc[max(0, i-10):i]
+            is_new_peak = touch_candle['high'] >= recent_highs.max() * 0.995 or recent_highs.idxmax() < i - 2
+            short_touch = (touch_candle['high'] >= touch_candle['ema20']) and (touch_candle['close'] < touch_candle['ema20'])
+            
+            if short_touch and (touch_candle['stoch_k'] > 70) and is_new_peak:
+                counter_candles = len(recent_slice[recent_slice['close'] > recent_slice['open']])
                 if counter_candles <= 2:
                     triggered = False
                     entry = 0
-                    sl = touch_candle['low']
-                    
-                    if m1['close'] > touch_candle['high']:
+                    sl = touch_candle['high']
+                    if m1['close'] < touch_candle['low']:
                         entry = m1['close']
                         triggered = True
-                    elif m2['close'] > touch_candle['high'] and m1['low'] >= touch_candle['low']:
+                    elif m2['close'] < touch_candle['low'] and m1['high'] <= touch_candle['high']:
                         entry = m2['close']
                         triggered = True
-                    
                     if triggered:
-                        dist = entry - sl
+                        dist = sl - entry
                         if dist > 0 and dist <= touch_candle['atr'] * 3.0:
                             valid_signal = True
-                            trend_type = "GELİŞMİŞ SAPAN LONG (ONAYLI)"
+                            trend_type = "GELİŞMİŞ SAPAN SHORT (ONAYLI)"
                             entry_price = entry
                             stop_loss = sl
-                            desc = f"Stoch RSI ({round(touch_candle['stoch_k'], 1)}) < 30, EMA20 temas ve onay mumu kapanışı gerçekleşti."
 
-        if valid_signal:
-            signal_key = f"{symbol}_{candle_timestamp}"
-            if notified_signals.get(symbol) == signal_key:
-                continue
+            # Long Koşulu
+            if not valid_signal:
+                recent_lows = df['low'].iloc[max(0, i-10):i]
+                is_new_bottom = touch_candle['low'] <= recent_lows.min() * 1.005 or recent_lows.idxmin() < i - 2
+                long_touch = (touch_candle['low'] <= touch_candle['ema20']) and (touch_candle['close'] > touch_candle['ema20'])
                 
-            clean_symbol = symbol.replace("_", "")
-            binance_link = f"https://www.binance.com/tr/futures/{clean_symbol}"
-            
-            message = (
-                f"🚀 <b>{trend_type}</b>\n\n"
-                f"Parite: #{clean_symbol} (15m Futures)\n"
-                f"Giriş Fiyatı: {round(entry_price, 4)}\n"
-                f"Stop Loss: {round(stop_loss, 4)}\n"
-                f"Stoch RSI K: {round(touch_candle['stoch_k'], 2)}\n\n"
-                f"💡 <b>Detay:</b> {desc}\n\n"
-                f"🔗 <a href='{binance_link}'>Grafiği Aç</a>"
-            )
-            
-            if send_telegram_message(BOT_TOKEN, CHAT_ID, message):
-                notified_signals[symbol] = signal_key
-                match_count += 1
+                if long_touch and (touch_candle['stoch_k'] < 30) and is_new_bottom:
+                    counter_candles = len(recent_slice[recent_slice['close'] < recent_slice['open']])
+                    if counter_candles <= 2:
+                        triggered = False
+                        entry = 0
+                        sl = touch_candle['low']
+                        if m1['close'] > touch_candle['high']:
+                            entry = m1['close']
+                            triggered = True
+                        elif m2['close'] > touch_candle['high'] and m1['low'] >= touch_candle['low']:
+                            entry = m2['close']
+                            triggered = True
+                        if triggered:
+                            dist = entry - sl
+                            if dist > 0 and dist <= touch_candle['atr'] * 3.0:
+                                valid_signal = True
+                                trend_type = "GELİŞMİŞ SAPAN LONG (ONAYLI)"
+                                entry_price = entry
+                                stop_loss = sl
+
+            if valid_signal:
+                signal_key_adv = f"{symbol}_{touch_candle['timestamp']}_adv"
+                if notified_signals.get(f"{symbol}_adv") != signal_key_adv:
+                    clean_symbol = symbol.replace("_", "")
+                    binance_link = f"https://www.binance.com/tr/futures/{clean_symbol}"
+                    msg_adv = (
+                        f"🚀 <b>{trend_type}</b>\n\n"
+                        f"Parite: #{clean_symbol} (15m)\n"
+                        f"Giriş: {round(entry_price, 4)} | SL: {round(stop_loss, 4)}\n"
+                        f"Stoch K: {round(touch_candle['stoch_k'], 2)}\n\n"
+                        f"🔗 <a href='{binance_link}'>Grafiği Aç</a>"
+                    )
+                    if send_telegram_message(BOT_TOKEN, CHAT_ID, msg_adv):
+                        notified_signals[f"{symbol}_adv"] = signal_key_adv
+                        match_count += 1
                 
     print(f"Tarama tamamlandı. İşlenen: {success_count} | Sinyal: {match_count}")
 
 if __name__ == "__main__":
-    print("Onay Mumlu Gelişmiş Sapan Botu Başlatıldı!")
-    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 Onay Mumlu Gelişmiş Sapan Botu aktif ve taramaya başladı!")
+    print("Çift Sistemli Sapan Botu Başlatıldı!")
+    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 Çift Sistemli Sapan Botu (Saf Temas + Gelişmiş Onaylı) aktif!")
     
     while True:
         try:
