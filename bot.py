@@ -67,7 +67,7 @@ def get_binance_klines(symbol, interval="15m", limit=120):
     return None
 
 def scan_market():
-    print(f"\n--- Piyasa Taranıyor | Çift Sistemli Sapan (Parite: {len(POPULAR_PAIRS)}) ---")
+    print(f"\n--- Piyasa Taranıyor | EMA 20-50-100 Trend Filtreli Çift Sapan (Parite: {len(POPULAR_PAIRS)}) ---")
     success_count = 0
     match_count = 0
     
@@ -99,40 +99,48 @@ def scan_market():
         if len(df) < 25:
             continue
             
-        current = df.iloc[-1]
-        candle_timestamp = current['timestamp']
-        
-        # --- 1. SİSTEM: SAF EMA20 TEMAS SİSTEMİ ---
+        # --- 1. SİSTEM: SAF EMA20 TEMAS SİSTEMİ (EMA 20-50-100 Paralel Trend Filtreli) ---
         i_saf = len(df) - 3
         if i_saf >= 20:
             touch_saf = df.iloc[i_saf]
             m1_saf = df.iloc[i_saf+1]
             m2_saf = df.iloc[i_saf+2]
+            recent_slice_saf = df.iloc[max(0, i_saf-6):i_saf]
             
-            recent_highs_saf = df['high'].iloc[max(0, i_saf-10):i_saf]
-            is_new_peak_saf = touch_saf['high'] >= recent_highs_saf.max() * 0.995 or recent_highs_saf.idxmax() < i_saf - 2
-            short_touch_saf = (touch_saf['high'] >= touch_saf['ema20']) and (touch_saf['close'] < touch_saf['ema20'])
+            # Trend Şartı (EMA20, EMA50, EMA100 paralel sıralı olmalı)
+            is_bullish_trend = (touch_saf['ema20'] > touch_saf['ema50']) and (touch_saf['ema50'] > touch_saf['ema100'])
+            is_bearish_trend = (touch_saf['ema20'] < touch_saf['ema50']) and (touch_saf['ema50'] < touch_saf['ema100'])
             
             saf_signal = False
             saf_type = ""
             saf_price = 0.0
             
-            if short_touch_saf and is_new_peak_saf:
-                if m1_saf['close'] < touch_saf['low'] or (m2_saf['close'] < touch_saf['low'] and m1_saf['high'] <= touch_saf['high']):
-                    saf_signal = True
-                    saf_type = "SAF EMA20 TEMAS SHORT SİNYALİ"
-                    saf_price = touch_saf['close']
+            # Short (Düşüş Trendi + Yeni Tepe + Temas)
+            recent_highs_saf = df['high'].iloc[max(0, i_saf-10):i_saf]
+            is_new_peak_saf = touch_saf['high'] >= recent_highs_saf.max() * 0.995 or recent_highs_saf.idxmax() < i_saf - 2
+            short_touch_saf = (touch_saf['high'] >= touch_saf['ema20']) and (touch_saf['close'] < touch_saf['ema20'])
             
+            if is_bearish_trend and short_touch_saf and is_new_peak_saf:
+                counter_candles = len(recent_slice_saf[recent_slice_saf['close'] > recent_slice_saf['open']])
+                if counter_candles <= 2:
+                    if m1_saf['close'] < touch_saf['low'] or (m2_saf['close'] < touch_saf['low'] and m1_saf['high'] <= touch_saf['high']):
+                        saf_signal = True
+                        saf_type = "SAF EMA20 TEMAS SHORT SİNYALİ"
+                        saf_price = touch_saf['close']
+            
+            # Long (Yükseliş Trendi + Yeni Dip + Temas)
             if not saf_signal:
                 recent_lows_saf = df['low'].iloc[max(0, i_saf-10):i_saf]
                 is_new_bottom_saf = touch_saf['low'] <= recent_lows_saf.min() * 1.005 or recent_lows_saf.idxmin() < i_saf - 2
                 long_touch_saf = (touch_saf['low'] <= touch_saf['ema20']) and (touch_saf['close'] > touch_saf['ema20'])
                 
-                if long_touch_saf and is_new_bottom_saf:
-                    if m1_saf['close'] > touch_saf['high'] or (m2_saf['close'] > touch_saf['high'] and m1_saf['low'] >= touch_saf['low']):
-                        saf_signal = True
-                        saf_type = "SAF EMA20 TEMAS LONG SİNYALİ"
-                        saf_price = touch_saf['close']
+                if is_bullish_trend and long_touch_saf and is_new_bottom_saf:
+                    counter_candles = len(recent_slice_saf[recent_slice_saf['close'] < recent_slice_saf['open']])
+                    if counter_candles <= 2:
+                        if m1_saf['close'] > touch_saf['high'] or (m2_saf['close'] > touch_saf['high'] and m1_saf['low'] >= touch_saf['low']):
+                            saf_signal = True
+                            saf_type = "SAF EMA20 TEMAS LONG SİNYALİ"
+                            saf_price = touch_saf['close']
 
             if saf_signal:
                 key_saf = f"{symbol}_{touch_saf['timestamp']}_saf"
@@ -143,7 +151,7 @@ def scan_market():
                         f"🎯 <b>{saf_type}</b>\n\n"
                         f"Parite: #{clean_symbol} (15m)\n"
                         f"Fiyat: {round(saf_price, 4)}\n"
-                        f"Açıklama: Saf EMA20 temas kuralı gerçekleşti.\n\n"
+                        f"Açıklama: EMA 20-50-100 paralel trend onaylı saf temas.\n\n"
                         f"🔗 <a href='{binance_link}'>Grafiği Aç</a>"
                     )
                     if send_telegram_message(BOT_TOKEN, CHAT_ID, msg_saf):
@@ -233,8 +241,8 @@ def scan_market():
     print(f"Tarama tamamlandı. İşlenen: {success_count} | Sinyal: {match_count}")
 
 if __name__ == "__main__":
-    print("Çift Sistemli Sapan Botu Başlatıldı!")
-    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 Çift Sistemli Sapan Botu (Saf Temas + Gelişmiş Backtest) aktif!")
+    print("EMA 20-50-100 Trend Filtreli Çift Sapan Botu Başlatıldı!")
+    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 EMA 20-50-100 Trend Filtreli Çift Sapan Botu aktif!")
     
     while True:
         try:
