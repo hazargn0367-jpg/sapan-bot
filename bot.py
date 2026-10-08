@@ -10,7 +10,7 @@ sys.stdout.reconfigure(line_buffering=True)
 BOT_TOKEN = "8663767442:AAEFpBh0V1eu5tBrWWc0Ki2EmVdS9f_rHiQ"
 CHAT_ID = "1494316515"
 
-# MEXC & Binance Ortak 150+ Popüler Parite Listesi
+# MEXC & Binance Ortak Popüler Parite Listesi
 SYMBOLS = [
     "BTC_USDT", "ETH_USDT", "SOL_USDT", "XRP_USDT", "DOGE_USDT", "SHIB_USDT", "PEPE_USDT", 
     "NEAR_USDT", "SUI_USDT", "RENDER_USDT", "FET_USDT", "INJ_USDT", "ARB_USDT", "OP_USDT", 
@@ -26,11 +26,7 @@ SYMBOLS = [
     "PORTAL_USDT", "PIXEL_USDT", "ETHFI_USDT", "BB_USDT", "PENDLE_USDT", "MAV_USDT", "CYBER_USDT",
     "HOOK_USDT", "HIGH_USDT", "ID_USDT", "NFP_USDT", "AI_USDT", "XAI_USDT", "ACE_USDT", "XLM_USDT",
     "QNT_USDT", "ENJ_USDT", "BAT_USDT", "ZIL_USDT", "KSM_USDT", "CAKE_USDT", "BAKE_USDT", "OCEAN_USDT",
-    "AGIX_USDT", "LSK_USDT", "BAL_USDT", "C98_USDT", "DAR_USDT", "MBOX_USDT", "PEOPLE_USDT", "GMT_USDT",
-    "GLMR_USDT", "ASTR_USDT", "GMX_USDT", "SSV_USDT", "BSW_USDT", "CFX_USDT", "LQTY_USDT", "JOE_USDT",
-    "RDNT_USDT", "GNS_USDT", "COMBO_USDT", "MAV_USDT", "PENDLE_USDT", "ARK_USDT", "AGLD_USDT", "SLP_USDT",
-    "BAKE_USDT", "HFT_USDT", "HOOK_USDT", "MAGIC_USDT", "RPL_USDT", "SSV_USDT", "VIB_USDT", "LQTY_USDT",
-    "BLZ_USDT", "CYBER_USDT", "HIFI_USDT", "ARK_USDT", "FRONT_USDT", "STORJ_USDT", "TOKEN_USDT", "ORBS_USDT"
+    "AGIX_USDT", "LSK_USDT", "BAL_USDT", "C98_USDT", "DAR_USDT", "MBOX_USDT", "PEOPLE_USDT", "GMT_USDT"
 ]
 
 SYMBOLS = sorted(list(set(SYMBOLS)))
@@ -81,7 +77,7 @@ def scan_market():
     
     for symbol in SYMBOLS:
         df = get_mexc_candles(symbol)
-        time.sleep(0.05) # API koruması
+        time.sleep(0.05)
         
         if df is None or len(df) < 40:
             continue
@@ -103,7 +99,6 @@ def scan_market():
         if len(df) < 25:
             continue
             
-        # Son kapanan mumlara göre kontrol (i = len(df) - 3)
         i = len(df) - 3
         touch_candle = df.iloc[i]
         m1 = df.iloc[i+1]
@@ -142,7 +137,7 @@ def scan_market():
                         sl_price = sl
                         tp_price = entry - (dist * 2.0)
 
-        # --- LONG SİNYALİ ---
+        # --- LONG SİNYALİ (DÜZELTİLDİ) ---
         if not signal_found:
             recent_lows = df['Low'].iloc[max(0, i-10):i]
             is_new_bottom = touch_candle['Low'] <= recent_lows.min() * 1.005 or True
@@ -157,7 +152,7 @@ def scan_market():
                     if m1['Close'] > touch_candle['High']:
                         entry = m1['Close']
                         triggered = True
-                    elif m2['Close'] > touch_candle['High'] + m1['Low'] >= touch_candle['Low']:
+                    elif m2['Close'] > touch_candle['High'] and m1['Low'] >= touch_candle['Low']:
                         entry = m2['Close']
                         triggered = True
                     if triggered:
@@ -193,7 +188,7 @@ def scan_market():
 
 if __name__ == "__main__":
     print("Canlı Sapan Sinyal Botu Başlatıldı!")
-    send_telegram_message("🤖 150+ Ortak Parite Canlı Sapan Botu Aktif!")
+    send_telegram_message("🤖 Canlı Sapan Botu Güncellendi ve Aktif!")
     
     while True:
         try:
