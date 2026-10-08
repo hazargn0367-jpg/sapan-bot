@@ -81,7 +81,7 @@ def get_binance_klines(symbol, interval="15m", limit=100):
     return None
 
 def scan_market():
-    print(f"\n--- Piyasa Taranıyor | İlk Temas Korumalı (Parite: {len(POPULAR_PAIRS)}) ---")
+    print(f"\n--- Sapan Stratejisi Taranıyor | Parite: {len(POPULAR_PAIRS)} ---")
     success_count = 0
     match_count = 0
     
@@ -99,12 +99,19 @@ def scan_market():
         df['ema100'] = df['close'].ewm(span=100, adjust=False).mean()
         df['ema200'] = df['close'].ewm(span=200, adjust=False).mean()
         
+        # Stokastik Hesaplama (Stoch RSI / Fast Stochastic uyumlu)
+        low_min = df['low'].rolling(window=5).min()
+        high_max = df['high'].rolling(window=5).max()
+        fast_k = 100 * (df['close'] - low_min) / (high_max - low_min)
+        df['stoch_k'] = fast_k.rolling(window=3).mean()
+        
         current = df.iloc[-1]
         candle_timestamp = current['timestamp']
         low = current['low']
         high = current['high']
         current_close = current['close']
         ema20 = current['ema20']
+        stoch_k = current['stoch_k']
         
         # Trend Şartları
         is_bullish_aligned = (ema20 > current['ema50']) and (current['ema50'] > current['ema100']) and (current['ema100'] > current['ema200'])
@@ -115,7 +122,6 @@ def scan_market():
         is_bullish_expanded = (diff_20_50 > 0.003) and (diff_50_100 > 0.003)
         is_bearish_expanded = (diff_20_50 < -0.003) and (diff_50_100 < -0.003)
         
-        # Anlık temas durumu
         current_ema20_touch = (low <= ema20 <= high)
 
         recent_candles = df.iloc[-12:-1]  
@@ -135,29 +141,25 @@ def scan_market():
         desc = ""
         trend_type = ""
         
-        # --- LONG KONTROLÜ ---
+        # --- LONG KONTROLÜ (Sapan Kuralları + Stokastik < 30) ---
         if is_bullish_aligned and is_bullish_expanded and (recent_max_close > previous_max_high):
-            # Zirve mumundan şu anki muma kadar olan aralığı tarar
             candles_since_peak = df.loc[recent_max_close_idx + 1 : current.name - 1]
             prior_touches = candles_since_peak[candles_since_peak['low'] <= candles_since_peak['ema20']]
             
-            # Daha önce hiç değmemiş ve ŞU AN değiyorsa tetiklenir
-            if len(prior_touches) == 0 and current_ema20_touch:
+            if len(prior_touches) == 0 and current_ema20_touch and (stoch_k < 30):
                 valid_bullish_breakout = True
-                trend_type = "KATI SAPAN LONG (İLK TEMAS)"
-                desc = f"Fiyat önceki tepeyi ({previous_max_high}) GÖVDE ile kırdı ve EMA20'ye İLK DEFA temas etti!"
+                trend_type = "SAPAN LONG SİNYALİ"
+                desc = f"Fiyat önceki tepeyi ({previous_max_high}) kırdı, EMA20'ye ilk temas gerçekleşti ve Stokastik ({round(stoch_k, 2)}) < 30."
 
-        # --- SHORT KONTROLÜ ---
+        # --- SHORT KONTROLÜ (Sapan Kuralları + Stokastik > 70) ---
         if is_bearish_aligned and is_bearish_expanded and (recent_min_close < previous_min_low):
-            # Dip mumundan şu anki muma kadar olan aralığı tarar
             candles_since_dip = df.loc[recent_min_close_idx + 1 : current.name - 1]
             prior_touches = candles_since_dip[candles_since_dip['high'] >= candles_since_dip['ema20']]
             
-            # Daha önce hiç değmemiş ve ŞU AN değiyorsa tetiklenir
-            if len(prior_touches) == 0 and current_ema20_touch:
+            if len(prior_touches) == 0 and current_ema20_touch and (stoch_k > 70):
                 valid_bearish_breakout = True
-                trend_type = "KATI SAPAN SHORT (İLK TEMAS)"
-                desc = f"Fiyat önceki dibi ({previous_min_low}) GÖVDE ile kırdı ve EMA20'ye İLK DEFA temas etti!"
+                trend_type = "SAPAN SHORT SİNYALİ"
+                desc = f"Fiyat önceki dibi ({previous_min_low}) kırdı, EMA20'ye ilk temas gerçekleşti ve Stokastik ({round(stoch_k, 2)}) > 70."
                 
         if valid_bullish_breakout or valid_bearish_breakout:
             signal_key = f"{symbol}_{candle_timestamp}"
@@ -168,17 +170,15 @@ def scan_market():
             binance_link = f"https://www.binance.com/tr/futures/{clean_symbol}"
             
             message = (
-                f"🏹 <b>SAPAN STRATEJİSİ SİNYALİ!</b>\n\n"
+                f"🏹 <b>{trend_type}</b>\n\n"
                 f"Parite: #{clean_symbol} (15m Futures)\n"
-                f"Sinyal: {trend_type}\n"
-                f"Anlık Fiyat: {current_close}\n\n"
-                f"📊 <b>EMA Değerleri:</b>\n"
+                f"Anlık Fiyat: {current_close}\n"
+                f"Stokastik K: {round(stoch_k, 2)}\n\n"
+                f"📊 <b>EMA Seviyeleri:</b>\n"
                 f"• EMA 20: {round(ema20, 4)}\n"
-                f"• EMA 50: {round(current['ema50'], 4)}\n"
-                f"• EMA 100: {round(current['ema100'], 4)}\n"
-                f"• EMA 200: {round(current['ema200'], 4)}\n\n"
-                f"💡 <b>Açıklama:</b> {desc}\n\n"
-                f"🔗 <a href='{binance_link}'>Grafiği Tarayıcıda Aç</a>"
+                f"• EMA 50: {round(current['ema50'], 4)}\n\n"
+                f"💡 <b>Detay:</b> {desc}\n\n"
+                f"🔗 <a href='{binance_link}'>Grafiği Binance'te Aç</a>"
             )
             
             if send_telegram_message(BOT_TOKEN, CHAT_ID, message):
@@ -188,8 +188,8 @@ def scan_market():
     print(f"Tarama tamamlandı. İşlenen: {success_count} | Sinyal: {match_count}")
 
 if __name__ == "__main__":
-    print("İlk Temas Filtreli Sapan Botu başarıyla başlatıldı!")
-    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 İlk Temas (First Touch) Onaylı Sapan Botu aktif ve taramaya başladı!")
+    print("Sapan Stratejisi Telegram Botu Aktif Edildi!")
+    send_telegram_message(BOT_TOKEN, CHAT_ID, "🤖 Sapan Stratejisi Canlı Botu başarıyla başlatıldı ve taramaya başladı!")
     
     while True:
         try:
