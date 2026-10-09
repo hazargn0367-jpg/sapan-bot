@@ -144,6 +144,8 @@ def check_signals():
             else:
                 in_touch_status[symbol] = False
 
+    print(f"[{datetime.datetime.now()}] Tarama bitti. Yeni döngü için 2 dakika bekleniyor...\n")
+
 if __name__ == "__main__":
     print("Gerçek Zirve Filtreli Sinyal Botu Devrede (Anlık Log Akışı Aktif)...")
     while True:
