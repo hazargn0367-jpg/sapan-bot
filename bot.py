@@ -1,3 +1,7 @@
+import sys
+import functools
+print = functools.partial(print, flush=True)
+
 import requests
 import pandas as pd
 import numpy as np
@@ -102,17 +106,14 @@ def check_signals():
 
         # LONG KONTROLÜ (Gerçek Yeni Zirve Teyitli)
         if uptrend:
-            # Son 96 mumun (24 saatin) en yüksek tepesini alıyoruz
             extended_window = df.iloc[-98:-6]
             historical_peak = extended_window['High'].max()
             
-            # Son oluşan tepe, geçmişteki o büyük zirveyi MUTLAKA kırmış (aşmış) olmalı
             recent_peak_window = df.iloc[-6:-2]
             current_move_high = recent_peak_window['High'].max()
             
             is_truly_new_high = current_move_high > historical_peak
             
-            # EMA20 Teması ve Stoch RSI şartı
             is_touching = (c['Low'] <= c['EMA20']) and (c['Stoch_K'] < 30)
             
             if is_truly_new_high and is_touching:
@@ -144,7 +145,7 @@ def check_signals():
                 in_touch_status[symbol] = False
 
 if __name__ == "__main__":
-    print("Gerçek Zirve Filtreli Sinyal Botu Devrede...")
+    print("Gerçek Zirve Filtreli Sinyal Botu Devrede (Anlık Log Akışı Aktif)...")
     while True:
         try:
             check_signals()
