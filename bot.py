@@ -24,14 +24,12 @@ SYMBOLS = [
     "POLYX_USDT", "CKB_USDT", "PORT3_USDT", "SLERF_USDT", "BENDOG_USDT", "WUF_USDT", "MOG_USDT", 
     "NEIRO_USDT", "CATI_USDT", "DOGS_USDT", "HMSTR_USDT", "EIGEN_USDT", "SCR_USDT", "GOAT_USDT", 
     "PNUT_USDT", "ACT_USDT", "HIPPO_USDT", "MOODENG_USDT", "ANIME_USDT", "PENGU_USDT", "TRUMP_USDT", 
-    "MELANIA_USDT", "SPLUS_USDT", "ZETA_USDT", "ACE_USDT", "ALT_USDT", "PIXEL_USDT", "PORTAL_USDT",
-    "BOME_USDT", "SAGA_USDT", "BB_USDT", "REZ_USDT", "IO_USDT", "ZK_USDT", "LISTA_USDT", "BANANA_USDT",
-    "RENDER_USDT", "TON_USDT", "DOGS_USDT", "CATI_USDT", "HMSTR_USDT", "EIGEN_USDT", "SCR_USDT"
+    "MELANIA_USDT", "SPLUS_USDT", "ZETA_USDT", "ACE_USDT", "ALT_USDT", "PIXEL_USDT", 
+    "SAGA_USDT", "LISTA_USDT", "BANANA_USDT", "TON_USDT"
 ]
 
 SYMBOLS = sorted(list(set(SYMBOLS)))
 
-# Telegram Bilgilerin
 TELEGRAM_BOT_TOKEN = "8663767442:AAEFpBh0V1eu5tBrWWc0Ki2EmVdS9f_rHiQ"
 TELEGRAM_CHAT_ID = "1494316515"
 
@@ -71,7 +69,7 @@ def get_latest_data(symbol):
     return None
 
 def check_signals():
-    print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} adet futures paritesi taranıyor...")
+    print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} adet futures paritesi taranıyor (Kesin Tepe/Dip Filtreli)...")
 
     for symbol in SYMBOLS:
         df = get_latest_data(symbol)
@@ -96,36 +94,47 @@ def check_signals():
         if symbol not in in_touch_status:
             in_touch_status[symbol] = False
 
-        # TradingView Linki oluşturma (Örn: MEXC:BTCUSDT)
         tv_symbol = symbol.replace("_", "")
         tv_link = f"https://www.tradingview.com/chart/?symbol=MEXC:{tv_symbol}"
 
-        # LONG SETUP
+        # LONG SETUP (Yeni En Yüksek Tepe + Temiz Geri Çekilme + EMA20 Teması)
         if uptrend:
+            # Son 20 mumun en yüksek seviyesi (Gerçek yeni tepe kontrolü)
+            lookback_window = df.iloc[-25:-2]
+            highest_peak = lookback_window['High'].max()
+            
+            # Fiyat yakın zamanda bu zirveyi görmüş olmalı (çift tepe veya takılı kalma değil, taze tepe)
+            recent_made_high = c['High'] >= highest_peak * 0.995 or df.iloc[-5]['High'] >= highest_peak * 0.995
+            
             is_touching = (c['Low'] <= c['EMA20']) and (c['Stoch_K'] < 30)
             
-            if is_touching:
+            if recent_made_high and is_touching:
                 if not in_touch_status[symbol]:
-                    msg = f"🟢 **İLK TEMAS: LONG SİNYALİ!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\n\n[TradingView Grafiği Aç]({tv_link})"
+                    msg = f"🟢 **YENİ TEPE + İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\n\n[TradingView Grafiği Aç]({tv_link})"
                     send_telegram_message(msg)
                     in_touch_status[symbol] = True
             else:
                 in_touch_status[symbol] = False
 
-        # SHORT SETUP
+        # SHORT SETUP (Yeni En Düşük Dip + Temiz Yükseliş/Düzeltme + EMA20 Teması)
         elif downtrend:
+            lookback_window = df.iloc[-25:-2]
+            lowest_valley = lookback_window['Low'].min()
+            
+            recent_made_low = c['Low'] <= lowest_valley * 1.005 or df.iloc[-5]['Low'] <= lowest_valley * 1.005
+            
             is_touching = (c['High'] >= c['EMA20']) and (c['Stoch_K'] > 70)
             
-            if is_touching:
+            if recent_made_low and is_touching:
                 if not in_touch_status[symbol]:
-                    msg = f"🔴 **İLK TEMAS: SHORT SİNYALİ!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\n\n[TradingView Grafiği Aç]({tv_link})"
+                    msg = f"🔴 **YENİ DİP + İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\n\n[TradingView Grafiği Aç]({tv_link})"
                     send_telegram_message(msg)
                     in_touch_status[symbol] = True
             else:
                 in_touch_status[symbol] = False
 
 if __name__ == "__main__":
-    print("TradingView Linkli Sinyal Botu Aktif Edildi...")
+    print("Gelişmiş Filtreli Sinyal Botu Aktif Edildi...")
     while True:
         try:
             check_signals()
