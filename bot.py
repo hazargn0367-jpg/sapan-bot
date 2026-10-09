@@ -35,7 +35,6 @@ SYMBOLS = sorted(list(set(SYMBOLS)))
 TELEGRAM_BOT_TOKEN = "8663767442:AAEFpBh0V1eu5tBrWWc0Ki2EmVdS9f_rHiQ"
 TELEGRAM_CHAT_ID = "1494316515"
 
-# Her parite için ilk temas durumunu takip eden sözlük
 in_touch_status = {}
 
 def send_telegram_message(message):
@@ -43,7 +42,8 @@ def send_telegram_message(message):
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message,
-        "parse_mode": "Markdown"
+        "parse_mode": "Markdown",
+        "disable_web_page_preview": True
     }
     try:
         requests.post(url, json=payload, timeout=5)
@@ -88,7 +88,7 @@ def check_signals():
         raw_k = 100 * (df['Close'] - low_min) / denom
         df['Stoch_K'] = raw_k.rolling(window=3).mean()
         
-        c = df.iloc[-2]  # Tamamlanan son mum
+        c = df.iloc[-2]
         
         uptrend = (c['EMA20'] > c['EMA50']) and (c['EMA50'] > c['EMA100']) and (c['EMA100'] > c['EMA200'])
         downtrend = (c['EMA20'] < c['EMA50']) and (c['EMA50'] < c['EMA100']) and (c['EMA100'] < c['EMA200'])
@@ -96,13 +96,17 @@ def check_signals():
         if symbol not in in_touch_status:
             in_touch_status[symbol] = False
 
+        # TradingView Linki oluşturma (Örn: MEXC:BTCUSDT)
+        tv_symbol = symbol.replace("_", "")
+        tv_link = f"https://www.tradingview.com/chart/?symbol=MEXC:{tv_symbol}"
+
         # LONG SETUP
         if uptrend:
             is_touching = (c['Low'] <= c['EMA20']) and (c['Stoch_K'] < 30)
             
             if is_touching:
                 if not in_touch_status[symbol]:
-                    msg = f"🟢 **İLK TEMAS: LONG SİNYALİ!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\nDurum: Paralel trend, temiz düzeltme sonrası EMA20'ye ilk kez değdi!"
+                    msg = f"🟢 **İLK TEMAS: LONG SİNYALİ!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\n\n[TradingView Grafiği Aç]({tv_link})"
                     send_telegram_message(msg)
                     in_touch_status[symbol] = True
             else:
@@ -114,14 +118,14 @@ def check_signals():
             
             if is_touching:
                 if not in_touch_status[symbol]:
-                    msg = f"🔴 **İLK TEMAS: SHORT SİNYALİ!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\nDurum: Paralel trend, temiz düzeltme sonrası EMA20'ye ilk kez değdi!"
+                    msg = f"🔴 **İLK TEMAS: SHORT SİNYALİ!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\n\n[TradingView Grafiği Aç]({tv_link})"
                     send_telegram_message(msg)
                     in_touch_status[symbol] = True
             else:
                 in_touch_status[symbol] = False
 
 if __name__ == "__main__":
-    print("Genişletilmiş Telegram Sinyal Botu Aktif Edildi...")
+    print("TradingView Linkli Sinyal Botu Aktif Edildi...")
     while True:
         try:
             check_signals()
