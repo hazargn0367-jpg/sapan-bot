@@ -8,7 +8,6 @@ import numpy as np
 import time
 import datetime
 
-# BTC, ETH ve BNB hariç bırakılmış devasa liste
 SYMBOLS = [
     "SOL_USDT", "XRP_USDT", "DOGE_USDT", "ADA_USDT", "AVAX_USDT", 
     "LINK_USDT", "NEAR_USDT", "SUI_USDT", "RENDER_USDT", "FET_USDT", "INJ_USDT", "ARB_USDT", 
@@ -76,7 +75,7 @@ def get_latest_data(symbol):
     return None
 
 def check_signals():
-    print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite gerçek tepe/dip doğrulamasıyla taranıyor...")
+    print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite KAPANIŞ onaylı gerçek tepe/dip ile taranıyor...")
 
     for symbol in SYMBOLS:
         df = get_latest_data(symbol)
@@ -107,41 +106,43 @@ def check_signals():
         tv_symbol = symbol.replace("_", "")
         tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{tv_symbol}.P"
 
-        # LONG KONTROLÜ (Gerçek Yeni Zirve Teyitli)
+        # LONG KONTROLÜ (Gövde Kapanışlı Yeni Zirve Teyidi)
         if uptrend:
             extended_window = df.iloc[-98:-6]
-            historical_peak = extended_window['High'].max()
+            historical_peak = extended_window['High'].max() # Geçmiş tepenin en uç iğnesi
             
             recent_peak_window = df.iloc[-6:-2]
-            current_move_high = recent_peak_window['High'].max()
+            current_move_highest_close = recent_peak_window['Close'].max() # Yeni hareketin EN YÜKSEK KAPANIŞI
             
-            is_truly_new_high = current_move_high > historical_peak
+            # Kural: Yeni zirve iğneyle değil, gövde kapanışıyla tarihi iğnenin üstüne çıkmalı
+            is_truly_new_high = current_move_highest_close > historical_peak
             
             is_touching = (c['Low'] <= c['EMA20']) and (c['Stoch_K'] < 30)
             
             if is_truly_new_high and is_touching:
                 if not in_touch_status[symbol]:
-                    msg = f"🟢 **GERÇEK YENİ TEPE + İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\nDurum: Geçmiş zirve kırıldı, temiz düzeltmeyle EMA20'ye ilk temas gerçekleşti!\n\n[TradingView Grafiği Aç]({tv_link})"
+                    msg = f"🟢 **KAPANIŞ ONAYLI YENİ TEPE + İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\nDurum: Önceki zirve MUM KAPANIŞI ile aşıldı, ardından EMA20'ye ilk temas gerçekleşti!\n\n[TradingView Grafiği Aç]({tv_link})"
                     send_telegram_message(msg)
                     in_touch_status[symbol] = True
             else:
                 in_touch_status[symbol] = False
 
-        # SHORT KONTROLÜ (Gerçek Yeni Dip Teyitli)
+        # SHORT KONTROLÜ (Gövde Kapanışlı Yeni Dip Teyidi)
         elif downtrend:
             extended_window = df.iloc[-98:-6]
-            historical_valley = extended_window['Low'].min()
+            historical_valley = extended_window['Low'].min() # Geçmiş dibin en uç iğnesi
             
             recent_valley_window = df.iloc[-6:-2]
-            current_move_low = recent_valley_window['Low'].min()
+            current_move_lowest_close = recent_valley_window['Close'].min() # Yeni hareketin EN DÜŞÜK KAPANIŞI
             
-            is_truly_new_low = current_move_low < historical_valley
+            # Kural: Yeni dip iğneyle değil, gövde kapanışıyla tarihi iğnenin altına inmeli
+            is_truly_new_low = current_move_lowest_close < historical_valley
             
             is_touching = (c['High'] >= c['EMA20']) and (c['Stoch_K'] > 70)
             
             if is_truly_new_low and is_touching:
                 if not in_touch_status[symbol]:
-                    msg = f"🔴 **GERÇEK YENİ DİP + İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\nDurum: Geçmiş dip kırıldı, temiz yükselişle EMA20'ye ilk temas gerçekleşti!\n\n[TradingView Grafiği Aç]({tv_link})"
+                    msg = f"🔴 **KAPANIŞ ONAYLI YENİ DİP + İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `15m`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\nDurum: Önceki dip MUM KAPANIŞI ile kırıldı, ardından EMA20'ye ilk temas gerçekleşti!\n\n[TradingView Grafiği Aç]({tv_link})"
                     send_telegram_message(msg)
                     in_touch_status[symbol] = True
             else:
@@ -150,7 +151,7 @@ def check_signals():
     print(f"[{datetime.datetime.now()}] Tarama bitti. Yeni döngü için 2 dakika bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("Gerçek Zirve Filtreli Sinyal Botu Devrede (Anlık Log Akışı Aktif)...")
+    print("Kapanış Onaylı Sinyal Botu Devrede (Anlık Log Akışı Aktif)...")
     while True:
         try:
             check_signals()
