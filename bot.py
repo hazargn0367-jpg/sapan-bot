@@ -8,8 +8,9 @@ import numpy as np
 import time
 import datetime
 
+# BTC, ETH ve BNB hariç bırakılmış devasa liste
 SYMBOLS = [
-    "BTC_USDT", "ETH_USDT", "SOL_USDT", "XRP_USDT", "DOGE_USDT", "ADA_USDT", "AVAX_USDT", 
+    "SOL_USDT", "XRP_USDT", "DOGE_USDT", "ADA_USDT", "AVAX_USDT", 
     "LINK_USDT", "NEAR_USDT", "SUI_USDT", "RENDER_USDT", "FET_USDT", "INJ_USDT", "ARB_USDT", 
     "OP_USDT", "TIA_USDT", "SEI_USDT", "JUP_USDT", "PYTH_USDT", "STRK_USDT", "ENA_USDT", 
     "WIF_USDT", "PEPE_USDT", "SHIB_USDT", "BOME_USDT", "ORDI_USDT", "BONK_USDT", "FLOKI_USDT", 
@@ -29,10 +30,9 @@ SYMBOLS = [
     "NEIRO_USDT", "CATI_USDT", "DOGS_USDT", "HMSTR_USDT", "EIGEN_USDT", "SCR_USDT", "GOAT_USDT", 
     "PNUT_USDT", "ACT_USDT", "HIPPO_USDT", "MOODENG_USDT", "ANIME_USDT", "PENGU_USDT", "TRUMP_USDT", 
     "MELANIA_USDT", "SPLUS_USDT", "ZETA_USDT", "ACE_USDT", "ALT_USDT", "PIXEL_USDT", 
-    "SAGA_USDT", "LISTA_USDT", "BANANA_USDT", "TON_USDT", "SENT_USDT", "HMSTR_USDT", 
-    "CATI_USDT", "MAJOR_USDT", "PUNDIX_USDT", "STG_USDT", "HIVE_USDT", "COW_USDT", 
-    "PNUT_USDT", "ACT_USDT", "LUCE_USDT", "USUAL_USDT", "VIRTUAL_USDT", "SPX_USDT", 
-    "AI16Z_USDT", "FARTCOIN_USDT", "CHILLGUY_USDT", "PENGU_USDT", "TRUMP_USDT", "MELANIA_USDT"
+    "SAGA_USDT", "LISTA_USDT", "BANANA_USDT", "TON_USDT", "SENT_USDT", "MAJOR_USDT", 
+    "PUNDIX_USDT", "STG_USDT", "HIVE_USDT", "COW_USDT", "LUCE_USDT", "USUAL_USDT", 
+    "VIRTUAL_USDT", "SPX_USDT", "AI16Z_USDT", "FARTCOIN_USDT", "CHILLGUY_USDT"
 ]
 
 SYMBOLS = sorted(list(set(SYMBOLS)))
@@ -104,7 +104,6 @@ def check_signals():
         if symbol not in in_touch_status:
             in_touch_status[symbol] = False
 
-        # LINK GÜNCELLEMESİ: MEXC yerine BINANCE eklendi ve sonuna .P (Vadeli İşlemler) konuldu.
         tv_symbol = symbol.replace("_", "")
         tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{tv_symbol}.P"
 
