@@ -104,8 +104,9 @@ def check_signals():
         if symbol not in in_touch_status:
             in_touch_status[symbol] = False
 
+        # LINK GÜNCELLEMESİ: MEXC yerine BINANCE eklendi ve sonuna .P (Vadeli İşlemler) konuldu.
         tv_symbol = symbol.replace("_", "")
-        tv_link = f"https://www.tradingview.com/chart/?symbol=MEXC:{tv_symbol}"
+        tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{tv_symbol}.P"
 
         # LONG KONTROLÜ (Gerçek Yeni Zirve Teyitli)
         if uptrend:
