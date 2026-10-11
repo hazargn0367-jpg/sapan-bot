@@ -82,7 +82,7 @@ def check_signals():
     timeframes = [("15m", "Min15"), ("30m", "Min30")]
     
     for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte EMA20-50-100 Trendi ile taranıyor...")
+        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte SIFIR TOLERANS (Kesin İlk Temas) ile taranıyor...")
 
         for symbol in SYMBOLS:
             df = get_latest_data(symbol, api_interval)
@@ -100,7 +100,6 @@ def check_signals():
             
             c_live = df.iloc[-1]
             
-            # Sadece EMA 20, 50, 100 dikkate alınıyor
             uptrend = (c_live['EMA20'] > c_live['EMA50']) and (c_live['EMA50'] > c_live['EMA100'])
             downtrend = (c_live['EMA20'] < c_live['EMA50']) and (c_live['EMA50'] < c_live['EMA100'])
 
@@ -131,13 +130,14 @@ def check_signals():
                         
                         is_truly_new_high = (new_peak_closes > historical_peak).any()
                         
+                        # KESİN İLK TEMAS KONTROLÜ (Sıfır Tolerans)
                         touch_start = max_high_idx + 1
+                        touch_end = current_idx - 1 # Canlı mumdan önceki tüm mumları kapsar
                         
-                        touch_check_end = max(touch_start, current_idx - 3)
-                        if touch_check_end > touch_start:
-                            no_old_touches = (df['Low'].iloc[touch_start : touch_check_end] > df['EMA20'].iloc[touch_start : touch_check_end]).all()
+                        if touch_end >= touch_start:
+                            no_prior_touch = (df['Low'].iloc[touch_start : touch_end + 1] > df['EMA20'].iloc[touch_start : touch_end + 1]).all()
                         else:
-                            no_old_touches = True
+                            no_prior_touch = True
                             
                         pullback_df = df.iloc[touch_start : current_idx + 1]
                         exception_candles = (pullback_df['Close'] > pullback_df['Open']).sum()
@@ -145,9 +145,9 @@ def check_signals():
                         
                         is_touching = (c_live['Low'] <= c_live['EMA20']) and (c_live['Stoch_K'] < 30)
                         
-                        if is_truly_new_high and is_touching and no_old_touches and is_clean_pullback:
+                        if is_truly_new_high and is_touching and no_prior_touch and is_clean_pullback:
                             if not in_touch_status[tf_label][symbol]:
-                                msg = f"🟢 **TEMİZ DÜZELTME + İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Zirveden sonra temiz bir düşüş dalgasıyla EMA20'ye ilk temas geldi (Stoch RSI < 30)!\n\n[TradingView Grafiği Aç]({tv_link})"
+                                msg = f"🟢 **TEMİZ DÜZELTME + ANLIK İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Zirveden sonra temiz bir düşüş dalgasıyla EMA20'ye SIFIR TOLERANSLI ilk temas şu an gerçekleşti!\n\n[TradingView Grafiği Aç]({tv_link})"
                                 send_telegram_message(msg)
                                 in_touch_status[tf_label][symbol] = True
                         else:
@@ -171,13 +171,14 @@ def check_signals():
                         
                         is_truly_new_low = (new_valley_closes < historical_valley).any()
                         
+                        # KESİN İLK TEMAS KONTROLÜ (Sıfır Tolerans)
                         touch_start = min_low_idx + 1
+                        touch_end = current_idx - 1 # Canlı mumdan önceki tüm mumları kapsar
                         
-                        touch_check_end = max(touch_start, current_idx - 3)
-                        if touch_check_end > touch_start:
-                            no_old_touches = (df['High'].iloc[touch_start : touch_check_end] < df['EMA20'].iloc[touch_start : touch_check_end]).all()
+                        if touch_end >= touch_start:
+                            no_prior_touch = (df['High'].iloc[touch_start : touch_end + 1] < df['EMA20'].iloc[touch_start : touch_end + 1]).all()
                         else:
-                            no_old_touches = True
+                            no_prior_touch = True
                             
                         pullback_df = df.iloc[touch_start : current_idx + 1]
                         exception_candles = (pullback_df['Close'] < pullback_df['Open']).sum()
@@ -185,9 +186,9 @@ def check_signals():
                         
                         is_touching = (c_live['High'] >= c_live['EMA20']) and (c_live['Stoch_K'] > 70)
                         
-                        if is_truly_new_low and is_touching and no_old_touches and is_clean_pullback:
+                        if is_truly_new_low and is_touching and no_prior_touch and is_clean_pullback:
                             if not in_touch_status[tf_label][symbol]:
-                                msg = f"🔴 **TEMİZ DÜZELTME + İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Dipten sonra temiz bir yükseliş dalgasıyla EMA20'ye ilk temas geldi (Stoch RSI > 70)!\n\n[TradingView Grafiği Aç]({tv_link})"
+                                msg = f"🔴 **TEMİZ DÜZELTME + ANLIK İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Dipten sonra temiz bir yükseliş dalgasıyla EMA20'ye SIFIR TOLERANSLI ilk temas şu an gerçekleşti!\n\n[TradingView Grafiği Aç]({tv_link})"
                                 send_telegram_message(msg)
                                 in_touch_status[tf_label][symbol] = True
                         else:
@@ -197,7 +198,7 @@ def check_signals():
     print(f"[{datetime.datetime.now()}] Çift zamanlı (15m & 30m) tarama bitti. Hızlı reaksiyon için 15 saniye bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("Mutlak Yapı & Temas Toleranslı Bot (15m & 30m) - EMA200 İptal Edildi - Devrede...")
+    print("Mutlak Yapı & Sıfır Toleranslı İlk Temas Botu (15m & 30m) Devrede...")
     while True:
         try:
             check_signals()
