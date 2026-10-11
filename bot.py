@@ -81,7 +81,7 @@ def check_signals():
     timeframes = [("15m", "Min15"), ("30m", "Min30")]
     
     for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte İĞNE REDDİ (Kapanış Şartı) ile taranıyor...")
+        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte DİNAMİK İĞNE REDDİ ile taranıyor...")
 
         for symbol in SYMBOLS:
             df = get_latest_data(symbol, api_interval)
@@ -112,36 +112,58 @@ def check_signals():
             tv_symbol = symbol.replace("_", "")
             tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{tv_symbol}.P"
 
+            # LONG KONTROLÜ
             if uptrend:
-                past_window = df.iloc[-70:-20]
-                recent_window = df.iloc[-20:-1]
+                # Son 40 mum içindeki en yüksek kapanışı ve onun grafikteki net pozisyonunu bul
+                recent_closes = df['Close'].iloc[-40:-1]
+                max_close_val = np.max(recent_closes.values)
+                max_close_pos = np.argmax(recent_closes.values) 
+                abs_max_close_pos = len(df) - 40 + max_close_pos # Grafikteki gerçek indeksi
                 
-                historical_peak = past_window['High'].max()
+                # Geçmiş tepeyi, bulduğumuz en yüksek kapanıştan en az 8 mum öncesine kadar ara
+                past_highs = df['High'].iloc[-120 : abs_max_close_pos - 8]
                 
-                is_truly_new_high = (recent_window['Close'] > historical_peak).any()
+                if len(past_highs) > 0:
+                    historical_peak = past_highs.max()
+                    # Yeni gövde kapanışı, eski iğnenin tam olarak üstünde mi?
+                    is_truly_new_high = max_close_val > historical_peak
+                else:
+                    is_truly_new_high = False
+                    
                 is_touching = (c_live['Low'] <= c_live['EMA20']) and (c_live['Stoch_K'] < 30)
                 
                 if is_truly_new_high and is_touching:
                     if not in_touch_status[tf_label][symbol]:
-                        msg = f"🟢 **GERÇEK KIRILIM + ANLIK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Önceki zirvenin üstünde mum GÖVDESİYLE kapanış yapıldı. Şu anki hareketli mum EMA20'ye ilk temasını gerçekleştirdi!\n\n[TradingView Grafiği Aç]({tv_link})"
+                        msg = f"🟢 **DİNAMİK KIRILIM + ANLIK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Önceki zirvenin iğne ucu, GÖVDE ile net şekilde aşıldı. Şu anki hareketli mum EMA20'ye ilk temasını gerçekleştirdi!\n\n[TradingView Grafiği Aç]({tv_link})"
                         send_telegram_message(msg)
                         in_touch_status[tf_label][symbol] = True
                 else:
                     if not is_touching:
                         in_touch_status[tf_label][symbol] = False
 
+            # SHORT KONTROLÜ
             elif downtrend:
-                past_window = df.iloc[-70:-20]
-                recent_window = df.iloc[-20:-1]
+                # Son 40 mum içindeki en düşük kapanışı ve onun grafikteki net pozisyonunu bul
+                recent_closes = df['Close'].iloc[-40:-1]
+                min_close_val = np.min(recent_closes.values)
+                min_close_pos = np.argmin(recent_closes.values)
+                abs_min_close_pos = len(df) - 40 + min_close_pos # Grafikteki gerçek indeksi
                 
-                historical_valley = past_window['Low'].min()
+                # Geçmiş dip seviyesini, bulduğumuz en düşük kapanıştan en az 8 mum öncesine kadar ara
+                past_lows = df['Low'].iloc[-120 : abs_min_close_pos - 8]
                 
-                is_truly_new_low = (recent_window['Close'] < historical_valley).any()
+                if len(past_lows) > 0:
+                    historical_valley = past_lows.min()
+                    # Yeni gövde kapanışı, eski iğnenin tam olarak altında mı?
+                    is_truly_new_low = min_close_val < historical_valley
+                else:
+                    is_truly_new_low = False
+                    
                 is_touching = (c_live['High'] >= c_live['EMA20']) and (c_live['Stoch_K'] > 70)
                 
                 if is_truly_new_low and is_touching:
                     if not in_touch_status[tf_label][symbol]:
-                        msg = f"🔴 **GERÇEK KIRILIM + ANLIK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Önceki dibin altında mum GÖVDESİYLE kapanış yapıldı (İğne reddi). Şu anki hareketli mum EMA20'ye ilk temasını gerçekleştirdi!\n\n[TradingView Grafiği Aç]({tv_link})"
+                        msg = f"🔴 **DİNAMİK KIRILIM + ANLIK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Önceki dibin iğne ucu, GÖVDE ile net şekilde kırıldı. Şu anki hareketli mum EMA20'ye ilk temasını gerçekleştirdi!\n\n[TradingView Grafiği Aç]({tv_link})"
                         send_telegram_message(msg)
                         in_touch_status[tf_label][symbol] = True
                 else:
@@ -151,7 +173,7 @@ def check_signals():
     print(f"[{datetime.datetime.now()}] Çift zamanlı (15m & 30m) tarama bitti. Hızlı reaksiyon için 15 saniye bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("MSB Gövde Onaylı & Anlık Temas Bildirimli Bot (15m & 30m) Devrede...")
+    print("Dinamik MSB & Anlık Temas Bildirimli Bot (15m & 30m) Devrede...")
     while True:
         try:
             check_signals()
