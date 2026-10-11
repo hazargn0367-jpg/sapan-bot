@@ -72,7 +72,6 @@ def get_latest_data(symbol, interval):
                     'Low': [float(x) for x in d.get("low", [])],
                     'Close': [float(x) for x in d.get("close", [])]
                 })
-                # İndeksleri kesin ve sıralı tamsayılara dönüştür
                 df = df.reset_index(drop=True)
                 return df
     except:
@@ -83,7 +82,7 @@ def check_signals():
     timeframes = [("15m", "Min15"), ("30m", "Min30")]
     
     for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte DALGA ODAKLI MSB KONTROLÜ ile taranıyor...")
+        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte İLK TEMAS FİLTRESİ ile taranıyor...")
 
         for symbol in SYMBOLS:
             df = get_latest_data(symbol, api_interval)
@@ -114,48 +113,56 @@ def check_signals():
             tv_symbol = symbol.replace("_", "")
             tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{tv_symbol}.P"
 
-            # LONG KONTROLÜ (Yükseliş Trendinde Düzeltme)
+            # LONG KONTROLÜ
             if uptrend:
-                # 1. Ralli öncesi son düzeltmenin dibini bul
                 valley_idx = df['Low'].iloc[-60:-5].idxmin()
-                
-                # 2. O dipten önceki eski tepenin iğne ucunu bul (Yatay direnç çizgisi)
                 start_idx = max(0, valley_idx - 60)
                 historical_peak = df['High'].iloc[start_idx:valley_idx].max()
                 
-                # 3. Yeni ralli dalgasındaki kapanışlar o iğneyi gövdeyle geçti mi?
                 recent_closes = df['Close'].iloc[valley_idx: -1]
                 is_truly_new_high = (recent_closes > historical_peak).any()
                 
+                # YENİ EKLENEN İLK TEMAS KONTROLÜ
+                new_peak_idx = df['High'].iloc[valley_idx:-1].idxmax()
+                if new_peak_idx < len(df) - 2:
+                    # Yeni tepeden güncel muma kadar olan tüm kapanmış mumların iğneleri EMA20'nin üzerinde olmalı
+                    no_prior_touch = (df['Low'].iloc[new_peak_idx + 1 : -1] > df['EMA20'].iloc[new_peak_idx + 1 : -1]).all()
+                else:
+                    no_prior_touch = True # Tepe daha yeni oluştuysa geçmiş temas yoktur
+                
                 is_touching = (c_live['Low'] <= c_live['EMA20']) and (c_live['Stoch_K'] < 30)
                 
-                if is_truly_new_high and is_touching:
+                if is_truly_new_high and is_touching and no_prior_touch:
                     if not in_touch_status[tf_label][symbol]:
-                        msg = f"🟢 **DALGA ONAYLI KIRILIM + ANLIK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Önceki direnç iğnesi, yeni ralli dalgası tarafından GÖVDE ile aşıldı. Şu anki hareketli mum EMA20'ye ilk temasını gerçekleştirdi!\n\n[TradingView Grafiği Aç]({tv_link})"
+                        msg = f"🟢 **DALGA ONAYLI İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Önceki direnç gövdeyle aşıldı. Fiyat yeni tepeden sonra GERÇEK İLK TEMASINI şu an EMA20'ye gerçekleştiriyor!\n\n[TradingView Grafiği Aç]({tv_link})"
                         send_telegram_message(msg)
                         in_touch_status[tf_label][symbol] = True
                 else:
                     if not is_touching:
                         in_touch_status[tf_label][symbol] = False
 
-            # SHORT KONTROLÜ (Düşüş Trendinde Düzeltme)
+            # SHORT KONTROLÜ
             elif downtrend:
-                # 1. Çöküş öncesi son düzeltmenin tepesini bul
                 peak_idx = df['High'].iloc[-60:-5].idxmax()
-                
-                # 2. O tepeden önceki eski dibin iğne ucunu bul (Yatay destek çizgisi)
                 start_idx = max(0, peak_idx - 60)
                 historical_valley = df['Low'].iloc[start_idx:peak_idx].min()
                 
-                # 3. Yeni çöküş dalgasındaki kapanışlar o iğnenin altında gövde kapattı mı?
                 recent_closes = df['Close'].iloc[peak_idx: -1]
                 is_truly_new_low = (recent_closes < historical_valley).any()
                 
+                # YENİ EKLENEN İLK TEMAS KONTROLÜ
+                new_valley_idx = df['Low'].iloc[peak_idx:-1].idxmin()
+                if new_valley_idx < len(df) - 2:
+                    # Yeni dipten güncel muma kadar olan tüm kapanmış mumların iğneleri EMA20'nin altında olmalı
+                    no_prior_touch = (df['High'].iloc[new_valley_idx + 1 : -1] < df['EMA20'].iloc[new_valley_idx + 1 : -1]).all()
+                else:
+                    no_prior_touch = True
+                
                 is_touching = (c_live['High'] >= c_live['EMA20']) and (c_live['Stoch_K'] > 70)
                 
-                if is_truly_new_low and is_touching:
+                if is_truly_new_low and is_touching and no_prior_touch:
                     if not in_touch_status[tf_label][symbol]:
-                        msg = f"🔴 **DALGA ONAYLI KIRILIM + ANLIK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Önceki destek iğnesi, yeni çöküş dalgası tarafından GÖVDE ile kırıldı. Şu anki hareketli mum EMA20'ye ilk temasını gerçekleştirdi!\n\n[TradingView Grafiği Aç]({tv_link})"
+                        msg = f"🔴 **DALGA ONAYLI İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Önceki destek gövdeyle kırıldı. Fiyat yeni dipten sonra GERÇEK İLK TEMASINI şu an EMA20'ye gerçekleştiriyor!\n\n[TradingView Grafiği Aç]({tv_link})"
                         send_telegram_message(msg)
                         in_touch_status[tf_label][symbol] = True
                 else:
@@ -165,7 +172,7 @@ def check_signals():
     print(f"[{datetime.datetime.now()}] Çift zamanlı (15m & 30m) tarama bitti. Hızlı reaksiyon için 15 saniye bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("Dalga Odaklı MSB & Anlık Temas Bildirimli Bot (15m & 30m) Devrede...")
+    print("Dalga Odaklı MSB & KATI İlk Temas Bildirimli Bot (15m & 30m) Devrede...")
     while True:
         try:
             check_signals()
