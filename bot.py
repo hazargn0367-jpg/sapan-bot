@@ -39,7 +39,8 @@ SYMBOLS = sorted(list(set(SYMBOLS)))
 TELEGRAM_BOT_TOKEN = "8663767442:AAEFpBh0V1eu5tBrWWc0Ki2EmVdS9f_rHiQ"
 TELEGRAM_CHAT_ID = "1494316515"
 
-in_touch_status = {
+# Spam önleyici Dalga/Pivot hafızası
+last_signal_pivot = {
     "15m": {},
     "30m": {}
 }
@@ -82,11 +83,11 @@ def check_signals():
     timeframes = [("15m", "Min15"), ("30m", "Min30")]
     
     for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte SIFIR TOLERANS (Kesin İlk Temas) ile taranıyor...")
+        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte GENİŞ UFUKLU (Lower High Korumalı) taranıyor...")
 
         for symbol in SYMBOLS:
             df = get_latest_data(symbol, api_interval)
-            if df is None or len(df) < 150: continue
+            if df is None or len(df) < 180: continue
                 
             df['EMA20'] = df['Close'].ewm(span=20, adjust=False).mean()
             df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
@@ -103,20 +104,24 @@ def check_signals():
             uptrend = (c_live['EMA20'] > c_live['EMA50']) and (c_live['EMA50'] > c_live['EMA100'])
             downtrend = (c_live['EMA20'] < c_live['EMA50']) and (c_live['EMA50'] < c_live['EMA100'])
 
-            if symbol not in in_touch_status[tf_label]:
-                in_touch_status[tf_label][symbol] = False
+            if symbol not in last_signal_pivot[tf_label]:
+                last_signal_pivot[tf_label][symbol] = -1
 
             tv_symbol = symbol.replace("_", "")
-            tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{tv_symbol}.P"
+            tv_link = f"https://www.tradingview.com/chart/?symbol=MEXC:{tv_symbol}"
+            mexc_link = f"https://futures.mexc.com/exchange/{symbol}?type=linear_swap"
 
             current_idx = df.index[-1]
-            start_idx = max(0, current_idx - 80)
-            recent_threshold = current_idx - 25
+            # Ufuk genişletildi: 80 yerine 150 mum geçmişe bakar (15 dklıkta ~37.5 saat)
+            start_idx = max(0, current_idx - 150)
+            recent_threshold = current_idx - 30
 
             # LONG KONTROLÜ
             if uptrend:
+                # 150 mumluk koca penceredeki MUTLAK EN YÜKSEK tepeyi bulur
                 max_high_idx = df['High'].iloc[start_idx : current_idx].idxmax()
                 
+                # Eğer bu mutlak tepe son 30 mum içindeyse (yani Düşük Tepe değilse) çalışır
                 if max_high_idx >= recent_threshold:
                     past_start = max(0, start_idx)
                     past_end = max_high_idx - 8
@@ -130,9 +135,8 @@ def check_signals():
                         
                         is_truly_new_high = (new_peak_closes > historical_peak).any()
                         
-                        # KESİN İLK TEMAS KONTROLÜ (Sıfır Tolerans)
                         touch_start = max_high_idx + 1
-                        touch_end = current_idx - 1 # Canlı mumdan önceki tüm mumları kapsar
+                        touch_end = current_idx - 1 
                         
                         if touch_end >= touch_start:
                             no_prior_touch = (df['Low'].iloc[touch_start : touch_end + 1] > df['EMA20'].iloc[touch_start : touch_end + 1]).all()
@@ -146,18 +150,17 @@ def check_signals():
                         is_touching = (c_live['Low'] <= c_live['EMA20']) and (c_live['Stoch_K'] < 30)
                         
                         if is_truly_new_high and is_touching and no_prior_touch and is_clean_pullback:
-                            if not in_touch_status[tf_label][symbol]:
-                                msg = f"🟢 **TEMİZ DÜZELTME + ANLIK İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Zirveden sonra temiz bir düşüş dalgasıyla EMA20'ye SIFIR TOLERANSLI ilk temas şu an gerçekleşti!\n\n[TradingView Grafiği Aç]({tv_link})"
+                            if last_signal_pivot[tf_label][symbol] != max_high_idx:
+                                msg = f"🟢 **GERÇEK ZİRVE + ANLIK İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Son 150 mumun mutlak zirvesinden sonra temiz bir düşüşle EMA20'ye ilk temas geldi!\n\n[MEXC Borsasında Aç]({mexc_link})\n[TradingView'da Aç]({tv_link})"
                                 send_telegram_message(msg)
-                                in_touch_status[tf_label][symbol] = True
-                        else:
-                            if not is_touching:
-                                in_touch_status[tf_label][symbol] = False
+                                last_signal_pivot[tf_label][symbol] = max_high_idx
 
             # SHORT KONTROLÜ
             elif downtrend:
+                # 150 mumluk koca penceredeki MUTLAK EN DÜŞÜK dibi bulur
                 min_low_idx = df['Low'].iloc[start_idx : current_idx].idxmin()
                 
+                # Eğer bu mutlak dip son 30 mum içindeyse (yani Yüksek Dip değilse) çalışır
                 if min_low_idx >= recent_threshold:
                     past_start = max(0, start_idx)
                     past_end = min_low_idx - 8
@@ -171,9 +174,8 @@ def check_signals():
                         
                         is_truly_new_low = (new_valley_closes < historical_valley).any()
                         
-                        # KESİN İLK TEMAS KONTROLÜ (Sıfır Tolerans)
                         touch_start = min_low_idx + 1
-                        touch_end = current_idx - 1 # Canlı mumdan önceki tüm mumları kapsar
+                        touch_end = current_idx - 1
                         
                         if touch_end >= touch_start:
                             no_prior_touch = (df['High'].iloc[touch_start : touch_end + 1] < df['EMA20'].iloc[touch_start : touch_end + 1]).all()
@@ -187,18 +189,15 @@ def check_signals():
                         is_touching = (c_live['High'] >= c_live['EMA20']) and (c_live['Stoch_K'] > 70)
                         
                         if is_truly_new_low and is_touching and no_prior_touch and is_clean_pullback:
-                            if not in_touch_status[tf_label][symbol]:
-                                msg = f"🔴 **TEMİZ DÜZELTME + ANLIK İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Dipten sonra temiz bir yükseliş dalgasıyla EMA20'ye SIFIR TOLERANSLI ilk temas şu an gerçekleşti!\n\n[TradingView Grafiği Aç]({tv_link})"
+                            if last_signal_pivot[tf_label][symbol] != min_low_idx:
+                                msg = f"🔴 **GERÇEK DİP + ANLIK İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Son 150 mumun mutlak dibinden sonra temiz bir yükselişle EMA20'ye ilk temas geldi!\n\n[MEXC Borsasında Aç]({mexc_link})\n[TradingView'da Aç]({tv_link})"
                                 send_telegram_message(msg)
-                                in_touch_status[tf_label][symbol] = True
-                        else:
-                            if not is_touching:
-                                in_touch_status[tf_label][symbol] = False
+                                last_signal_pivot[tf_label][symbol] = min_low_idx
 
     print(f"[{datetime.datetime.now()}] Çift zamanlı (15m & 30m) tarama bitti. Hızlı reaksiyon için 15 saniye bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("Mutlak Yapı & Sıfır Toleranslı İlk Temas Botu (15m & 30m) Devrede...")
+    print("Lower High Korumalı İlk Temas Botu (15m & 30m) Devrede...")
     while True:
         try:
             check_signals()
