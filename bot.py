@@ -82,7 +82,7 @@ def check_signals():
     timeframes = [("15m", "Min15"), ("30m", "Min30")]
     
     for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte MUTLAK YAPI (Derin Temas Serbest) ile taranıyor...")
+        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte TEMİZ DÜZELTME filtresiyle taranıyor...")
 
         for symbol in SYMBOLS:
             df = get_latest_data(symbol, api_interval)
@@ -141,12 +141,16 @@ def check_signals():
                         else:
                             no_prior_touch = True
                             
-                        # 3. Kural İptal Edildi: Sadece EMA20'ye değmesi ve Stoch_K şartı yeterli
+                        # TEMİZ DÜZELTME KONTROLÜ: Yeni tepeden güncel muma kadar en fazla 2 yeşil muma izin ver
+                        pullback_df = df.iloc[touch_start : current_idx + 1]
+                        exception_candles = (pullback_df['Close'] > pullback_df['Open']).sum()
+                        is_clean_pullback = exception_candles <= 2
+                        
                         is_touching = (c_live['Low'] <= c_live['EMA20']) and (c_live['Stoch_K'] < 30)
                         
-                        if is_truly_new_high and is_touching and no_prior_touch:
+                        if is_truly_new_high and is_touching and no_prior_touch and is_clean_pullback:
                             if not in_touch_status[tf_label][symbol]:
-                                msg = f"🟢 **MUTLAK ZİRVE KIRILIMI + İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Son 80 mumun en yüksek zirvesi gövdeyle aşıldı. Fiyat yeni zirveden sonra EMA20'ye ilk temasını gerçekleştiriyor!\n\n[TradingView Grafiği Aç]({tv_link})"
+                                msg = f"🟢 **TEMİZ DÜZELTME + İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Zirveden sonra temiz bir düşüş dalgasıyla (en fazla {exception_candles} istisna mum) EMA20'ye ilk temas geldi!\n\n[TradingView Grafiği Aç]({tv_link})"
                                 send_telegram_message(msg)
                                 in_touch_status[tf_label][symbol] = True
                         else:
@@ -177,12 +181,16 @@ def check_signals():
                         else:
                             no_prior_touch = True
                             
-                        # 3. Kural İptal Edildi: Sadece EMA20'ye değmesi ve Stoch_K şartı yeterli
+                        # TEMİZ DÜZELTME KONTROLÜ: Yeni dipten güncel muma kadar en fazla 2 kırmızı muma izin ver
+                        pullback_df = df.iloc[touch_start : current_idx + 1]
+                        exception_candles = (pullback_df['Close'] < pullback_df['Open']).sum()
+                        is_clean_pullback = exception_candles <= 2
+                        
                         is_touching = (c_live['High'] >= c_live['EMA20']) and (c_live['Stoch_K'] > 70)
                         
-                        if is_truly_new_low and is_touching and no_prior_touch:
+                        if is_truly_new_low and is_touching and no_prior_touch and is_clean_pullback:
                             if not in_touch_status[tf_label][symbol]:
-                                msg = f"🔴 **MUTLAK DİP KIRILIMI + İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Son 80 mumun en düşük dibi gövdeyle kırıldı. Fiyat yeni dipten sonra EMA20'ye ilk temasını gerçekleştiriyor!\n\n[TradingView Grafiği Aç]({tv_link})"
+                                msg = f"🔴 **TEMİZ DÜZELTME + İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Dipten sonra temiz bir yükseliş dalgasıyla (en fazla {exception_candles} istisna mum) EMA20'ye ilk temas geldi!\n\n[TradingView Grafiği Aç]({tv_link})"
                                 send_telegram_message(msg)
                                 in_touch_status[tf_label][symbol] = True
                         else:
@@ -192,7 +200,7 @@ def check_signals():
     print(f"[{datetime.datetime.now()}] Çift zamanlı (15m & 30m) tarama bitti. Hızlı reaksiyon için 15 saniye bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("Mutlak Yapı (Absolute MSB) & Esnek Temaslı Bot (15m & 30m) Devrede...")
+    print("Mutlak Yapı & Temiz Düzeltme Botu (15m & 30m) Devrede...")
     while True:
         try:
             check_signals()
