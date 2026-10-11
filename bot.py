@@ -39,7 +39,8 @@ SYMBOLS = sorted(list(set(SYMBOLS)))
 TELEGRAM_BOT_TOKEN = "8663767442:AAEFpBh0V1eu5tBrWWc0Ki2EmVdS9f_rHiQ"
 TELEGRAM_CHAT_ID = "1494316515"
 
-last_signal_pivot = {
+# Her dalga ve zaman dilimi için son gönderilen bildirim zaman mührünü tutar
+last_signal_tracker = {
     "15m": {},
     "30m": {}
 }
@@ -82,7 +83,7 @@ def check_signals():
     timeframes = [("15m", "Min15"), ("30m", "Min30")]
     
     for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte GERÇEK DÜZELTME SAYIMI ile taranıyor...")
+        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte ÇİFT BİLDİRİM ENGELLEYİCİ ile taranıyor...")
 
         for symbol in SYMBOLS:
             df = get_latest_data(symbol, api_interval)
@@ -103,14 +104,15 @@ def check_signals():
             uptrend = (c_live['EMA20'] > c_live['EMA50']) and (c_live['EMA50'] > c_live['EMA100'])
             downtrend = (c_live['EMA20'] < c_live['EMA50']) and (c_live['EMA50'] < c_live['EMA100'])
 
-            if symbol not in last_signal_pivot[tf_label]:
-                last_signal_pivot[tf_label][symbol] = -1
+            if symbol not in last_signal_tracker[tf_label]:
+                last_signal_tracker[tf_label][symbol] = None
 
             tv_symbol = symbol.replace("_", "")
             tv_link = f"https://www.tradingview.com/chart/?symbol=MEXC:{tv_symbol}"
             mexc_link = f"https://futures.mexc.com/exchange/{symbol}?type=linear_swap"
 
             current_idx = df.index[-1]
+            current_timestamp = c_live['timestamp']
             start_idx = max(0, current_idx - 150)
             recent_threshold = current_idx - 30
 
@@ -131,7 +133,6 @@ def check_signals():
                         
                         is_truly_new_high = (new_peak_closes > historical_peak).any()
                         
-                        # YENİ EKLENTİ: Düzeltme sayımını momentumun (gövdenin) veya iğnenin bittiği en erken yerden başlat
                         max_close_idx = df['Close'].iloc[start_idx : current_idx].idxmax()
                         count_start_idx = min(max_high_idx, max_close_idx) + 1
                         
@@ -149,10 +150,12 @@ def check_signals():
                         is_touching = (c_live['Low'] <= c_live['EMA20']) and (c_live['Stoch_K'] < 30)
                         
                         if is_truly_new_high and is_touching and no_prior_touch and is_clean_pullback:
-                            if last_signal_pivot[tf_label][symbol] != max_high_idx:
+                            # Aynı dalga (max_high_idx) VE aynı canlı mum (current_timestamp) için tekrar bildirim atmaz
+                            signal_id = f"{max_high_idx}_{current_timestamp}"
+                            if last_signal_tracker[tf_label][symbol] != signal_id:
                                 msg = f"🟢 **GERÇEK ZİRVE + ANLIK İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Zirveden sonra temiz bir düşüşle (en fazla {exception_candles} istisna mum) EMA20'ye ilk temas geldi!\n\n[MEXC Borsasında Aç]({mexc_link})\n[TradingView'da Aç]({tv_link})"
                                 send_telegram_message(msg)
-                                last_signal_pivot[tf_label][symbol] = max_high_idx
+                                last_signal_tracker[tf_label][symbol] = signal_id
 
             # SHORT KONTROLÜ
             elif downtrend:
@@ -171,7 +174,6 @@ def check_signals():
                         
                         is_truly_new_low = (new_valley_closes < historical_valley).any()
                         
-                        # YENİ EKLENTİ: Düzeltme sayımını momentumun (gövdenin) veya iğnenin bittiği en erken yerden başlat
                         min_close_idx = df['Close'].iloc[start_idx : current_idx].idxmin()
                         count_start_idx = min(min_low_idx, min_close_idx) + 1
                         
@@ -189,15 +191,16 @@ def check_signals():
                         is_touching = (c_live['High'] >= c_live['EMA20']) and (c_live['Stoch_K'] > 70)
                         
                         if is_truly_new_low and is_touching and no_prior_touch and is_clean_pullback:
-                            if last_signal_pivot[tf_label][symbol] != min_low_idx:
+                            signal_id = f"{min_low_idx}_{current_timestamp}"
+                            if last_signal_tracker[tf_label][symbol] != signal_id:
                                 msg = f"🔴 **GERÇEK DİP + ANLIK İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Dipten sonra temiz bir yükselişle (en fazla {exception_candles} istisna mum) EMA20'ye ilk temas geldi!\n\n[MEXC Borsasında Aç]({mexc_link})\n[TradingView'da Aç]({tv_link})"
                                 send_telegram_message(msg)
-                                last_signal_pivot[tf_label][symbol] = min_low_idx
+                                last_signal_tracker[tf_label][symbol] = signal_id
 
     print(f"[{datetime.datetime.now()}] Çift zamanlı (15m & 30m) tarama bitti. Hızlı reaksiyon için 15 saniye bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("Gövde Zirvesine Duyarlı İlk Temas Botu (15m & 30m) Devrede...")
+    print("Spam Engelleyici & Tekil Sinyal Botu (15m & 30m) Devrede...")
     while True:
         try:
             check_signals()
