@@ -39,7 +39,6 @@ SYMBOLS = sorted(list(set(SYMBOLS)))
 TELEGRAM_BOT_TOKEN = "8663767442:AAEFpBh0V1eu5tBrWWc0Ki2EmVdS9f_rHiQ"
 TELEGRAM_CHAT_ID = "1494316515"
 
-# Spam önleyici Dalga/Pivot hafızası
 last_signal_pivot = {
     "15m": {},
     "30m": {}
@@ -83,7 +82,7 @@ def check_signals():
     timeframes = [("15m", "Min15"), ("30m", "Min30")]
     
     for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte GENİŞ UFUKLU (Lower High Korumalı) taranıyor...")
+        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte GERÇEK DÜZELTME SAYIMI ile taranıyor...")
 
         for symbol in SYMBOLS:
             df = get_latest_data(symbol, api_interval)
@@ -112,16 +111,13 @@ def check_signals():
             mexc_link = f"https://futures.mexc.com/exchange/{symbol}?type=linear_swap"
 
             current_idx = df.index[-1]
-            # Ufuk genişletildi: 80 yerine 150 mum geçmişe bakar (15 dklıkta ~37.5 saat)
             start_idx = max(0, current_idx - 150)
             recent_threshold = current_idx - 30
 
             # LONG KONTROLÜ
             if uptrend:
-                # 150 mumluk koca penceredeki MUTLAK EN YÜKSEK tepeyi bulur
                 max_high_idx = df['High'].iloc[start_idx : current_idx].idxmax()
                 
-                # Eğer bu mutlak tepe son 30 mum içindeyse (yani Düşük Tepe değilse) çalışır
                 if max_high_idx >= recent_threshold:
                     past_start = max(0, start_idx)
                     past_end = max_high_idx - 8
@@ -135,15 +131,18 @@ def check_signals():
                         
                         is_truly_new_high = (new_peak_closes > historical_peak).any()
                         
-                        touch_start = max_high_idx + 1
+                        # YENİ EKLENTİ: Düzeltme sayımını momentumun (gövdenin) veya iğnenin bittiği en erken yerden başlat
+                        max_close_idx = df['Close'].iloc[start_idx : current_idx].idxmax()
+                        count_start_idx = min(max_high_idx, max_close_idx) + 1
+                        
                         touch_end = current_idx - 1 
                         
-                        if touch_end >= touch_start:
-                            no_prior_touch = (df['Low'].iloc[touch_start : touch_end + 1] > df['EMA20'].iloc[touch_start : touch_end + 1]).all()
+                        if touch_end >= count_start_idx:
+                            no_prior_touch = (df['Low'].iloc[count_start_idx : touch_end + 1] > df['EMA20'].iloc[count_start_idx : touch_end + 1]).all()
                         else:
                             no_prior_touch = True
                             
-                        pullback_df = df.iloc[touch_start : current_idx + 1]
+                        pullback_df = df.iloc[count_start_idx : current_idx + 1]
                         exception_candles = (pullback_df['Close'] > pullback_df['Open']).sum()
                         is_clean_pullback = exception_candles <= 2
                         
@@ -151,16 +150,14 @@ def check_signals():
                         
                         if is_truly_new_high and is_touching and no_prior_touch and is_clean_pullback:
                             if last_signal_pivot[tf_label][symbol] != max_high_idx:
-                                msg = f"🟢 **GERÇEK ZİRVE + ANLIK İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Son 150 mumun mutlak zirvesinden sonra temiz bir düşüşle EMA20'ye ilk temas geldi!\n\n[MEXC Borsasında Aç]({mexc_link})\n[TradingView'da Aç]({tv_link})"
+                                msg = f"🟢 **GERÇEK ZİRVE + ANLIK İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Zirveden sonra temiz bir düşüşle (en fazla {exception_candles} istisna mum) EMA20'ye ilk temas geldi!\n\n[MEXC Borsasında Aç]({mexc_link})\n[TradingView'da Aç]({tv_link})"
                                 send_telegram_message(msg)
                                 last_signal_pivot[tf_label][symbol] = max_high_idx
 
             # SHORT KONTROLÜ
             elif downtrend:
-                # 150 mumluk koca penceredeki MUTLAK EN DÜŞÜK dibi bulur
                 min_low_idx = df['Low'].iloc[start_idx : current_idx].idxmin()
                 
-                # Eğer bu mutlak dip son 30 mum içindeyse (yani Yüksek Dip değilse) çalışır
                 if min_low_idx >= recent_threshold:
                     past_start = max(0, start_idx)
                     past_end = min_low_idx - 8
@@ -174,15 +171,18 @@ def check_signals():
                         
                         is_truly_new_low = (new_valley_closes < historical_valley).any()
                         
-                        touch_start = min_low_idx + 1
+                        # YENİ EKLENTİ: Düzeltme sayımını momentumun (gövdenin) veya iğnenin bittiği en erken yerden başlat
+                        min_close_idx = df['Close'].iloc[start_idx : current_idx].idxmin()
+                        count_start_idx = min(min_low_idx, min_close_idx) + 1
+                        
                         touch_end = current_idx - 1
                         
-                        if touch_end >= touch_start:
-                            no_prior_touch = (df['High'].iloc[touch_start : touch_end + 1] < df['EMA20'].iloc[touch_start : touch_end + 1]).all()
+                        if touch_end >= count_start_idx:
+                            no_prior_touch = (df['High'].iloc[count_start_idx : touch_end + 1] < df['EMA20'].iloc[count_start_idx : touch_end + 1]).all()
                         else:
                             no_prior_touch = True
                             
-                        pullback_df = df.iloc[touch_start : current_idx + 1]
+                        pullback_df = df.iloc[count_start_idx : current_idx + 1]
                         exception_candles = (pullback_df['Close'] < pullback_df['Open']).sum()
                         is_clean_pullback = exception_candles <= 2
                         
@@ -190,14 +190,14 @@ def check_signals():
                         
                         if is_truly_new_low and is_touching and no_prior_touch and is_clean_pullback:
                             if last_signal_pivot[tf_label][symbol] != min_low_idx:
-                                msg = f"🔴 **GERÇEK DİP + ANLIK İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Son 150 mumun mutlak dibinden sonra temiz bir yükselişle EMA20'ye ilk temas geldi!\n\n[MEXC Borsasında Aç]({mexc_link})\n[TradingView'da Aç]({tv_link})"
+                                msg = f"🔴 **GERÇEK DİP + ANLIK İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Dipten sonra temiz bir yükselişle (en fazla {exception_candles} istisna mum) EMA20'ye ilk temas geldi!\n\n[MEXC Borsasında Aç]({mexc_link})\n[TradingView'da Aç]({tv_link})"
                                 send_telegram_message(msg)
                                 last_signal_pivot[tf_label][symbol] = min_low_idx
 
     print(f"[{datetime.datetime.now()}] Çift zamanlı (15m & 30m) tarama bitti. Hızlı reaksiyon için 15 saniye bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("Lower High Korumalı İlk Temas Botu (15m & 30m) Devrede...")
+    print("Gövde Zirvesine Duyarlı İlk Temas Botu (15m & 30m) Devrede...")
     while True:
         try:
             check_signals()
