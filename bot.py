@@ -39,10 +39,10 @@ SYMBOLS = sorted(list(set(SYMBOLS)))
 TELEGRAM_BOT_TOKEN = "8663767442:AAEFpBh0V1eu5tBrWWc0Ki2EmVdS9f_rHiQ"
 TELEGRAM_CHAT_ID = "1494316515"
 
-# Hafıza zaman dilimlerine göre ayrıldı
+# Hafıza 15m ve 30m olarak güncellendi
 in_touch_status = {
-    "5m": {},
-    "15m": {}
+    "15m": {},
+    "30m": {}
 }
 
 def send_telegram_message(message):
@@ -61,105 +61,4 @@ def send_telegram_message(message):
 def get_latest_data(symbol, interval):
     url = f"https://contract.mexc.com/api/v1/contract/kline/{symbol}?interval={interval}"
     try:
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200:
-            res_json = res.json()
-            if res_json.get("success") and res_json.get("data"):
-                d = res_json["data"]
-                df = pd.DataFrame({
-                    'timestamp': d.get("time", []),
-                    'Open': [float(x) for x in d.get("open", [])],
-                    'High': [float(x) for x in d.get("high", [])],
-                    'Low': [float(x) for x in d.get("low", [])],
-                    'Close': [float(x) for x in d.get("close", [])]
-                })
-                return df
-    except:
-        pass
-    return None
-
-def check_signals():
-    # 5m ve 15m için sırayla tarama yapacak döngü
-    timeframes = [("5m", "Min5"), ("15m", "Min15")]
-    
-    for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte KAPANIŞ onaylı gerçek tepe/dip ile taranıyor...")
-
-        for symbol in SYMBOLS:
-            df = get_latest_data(symbol, api_interval)
-            if df is None or len(df) < 200: continue
-                
-            df['EMA20'] = df['Close'].ewm(span=20, adjust=False).mean()
-            df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
-            df['EMA100'] = df['Close'].ewm(span=100, adjust=False).mean()
-            df['EMA200'] = df['Close'].ewm(span=200, adjust=False).mean()
-            
-            low_min = df['Low'].rolling(window=5).min()
-            high_max = df['High'].rolling(window=5).max()
-            denom = (high_max - low_min).replace(0, np.nan)
-            raw_k = 100 * (df['Close'] - low_min) / denom
-            df['Stoch_K'] = raw_k.rolling(window=3).mean()
-            
-            c = df.iloc[-2]
-            
-            uptrend = (c['EMA20'] > c['EMA50'] * 1.001) and \
-                      (c['EMA50'] > c['EMA100'] * 1.001) and (c['EMA100'] > c['EMA200'] * 1.001)
-                      
-            downtrend = (c['EMA20'] < c['EMA50'] * 0.999) and \
-                        (c['EMA50'] < c['EMA100'] * 0.999) and (c['EMA100'] < c['EMA200'] * 0.999)
-
-            if symbol not in in_touch_status[tf_label]:
-                in_touch_status[tf_label][symbol] = False
-
-            tv_symbol = symbol.replace("_", "")
-            tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{tv_symbol}.P"
-
-            # LONG KONTROLÜ
-            if uptrend:
-                extended_window = df.iloc[-98:-6]
-                historical_peak = extended_window['High'].max()
-                
-                recent_peak_window = df.iloc[-6:-2]
-                current_move_highest_close = recent_peak_window['Close'].max()
-                
-                is_truly_new_high = current_move_highest_close > historical_peak
-                is_touching = (c['Low'] <= c['EMA20']) and (c['Stoch_K'] < 30)
-                
-                if is_truly_new_high and is_touching:
-                    if not in_touch_status[tf_label][symbol]:
-                        msg = f"🟢 **KAPANIŞ ONAYLI YENİ TEPE + İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\nDurum: Önceki zirve MUM KAPANIŞI ile aşıldı, ardından EMA20'ye ilk temas gerçekleşti!\n\n[TradingView Grafiği Aç]({tv_link})"
-                        send_telegram_message(msg)
-                        in_touch_status[tf_label][symbol] = True
-                else:
-                    in_touch_status[tf_label][symbol] = False
-
-            # SHORT KONTROLÜ
-            elif downtrend:
-                extended_window = df.iloc[-98:-6]
-                historical_valley = extended_window['Low'].min()
-                
-                recent_valley_window = df.iloc[-6:-2]
-                current_move_lowest_close = recent_valley_window['Close'].min()
-                
-                is_truly_new_low = current_move_lowest_close < historical_valley
-                is_touching = (c['High'] >= c['EMA20']) and (c['Stoch_K'] > 70)
-                
-                if is_truly_new_low and is_touching:
-                    if not in_touch_status[tf_label][symbol]:
-                        msg = f"🔴 **KAPANIŞ ONAYLI YENİ DİP + İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c['Close']}`\nStoch RSI: `{c['Stoch_K']:.2f}`\nDurum: Önceki dip MUM KAPANIŞI ile kırıldı, ardından EMA20'ye ilk temas gerçekleşti!\n\n[TradingView Grafiği Aç]({tv_link})"
-                        send_telegram_message(msg)
-                        in_touch_status[tf_label][symbol] = True
-                else:
-                    in_touch_status[tf_label][symbol] = False
-
-    print(f"[{datetime.datetime.now()}] Çift zamanlı (5m & 15m) tarama bitti. Yeni döngü için 2 dakika bekleniyor...\n")
-
-if __name__ == "__main__":
-    print("5m & 15m Çift Motorlu Kapanış Onaylı Sinyal Botu Devrede (Anlık Log Akışı Aktif)...")
-    while True:
-        try:
-            check_signals()
-        except Exception as e:
-            print(f"Hata: {e}")
-        
-        time.sleep(120)
+        res = requests.get(url
