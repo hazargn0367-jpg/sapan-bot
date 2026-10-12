@@ -39,9 +39,9 @@ last_signal_tracker = {
     "30m": {}
 }
 
-# Borsalar arası farkı tolere etmek için mıknatıs (esneklik) payı (%0.15)
-TOLERANCE_LONG = 1.0015
-TOLERANCE_SHORT = 0.9985
+# Borsalar arası farkı tolere etmek için ÇOK HASSAS mıknatıs payı (%0.03)
+TOLERANCE_LONG = 1.0003
+TOLERANCE_SHORT = 0.9997
 
 def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -81,7 +81,7 @@ def check_signals():
     timeframes = [("15m", "Min15"), ("30m", "Min30")]
     
     for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte MIKNATIS PAYI (%0.15) ile taranıyor...")
+        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte MİKRO MIKNATIS PAYI (%0.03) ile taranıyor...")
 
         for symbol in SYMBOLS:
             df = get_latest_data(symbol, api_interval)
@@ -135,7 +135,6 @@ def check_signals():
                         
                         touch_end = current_idx - 1 
                         
-                        # Geçmiş mumlarda toleranslı temas kontrolü
                         if touch_end >= count_start_idx:
                             no_prior_touch = (df['Low'].iloc[count_start_idx : touch_end + 1] > df['EMA20'].iloc[count_start_idx : touch_end + 1] * TOLERANCE_LONG).all()
                         else:
@@ -145,13 +144,13 @@ def check_signals():
                         exception_candles = (pullback_df['Close'] > pullback_df['Open']).sum()
                         is_clean_pullback = exception_candles <= 2
                         
-                        # Canlı mumda toleranslı (mıknatıs) temas kontrolü
+                        # Canlı mumda toleranslı temas kontrolü
                         is_touching = (c_live['Low'] <= c_live['EMA20'] * TOLERANCE_LONG) and (c_live['Stoch_K'] < 30)
                         
                         if is_truly_new_high and is_touching and no_prior_touch and is_clean_pullback:
                             signal_id = f"{max_high_idx}_{current_timestamp}"
                             if last_signal_tracker[tf_label][symbol] != signal_id:
-                                msg = f"🟢 **GERÇEK ZİRVE + ESNEMİŞ İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Zirveden sonra temiz düşüş sağlandı. EMA20 Mıknatıs Alanına (%0.15) ilk temas gerçekleşti!\n\n[TradingView'da Aç]({tv_link})"
+                                msg = f"🟢 **GERÇEK ZİRVE + ESNEMİŞ İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Zirveden sonra temiz düşüş sağlandı. EMA20'ye (Hassas Mıknatıs %0.03) ilk temas gerçekleşti!\n\n[TradingView'da Aç]({tv_link})"
                                 send_telegram_message(msg)
                                 last_signal_tracker[tf_label][symbol] = signal_id
 
@@ -177,7 +176,6 @@ def check_signals():
                         
                         touch_end = current_idx - 1
                         
-                        # Geçmiş mumlarda toleranslı temas kontrolü
                         if touch_end >= count_start_idx:
                             no_prior_touch = (df['High'].iloc[count_start_idx : touch_end + 1] < df['EMA20'].iloc[count_start_idx : touch_end + 1] * TOLERANCE_SHORT).all()
                         else:
@@ -187,20 +185,20 @@ def check_signals():
                         exception_candles = (pullback_df['Close'] < pullback_df['Open']).sum()
                         is_clean_pullback = exception_candles <= 2
                         
-                        # Canlı mumda toleranslı (mıknatıs) temas kontrolü
+                        # Canlı mumda toleranslı temas kontrolü
                         is_touching = (c_live['High'] >= c_live['EMA20'] * TOLERANCE_SHORT) and (c_live['Stoch_K'] > 70)
                         
                         if is_truly_new_low and is_touching and no_prior_touch and is_clean_pullback:
                             signal_id = f"{min_low_idx}_{current_timestamp}"
                             if last_signal_tracker[tf_label][symbol] != signal_id:
-                                msg = f"🔴 **GERÇEK DİP + ESNEMİŞ İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Dipten sonra temiz yükseliş sağlandı. EMA20 Mıknatıs Alanına (%0.15) ilk temas gerçekleşti!\n\n[TradingView'da Aç]({tv_link})"
+                                msg = f"🔴 **GERÇEK DİP + ESNEMİŞ İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Dipten sonra temiz yükseliş sağlandı. EMA20'ye (Hassas Mıknatıs %0.03) ilk temas gerçekleşti!\n\n[TradingView'da Aç]({tv_link})"
                                 send_telegram_message(msg)
                                 last_signal_tracker[tf_label][symbol] = signal_id
 
     print(f"[{datetime.datetime.now()}] Çift zamanlı (15m & 30m) tarama bitti. Hızlı reaksiyon için 15 saniye bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("Mıknatıs Paylı (Binance Uyumlu) İlk Temas Botu Devrede...")
+    print("Mikro Hassasiyetli (Hata Engelleyici) İlk Temas Botu Devrede...")
     while True:
         try:
             check_signals()
