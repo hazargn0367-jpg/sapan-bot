@@ -1,0 +1,14 @@
+services:
+  - type: worker
+    name: keskin-nisanci-bot
+    runtime: python
+    region: frankfurt   # ABD bölgelerinden Binance API engelleniyor
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -u bot.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: SCAN_SLEEP
+        value: "15"
