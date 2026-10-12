@@ -1,77 +1,61 @@
 """
-Borsalardan veri çekme (Binance + MEXC vadeli).
+Binance vadeli (USDT-M perpetual) veri çekme.
 """
 
 import logging
+import time
 
 import pandas as pd
 import requests
 
 log = logging.getLogger("bot")
 
+BASE_URL = "https://fapi.binance.com"
+KLINE_LIMIT = 499  # Binance'te 100-499 arası mum = 2 ağırlık (rate limit dostu)
 
-def get_binance_symbols():
-    url = "https://fapi.binance.com/fapi/v1/exchangeInfo"
+_session = requests.Session()
+
+
+def get_symbols():
+    """İşlemde olan tüm USDT vadeli (perpetual) coinler, örn. BTCUSDT."""
     try:
-        res = requests.get(url, timeout=10)
+        res = _session.get(f"{BASE_URL}/fapi/v1/exchangeInfo", timeout=10)
         res.raise_for_status()
-        return {
-            s["baseAsset"] + "_USDT"
+        return sorted(
+            s["symbol"]
             for s in res.json().get("symbols", [])
-            if s.get("quoteAsset") == "USDT" and s.get("contractType") == "PERPETUAL"
-        }
+            if s.get("quoteAsset") == "USDT"
+            and s.get("contractType") == "PERPETUAL"
+            and s.get("status") == "TRADING"
+        )
     except Exception as e:
         log.error("Binance coin listesi alınamadı: %s", e)
-        return set()
-
-
-def get_mexc_symbols():
-    url = "https://contract.mexc.com/api/v1/contract/detail"
-    try:
-        res = requests.get(url, timeout=10)
-        res.raise_for_status()
-        data = res.json()
-        if not data.get("success"):
-            return set()
-        return {
-            item["symbol"]
-            for item in data.get("data") or []
-            if item.get("symbol", "").endswith("_USDT")
-        }
-    except Exception as e:
-        log.error("MEXC coin listesi alınamadı: %s", e)
-        return set()
-
-
-def get_common_symbols():
-    """Hem Binance hem MEXC'de olan USDT vadeli coinler.
-    Binance'e ulaşılamazsa (eski koddaki gibi) tüm MEXC coinleri kullanılır."""
-    binance = get_binance_symbols()
-    mexc = get_mexc_symbols()
-    if not mexc:
         return []
-    if not binance:
-        log.warning("Binance listesi yok, tüm MEXC coinleri taranacak (%d adet)", len(mexc))
-        return sorted(mexc)
-    return sorted(binance & mexc)
 
 
 def get_klines(symbol, interval):
-    """MEXC vadeli mum verisi. Son satır şu an açık olan (canlı) mumdur."""
-    url = f"https://contract.mexc.com/api/v1/contract/kline/{symbol}"
+    """Binance vadeli mum verisi. Son satır şu an açık olan (canlı) mumdur."""
     try:
-        res = requests.get(url, params={"interval": interval}, timeout=5)
-        res.raise_for_status()
-        js = res.json()
-        if not js.get("success") or not js.get("data"):
+        res = _session.get(
+            f"{BASE_URL}/fapi/v1/klines",
+            params={"symbol": symbol, "interval": interval, "limit": KLINE_LIMIT},
+            timeout=10,
+        )
+        if res.status_code in (418, 429):
+            wait = int(res.headers.get("Retry-After", "60"))
+            log.warning("Binance istek sınırı aşıldı, %s sn bekleniyor", wait)
+            time.sleep(wait)
             return None
-        d = js["data"]
+        res.raise_for_status()
+        rows = res.json()
+        if not rows:
+            return None
         return pd.DataFrame({
-            "timestamp": d.get("time", []),
-            "Open": [float(x) for x in d.get("open", [])],
-            "High": [float(x) for x in d.get("high", [])],
-            "Low": [float(x) for x in d.get("low", [])],
-            "Close": [float(x) for x in d.get("close", [])],
+            "timestamp": [int(k[0]) for k in rows],
+            "Open": [float(k[1]) for k in rows],
+            "High": [float(k[2]) for k in rows],
+            "Low": [float(k[3]) for k in rows],
+            "Close": [float(k[4]) for k in rows],
         })
     except Exception as e:
         log.debug("%s %s verisi alınamadı: %s", symbol, interval, e)

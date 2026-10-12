@@ -4,7 +4,7 @@ Keskin Nişancı Trend & Kırılım Botu - ana döngü.
 Dosyalar:
   config.py    -> ayarlar (token'lar Render Environment'tan gelir)
   strategy.py  -> sinyal kuralları (sadece mantık)
-  exchanges.py -> Binance/MEXC veri çekme
+  exchanges.py -> Binance vadeli veri çekme
   telegram.py  -> mesaj gönderme ve mesaj metni
   bot.py       -> bunları birleştiren döngü (ana dosya)
 """
@@ -13,7 +13,7 @@ import logging
 import time
 
 import config
-from exchanges import get_common_symbols, get_klines
+from exchanges import get_symbols as fetch_symbols, get_klines
 from strategy import check_signal
 from telegram import format_signal, send_message
 
@@ -31,17 +31,17 @@ def get_symbols():
     """Coin listesini saatte bir yeniler (her turda çekmez)."""
     global _symbols, _symbols_time
     if not _symbols or time.time() - _symbols_time > config.SYMBOL_REFRESH_SECONDS:
-        fresh = get_common_symbols()
+        fresh = fetch_symbols()
         if fresh:
             _symbols, _symbols_time = fresh, time.time()
-            log.info("Coin listesi güncellendi: %d ortak parite", len(_symbols))
+            log.info("Coin listesi güncellendi: %d Binance vadeli parite", len(_symbols))
     return _symbols
 
 
 def scan():
     symbols = get_symbols()
     if not symbols:
-        log.warning("Ortak sembol listesi alınamadı, bekleniyor...")
+        log.warning("Coin listesi alınamadı, bekleniyor...")
         return
 
     for tf_label, api_interval in config.TIMEFRAMES:

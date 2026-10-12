@@ -39,7 +39,7 @@ def send_message(text):
 
 def format_signal(symbol, tf_label, sig):
     s = html.escape(symbol)
-    tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol.replace('_', '')}.P"
+    tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol}.P"
     if sig["side"] == "LONG":
         head = "🟢 <b>NET TREND + GÖVDE KAPANIŞLI İLK TEMAS (LONG)!</b>"
         durum = "Kusursuz paralel trend, gövdeyle kırılan zirve ve EMA20'ye ilk temas!"
