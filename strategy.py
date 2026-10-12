@@ -132,6 +132,47 @@ def evaluate_at(df, i):
     return sig
 
 
+def diagnose(df, i):
+    """Bir mum için temas şartlarını TEK TEK döner (kontrol ve backtest raporu için).
+    Hepsi True ise evaluate_at() sinyal verir."""
+    c = df.iloc[i]
+    up = c["EMA20"] > c["EMA50"] * (1 + EMA_GAP) and c["EMA50"] > c["EMA100"] * (1 + EMA_GAP)
+    down = c["EMA20"] < c["EMA50"] * (1 - EMA_GAP) and c["EMA50"] < c["EMA100"] * (1 - EMA_GAP)
+    d = {"trend": bool(up or down), "side": "LONG" if up else ("SHORT" if down else None)}
+    if not d["trend"]:
+        return d
+
+    start = max(0, i - LOOKBACK)
+    if up:
+        pivot = df["High"].iloc[start:i].idxmax()
+    else:
+        pivot = df["Low"].iloc[start:i].idxmin()
+    d["pivot_recent"] = bool(pivot >= i - RECENT)
+    past_end = pivot - PEAK_GAP
+    d["body_break"] = False
+    if past_end > start:
+        closes = df["Close"].iloc[max(0, pivot - 2): min(i, pivot + 3)]
+        if up:
+            d["body_break"] = bool((closes > df["High"].iloc[start:past_end].max()).any())
+        else:
+            d["body_break"] = bool((closes < df["Low"].iloc[start:past_end].min()).any())
+
+    after = pivot + 1
+    seg = df.iloc[after:i]
+    pullback = df.iloc[after: i + 1]
+    if up:
+        d["first_touch"] = bool((seg["Low"] > seg["EMA20"]).all())
+        d["clean_pullback"] = int((pullback["Close"] > pullback["Open"]).sum()) <= MAX_EXCEPTION_CANDLES
+        d["touch"] = bool(c["Low"] <= c["EMA20"] * TOLERANCE_LONG)
+        d["stoch"] = bool(c["Stoch_K"] < STOCH_LONG_MAX)
+    else:
+        d["first_touch"] = bool((seg["High"] < seg["EMA20"]).all())
+        d["clean_pullback"] = int((pullback["Close"] < pullback["Open"]).sum()) <= MAX_EXCEPTION_CANDLES
+        d["touch"] = bool(c["High"] >= c["EMA20"] * TOLERANCE_SHORT)
+        d["stoch"] = bool(c["Stoch_K"] > STOCH_SHORT_MIN)
+    return d
+
+
 def check_signal(df):
     """Canlı bot için: tablonun SON mumunu kontrol eder."""
     if df is None or len(df) < MIN_CANDLES:

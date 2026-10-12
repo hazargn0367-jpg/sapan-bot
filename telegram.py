@@ -37,6 +37,29 @@ def send_message(text):
         return False
 
 
+def send_document(path, caption=""):
+    """Telegram'a dosya gönderir (örn. backtest işlem listesi)."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        log.warning("Telegram ayarları eksik, dosya gönderilmedi: %s", path)
+        return False
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendDocument"
+    try:
+        with open(path, "rb") as f:
+            r = requests.post(
+                url,
+                data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption[:1000]},
+                files={"document": f},
+                timeout=60,
+            )
+        if r.status_code != 200:
+            log.error("Telegram dosya hatası %s: %s", r.status_code, r.text)
+            return False
+        return True
+    except (requests.RequestException, OSError) as e:
+        log.error("Dosya gönderilemedi: %s", e)
+        return False
+
+
 def format_signal(symbol, tf_label, sig):
     s = html.escape(symbol)
     tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol}.P"
