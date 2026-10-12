@@ -7,12 +7,15 @@ Dosyalar:
   exchanges.py -> Binance vadeli veri çekme
   telegram.py  -> mesaj gönderme ve mesaj metni
   bot.py       -> bunları birleştiren döngü (ana dosya)
+  commands.py  -> Telegram komutları (/backtest)
+  backtest.py  -> geçmiş veride strateji testi
 """
 
 import logging
 import time
 
 import config
+from commands import start_listener
 from exchanges import get_symbols as fetch_symbols, get_klines
 from strategy import check_signal
 from telegram import format_signal, send_message
@@ -71,7 +74,8 @@ def scan():
 
 def main():
     log.info("Keskin Nişancı Trend & Kırılım Botu Devrede...")
-    send_message("✅ Bot başladı")
+    send_message("✅ Bot başladı\nBacktest için: /backtest")
+    start_listener()
     while True:
         try:
             scan()
