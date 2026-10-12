@@ -39,7 +39,7 @@ last_signal_tracker = {
     "30m": {}
 }
 
-# Borsalar arası farkı tolere etmek için ÇOK HASSAS mıknatıs payı (%0.03)
+# Canlı mum için mikroskobik tolerans (%0.03)
 TOLERANCE_LONG = 1.0003
 TOLERANCE_SHORT = 0.9997
 
@@ -81,7 +81,7 @@ def check_signals():
     timeframes = [("15m", "Min15"), ("30m", "Min30")]
     
     for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte MİKRO MIKNATIS PAYI (%0.03) ile taranıyor...")
+        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte GÖVDE KAPANISLI DİP/ZİRVE KIRILIMI ile taranıyor...")
 
         for symbol in SYMBOLS:
             df = get_latest_data(symbol, api_interval)
@@ -99,6 +99,7 @@ def check_signals():
             
             c_live = df.iloc[-1]
             
+            # TREND ŞARTLARI
             uptrend = (c_live['EMA20'] > c_live['EMA50']) and (c_live['EMA50'] > c_live['EMA100'])
             downtrend = (c_live['EMA20'] < c_live['EMA50']) and (c_live['EMA50'] < c_live['EMA100'])
 
@@ -119,24 +120,23 @@ def check_signals():
                 
                 if max_high_idx >= recent_threshold:
                     past_start = max(0, start_idx)
-                    past_end = max_high_idx - 8
+                    past_end = max_high_idx - 5
                     
                     if past_end > past_start:
                         historical_peak = df['High'].iloc[past_start : past_end].max()
                         
+                        # GÖVDE KAPANIS ŞARTI (LONG): Zirve civarındaki mumların KAPANIŞI eski tepeyi geçmeli!
                         close_start = max(0, max_high_idx - 2)
                         close_end = min(current_idx, max_high_idx + 3)
                         new_peak_closes = df['Close'].iloc[close_start : close_end]
                         
                         is_truly_new_high = (new_peak_closes > historical_peak).any()
                         
-                        max_close_idx = df['Close'].iloc[start_idx : current_idx].idxmax()
-                        count_start_idx = min(max_high_idx, max_close_idx) + 1
-                        
+                        count_start_idx = max_high_idx + 1
                         touch_end = current_idx - 1 
                         
                         if touch_end >= count_start_idx:
-                            no_prior_touch = (df['Low'].iloc[count_start_idx : touch_end + 1] > df['EMA20'].iloc[count_start_idx : touch_end + 1] * TOLERANCE_LONG).all()
+                            no_prior_touch = (df['Low'].iloc[count_start_idx : touch_end + 1] > df['EMA20'].iloc[count_start_idx : touch_end + 1]).all()
                         else:
                             no_prior_touch = True
                             
@@ -144,13 +144,12 @@ def check_signals():
                         exception_candles = (pullback_df['Close'] > pullback_df['Open']).sum()
                         is_clean_pullback = exception_candles <= 2
                         
-                        # Canlı mumda toleranslı temas kontrolü
                         is_touching = (c_live['Low'] <= c_live['EMA20'] * TOLERANCE_LONG) and (c_live['Stoch_K'] < 30)
                         
                         if is_truly_new_high and is_touching and no_prior_touch and is_clean_pullback:
                             signal_id = f"{max_high_idx}_{current_timestamp}"
                             if last_signal_tracker[tf_label][symbol] != signal_id:
-                                msg = f"🟢 **GERÇEK ZİRVE + ESNEMİŞ İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Zirveden sonra temiz düşüş sağlandı. EMA20'ye (Hassas Mıknatıs %0.03) ilk temas gerçekleşti!\n\n[TradingView'da Aç]({tv_link})"
+                                msg = f"🟢 **GÖVDE KAPANİŞLI ZİRVE KIRILIMI + KESİN İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Gövde kapanışıyla tepe kırıldı, temiz düşüşle EMA20'ye ilk temas geldi.\n\n[TradingView'da Aç]({tv_link})"
                                 send_telegram_message(msg)
                                 last_signal_tracker[tf_label][symbol] = signal_id
 
@@ -160,24 +159,23 @@ def check_signals():
                 
                 if min_low_idx >= recent_threshold:
                     past_start = max(0, start_idx)
-                    past_end = min_low_idx - 8
+                    past_end = min_low_idx - 5
                     
                     if past_end > past_start:
                         historical_valley = df['Low'].iloc[past_start : past_end].min()
                         
+                        # GÖVDE KAPANIS ŞARTI (SHORT): Dip civarındaki mumların KAPANIŞI eski dibin altında kalmalı!
                         close_start = max(0, min_low_idx - 2)
                         close_end = min(current_idx, min_low_idx + 3)
                         new_valley_closes = df['Close'].iloc[close_start : close_end]
                         
                         is_truly_new_low = (new_valley_closes < historical_valley).any()
                         
-                        min_close_idx = df['Close'].iloc[start_idx : current_idx].idxmin()
-                        count_start_idx = min(min_low_idx, min_close_idx) + 1
-                        
+                        count_start_idx = min_low_idx + 1
                         touch_end = current_idx - 1
                         
                         if touch_end >= count_start_idx:
-                            no_prior_touch = (df['High'].iloc[count_start_idx : touch_end + 1] < df['EMA20'].iloc[count_start_idx : touch_end + 1] * TOLERANCE_SHORT).all()
+                            no_prior_touch = (df['High'].iloc[count_start_idx : touch_end + 1] < df['EMA20'].iloc[count_start_idx : touch_end + 1]).all()
                         else:
                             no_prior_touch = True
                             
@@ -185,20 +183,19 @@ def check_signals():
                         exception_candles = (pullback_df['Close'] < pullback_df['Open']).sum()
                         is_clean_pullback = exception_candles <= 2
                         
-                        # Canlı mumda toleranslı temas kontrolü
                         is_touching = (c_live['High'] >= c_live['EMA20'] * TOLERANCE_SHORT) and (c_live['Stoch_K'] > 70)
                         
                         if is_truly_new_low and is_touching and no_prior_touch and is_clean_pullback:
                             signal_id = f"{min_low_idx}_{current_timestamp}"
                             if last_signal_tracker[tf_label][symbol] != signal_id:
-                                msg = f"🔴 **GERÇEK DİP + ESNEMİŞ İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Dipten sonra temiz yükseliş sağlandı. EMA20'ye (Hassas Mıknatıs %0.03) ilk temas gerçekleşti!\n\n[TradingView'da Aç]({tv_link})"
+                                msg = f"🔴 **GÖVDE KAPANİŞLI DİP KIRILIMI + KESİN İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Gövde kapanışıyla dip kırıldı, temiz yükselişle EMA20'ye ilk temas geldi.\n\n[TradingView'da Aç]({tv_link})"
                                 send_telegram_message(msg)
                                 last_signal_tracker[tf_label][symbol] = signal_id
 
     print(f"[{datetime.datetime.now()}] Çift zamanlı (15m & 30m) tarama bitti. Hızlı reaksiyon için 15 saniye bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("Mikro Hassasiyetli (Hata Engelleyici) İlk Temas Botu Devrede...")
+    print("Gövde Kapanışlı Kırılım Garantili Bot Devrede...")
     while True:
         try:
             check_signals()
