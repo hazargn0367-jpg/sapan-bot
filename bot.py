@@ -26,7 +26,7 @@ SYMBOLS = [
     "MEW_USDT", "REZ_USDT", "BB_USDT", "LISTA_USDT", "BANANA_USDT", 
     "UXLINK_USDT", "CATI_USDT", "HMSTR_USDT", "DOGS_USDT", "EIGEN_USDT", "SCR_USDT", 
     "LUMIA_USDT", "SWELL_USDT", "CETUS_USDT", "COW_USDT", "TROY_USDT",
-    "FARTCOIN_USDT", "CHILLGUY_USDT", "DOS_USDT"
+    "FARTCOIN_USDT", "CHILLGUY_USDT", "DOS_USDT", "SAFE_USDT"
 ]
 
 SYMBOLS = sorted(list(set(SYMBOLS)))
@@ -81,11 +81,11 @@ def check_signals():
     timeframes = [("15m", "Min15"), ("30m", "Min30")]
     
     for tf_label, api_interval in timeframes:
-        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte GÖVDE KAPANISLI DİP/ZİRVE KIRILIMI ile taranıyor...")
+        print(f"[{datetime.datetime.now()}] {len(SYMBOLS)} parite {tf_label} grafikte taranıyor...")
 
         for symbol in SYMBOLS:
             df = get_latest_data(symbol, api_interval)
-            if df is None or len(df) < 180: continue
+            if df is None or len(df) < 100: continue
                 
             df['EMA20'] = df['Close'].ewm(span=20, adjust=False).mean()
             df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
@@ -99,7 +99,7 @@ def check_signals():
             
             c_live = df.iloc[-1]
             
-            # TREND ŞARTLARI
+            # Trend Kontrolü (EMA 20 > 50 > 100)
             uptrend = (c_live['EMA20'] > c_live['EMA50']) and (c_live['EMA50'] > c_live['EMA100'])
             downtrend = (c_live['EMA20'] < c_live['EMA50']) and (c_live['EMA50'] < c_live['EMA100'])
 
@@ -111,91 +111,35 @@ def check_signals():
 
             current_idx = df.index[-1]
             current_timestamp = c_live['timestamp']
-            start_idx = max(0, current_idx - 150)
-            recent_threshold = current_idx - 30
 
             # LONG KONTROLÜ
             if uptrend:
-                max_high_idx = df['High'].iloc[start_idx : current_idx].idxmax()
+                # Fiyat EMA20'ye değiyor mu ve Stoch RSI < 30 mu?
+                is_touching = (c_live['Low'] <= c_live['EMA20'] * TOLERANCE_LONG) and (c_live['Stoch_K'] < 30)
                 
-                if max_high_idx >= recent_threshold:
-                    past_start = max(0, start_idx)
-                    past_end = max_high_idx - 5
-                    
-                    if past_end > past_start:
-                        historical_peak = df['High'].iloc[past_start : past_end].max()
-                        
-                        # GÖVDE KAPANIS ŞARTI (LONG): Zirve civarındaki mumların KAPANIŞI eski tepeyi geçmeli!
-                        close_start = max(0, max_high_idx - 2)
-                        close_end = min(current_idx, max_high_idx + 3)
-                        new_peak_closes = df['Close'].iloc[close_start : close_end]
-                        
-                        is_truly_new_high = (new_peak_closes > historical_peak).any()
-                        
-                        count_start_idx = max_high_idx + 1
-                        touch_end = current_idx - 1 
-                        
-                        if touch_end >= count_start_idx:
-                            no_prior_touch = (df['Low'].iloc[count_start_idx : touch_end + 1] > df['EMA20'].iloc[count_start_idx : touch_end + 1]).all()
-                        else:
-                            no_prior_touch = True
-                            
-                        pullback_df = df.iloc[count_start_idx : current_idx + 1]
-                        exception_candles = (pullback_df['Close'] > pullback_df['Open']).sum()
-                        is_clean_pullback = exception_candles <= 2
-                        
-                        is_touching = (c_live['Low'] <= c_live['EMA20'] * TOLERANCE_LONG) and (c_live['Stoch_K'] < 30)
-                        
-                        if is_truly_new_high and is_touching and no_prior_touch and is_clean_pullback:
-                            signal_id = f"{max_high_idx}_{current_timestamp}"
-                            if last_signal_tracker[tf_label][symbol] != signal_id:
-                                msg = f"🟢 **GÖVDE KAPANİŞLI ZİRVE KIRILIMI + KESİN İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Gövde kapanışıyla tepe kırıldı, temiz düşüşle EMA20'ye ilk temas geldi.\n\n[TradingView'da Aç]({tv_link})"
-                                send_telegram_message(msg)
-                                last_signal_tracker[tf_label][symbol] = signal_id
+                if is_touching:
+                    signal_id = f"{current_idx}_{current_timestamp}"
+                    if last_signal_tracker[tf_label][symbol] != signal_id:
+                        msg = f"🟢 **EMA20 İLK TEMAS (LONG)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Yükseliş trendinde EMA20'ye temas gerçekleşti!\n\n[TradingView'da Aç]({tv_link})"
+                        send_telegram_message(msg)
+                        last_signal_tracker[tf_label][symbol] = signal_id
 
             # SHORT KONTROLÜ
             elif downtrend:
-                min_low_idx = df['Low'].iloc[start_idx : current_idx].idxmin()
+                # Fiyat EMA20'ye değiyor mu ve Stoch RSI > 70 mi?
+                is_touching = (c_live['High'] >= c_live['EMA20'] * TOLERANCE_SHORT) and (c_live['Stoch_K'] > 70)
                 
-                if min_low_idx >= recent_threshold:
-                    past_start = max(0, start_idx)
-                    past_end = min_low_idx - 5
-                    
-                    if past_end > past_start:
-                        historical_valley = df['Low'].iloc[past_start : past_end].min()
-                        
-                        # GÖVDE KAPANIS ŞARTI (SHORT): Dip civarındaki mumların KAPANIŞI eski dibin altında kalmalı!
-                        close_start = max(0, min_low_idx - 2)
-                        close_end = min(current_idx, min_low_idx + 3)
-                        new_valley_closes = df['Close'].iloc[close_start : close_end]
-                        
-                        is_truly_new_low = (new_valley_closes < historical_valley).any()
-                        
-                        count_start_idx = min_low_idx + 1
-                        touch_end = current_idx - 1
-                        
-                        if touch_end >= count_start_idx:
-                            no_prior_touch = (df['High'].iloc[count_start_idx : touch_end + 1] < df['EMA20'].iloc[count_start_idx : touch_end + 1]).all()
-                        else:
-                            no_prior_touch = True
-                            
-                        pullback_df = df.iloc[count_start_idx : current_idx + 1]
-                        exception_candles = (pullback_df['Close'] < pullback_df['Open']).sum()
-                        is_clean_pullback = exception_candles <= 2
-                        
-                        is_touching = (c_live['High'] >= c_live['EMA20'] * TOLERANCE_SHORT) and (c_live['Stoch_K'] > 70)
-                        
-                        if is_truly_new_low and is_touching and no_prior_touch and is_clean_pullback:
-                            signal_id = f"{min_low_idx}_{current_timestamp}"
-                            if last_signal_tracker[tf_label][symbol] != signal_id:
-                                msg = f"🔴 **GÖVDE KAPANİŞLI DİP KIRILIMI + KESİN İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Gövde kapanışıyla dip kırıldı, temiz yükselişle EMA20'ye ilk temas geldi.\n\n[TradingView'da Aç]({tv_link})"
-                                send_telegram_message(msg)
-                                last_signal_tracker[tf_label][symbol] = signal_id
+                if is_touching:
+                    signal_id = f"{current_idx}_{current_timestamp}"
+                    if last_signal_tracker[tf_label][symbol] != signal_id:
+                        msg = f"🔴 **EMA20 İLK TEMAS (SHORT)!**\n\nCoin: `{symbol}`\nZaman Dilimi: `{tf_label}`\nFiyat: `{c_live['Close']}`\nStoch RSI: `{c_live['Stoch_K']:.2f}`\nDurum: Düşüş trendinde EMA20'ye temas gerçekleşti!\n\n[TradingView'da Aç]({tv_link})"
+                        send_telegram_message(msg)
+                        last_signal_tracker[tf_label][symbol] = signal_id
 
     print(f"[{datetime.datetime.now()}] Çift zamanlı (15m & 30m) tarama bitti. Hızlı reaksiyon için 15 saniye bekleniyor...\n")
 
 if __name__ == "__main__":
-    print("Gövde Kapanışlı Kırılım Garantili Bot Devrede...")
+    print("Doğrudan EMA20 Temas Botu Devrede...")
     while True:
         try:
             check_signals()
