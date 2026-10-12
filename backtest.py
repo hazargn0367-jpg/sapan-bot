@@ -5,7 +5,7 @@ Render > Shell'de çalıştır:
     nohup python backtest.py > backtest.log 2>&1 &
 
 Seçenekler:
-    --days 90                      kaç günlük veri (varsayılan 90)
+    --days 30                      kaç günlük veri (varsayılan 30)
     --symbols NEARUSDT,QNTUSDT     sadece bu coinler (varsayılan: hepsi)
     --tf 15m,30m                   zaman dilimleri (varsayılan: 15m,30m)
 
@@ -241,7 +241,7 @@ def build_report(df_all, days, n_coins, minutes, examples_txt):
 # ---------------------------------------------------------------- ana
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=90)
+    ap.add_argument("--days", type=int, default=30)
     ap.add_argument("--symbols", default="")
     ap.add_argument("--tf", default="15m,30m")
     args = ap.parse_args()
