@@ -12,6 +12,7 @@ import time
 import numpy as np
 import pandas as pd
 
+import config
 import live_setups
 import strategy as st
 import trade_rules as tr
@@ -21,16 +22,16 @@ TZ = "Europe/Istanbul"
 
 
 def parse(text):
-    m = re.search(r"([A-Za-z0-9]+)\s+(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s+(\d{1,2}):(\d{2})", text)
+    m = re.search(r"([A-Za-z0-9]+)\s+(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s+(\d{1,2}):(\d{2})(?:\s+(\d+[mh]))?", text)
     if not m:
         return None
-    sym, d, mo, y, h, mi = m.groups()
+    sym, d, mo, y, h, mi, tf = m.groups()
     sym = sym.upper()
     if not sym.endswith("USDT"):
         sym += "USDT"
     year = int(y) if y else pd.Timestamp.now(tz=TZ).year
     ts = pd.Timestamp(year=year, month=int(mo), day=int(d), hour=int(h), minute=int(mi), tz=TZ)
-    return sym, ts
+    return sym, ts, (tf or "15m").lower()
 
 
 def explain(text):
@@ -42,16 +43,18 @@ def inspect(text, chart_path="/tmp/incele.png"):
     """(açıklama metni, grafik dosyası ya da None)"""
     parsed = parse(text)
     if not parsed:
-        return "Kullanım: /incele AXSUSDT 01.08.2026 02:00 (temas mumunun Türkiye saati)", None
-    sym, ts_tr = parsed
+        return ("Kullanım: /incele AXSUSDT 01.08.2026 02:00 (temas mumunun Türkiye saati, 15dk)\n"
+                "5 dakikalık canlı bildirim için sona 5m ekle: /incele AXSUSDT 13.10 22:05 5m"), None
+    sym, ts_tr, tf = parsed
+    tf_ms = config.tf_minutes(tf) * 60_000
     t_ms = int(ts_tr.tz_convert("UTC").value // 10**6)
-    df = get_klines_range(sym, "15m", t_ms - 600 * 900_000, t_ms + 40 * 900_000, yield_live=False, max_wait=60)
+    df = get_klines_range(sym, tf, t_ms - 600 * tf_ms, t_ms + 40 * tf_ms, yield_live=False, max_wait=60)
     if df is None or df.empty:
         return f"{sym} için veri alınamadı.", None
     df = tr.add_atr(st.add_indicators(df.reset_index(drop=True)))
     hits = np.flatnonzero(df["timestamp"].values == t_ms)
     if len(hits) == 0:
-        return f"{sym} {ts_tr:%d.%m.%Y %H:%M} mumu veride yok (15dk'lık mum başlangıç saati olmalı).", None
+        return f"{sym} {ts_tr:%d.%m.%Y %H:%M} mumu veride yok ({tf} mumun başlangıç saati olmalı).", None
     i = int(hits[0])
     live_setups.apply_rules()
     # Fiyat adımı: önce canlı taramanın elindeki liste (Binance'e fazladan istek atmamak için)
@@ -68,7 +71,7 @@ def inspect(text, chart_path="/tmp/incele.png"):
 
     d = st.diagnose(df, i)
     side = d.get("side")
-    lines = [f"🔍 <b>{html.escape(sym)} {ts_tr:%d.%m.%Y %H:%M} TR</b>",
+    lines = [f"🔍 <b>{html.escape(sym)} {tf} {ts_tr:%d.%m.%Y %H:%M} TR</b>",
              f"Temas mumu: A {p8(O[i])} Y {p8(H[i])} D {p8(L[i])} K {p8(C[i])} | EMA20 {p8(df['EMA20'].values[i])} | Stoch {df['Stoch_K'].values[i]:.1f}",
              "", "<b>Temel şartlar</b>"]
     for key, label in [("trend", "Net trend"), ("pivot_recent", "Tepe/dip son 30 mumda"),
@@ -139,7 +142,7 @@ def inspect(text, chart_path="/tmp/incele.png"):
     path = None
     try:
         import charts  # matplotlib sadece burada yüklenir
-        title = f"{sym}  15m  {side}   temas {ts_tr:%d.%m.%Y %H:%M} TR   sonuç: {status_tr}"
+        title = f"{sym}  {tf}  {side}   temas {ts_tr:%d.%m.%Y %H:%M} TR   sonuç: {status_tr}"
         if sd.get("q") is not None:
             title += "   yapı: " + ("sağlam" if sd["ok"] else "BOZUK")
         charts.draw_inspect(df, i, side, r, sd, title, chart_path,

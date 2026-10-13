@@ -26,7 +26,10 @@ KLINE_LIMIT = 499  # Binance'te 100-499 arası mum = 2 ağırlık (rate limit do
 WEIGHT_LIMIT = 2400
 WEIGHT_SOFT_LIMIT = 2000  # buna yaklaşınca dakika dolana kadar beklenir (canlı bota pay kalır)
 PAUSE_FILE = "/tmp/binance_pause"
-LIVE_SCAN_WINDOW = 120  # her 15dk'lık mum kapanışından sonraki 120 sn canlı taramaya ayrılır
+import config  # noqa: E402
+
+LIVE_PERIOD = config.tf_minutes(config.LIVE_TF) * 60  # canlı taramanın mum süresi (sn)
+LIVE_SCAN_WINDOW = 75  # her canlı mum kapanışından sonraki 75 sn canlı taramaya ayrılır (tarama ~30 sn)
 
 
 class BinanceBlocked(RuntimeError):
@@ -101,9 +104,9 @@ def _wait_pause(max_wait=None):
 
 def _wait_if_paused(max_wait=None):
     """Sadece backtest kullanır: sınıra yaklaşıldıysa ya da canlı tarama zamanıysa
-    (15dk'lık mum kapanışından sonraki ilk 120 sn) bekler."""
+    (canlı mum kapanışından sonraki ilk 75 sn) bekler."""
     _wait_pause(max_wait)
-    sec = time.time() % 900
+    sec = time.time() % LIVE_PERIOD
     if sec < LIVE_SCAN_WINDOW:
         time.sleep(LIVE_SCAN_WINDOW - sec)
 

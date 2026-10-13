@@ -90,7 +90,7 @@ def scan():
 
 def setup_loop():
     """EMİR HAZIR taraması kendi iş parçacığında: temas taraması uzun sürse bile
-    15dk'lık kapanış penceresini kaçırmaz."""
+    mum kapanış penceresini kaçırmaz."""
     while True:
         if config.SETUP_ALERTS:
             try:
@@ -107,7 +107,7 @@ def main():
     durum = "açık" if config.TOUCH_ALERTS else "kapalı"
     setup = "açık" if config.SETUP_ALERTS else "kapalı"
     send_message(f"✅ Bot başladı\n"
-                 f"📋 Emir bildirimleri: {setup} (hacmi en yüksek {live_setups.UNIVERSE} coin, 15dk)\n"
+                 f"📋 Emir bildirimleri: {setup} (hacmi en yüksek {live_setups.UNIVERSE} coin, {live_setups.LIVE_TF})\n"
                  f"Kurallar: {live_setups.rules_summary()}\n"
                  f"🔔 Temas bildirimleri: {durum}\n"
                  + (f"🧠 {prev}\n" if prev else "")

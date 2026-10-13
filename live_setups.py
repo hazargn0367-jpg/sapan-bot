@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 
+import config
 import strategy as st
 import trade_rules as tr
 import exchanges
@@ -32,6 +33,9 @@ log = logging.getLogger("bot")
 UNIVERSE = 500          # hacme göre ilk kaç coin taransın
 CLUSTER_MAX = 5         # aynı mumda bu kadar coin aynı yönde temas verirse girme (toplu hareket)
 SCAN_THREADS = 6
+LIVE_TF = config.LIVE_TF                 # canlı tarama zaman dilimi (varsayılan 5m)
+TF_MIN = config.tf_minutes(LIVE_TF)
+TF_SEC = TF_MIN * 60
 TZ = "Europe/Istanbul"
 CHART_DIR = "/tmp/live_charts"
 
@@ -116,7 +120,7 @@ def refresh_universe():
 
 
 def closed_candles(symbol):
-    df = get_klines(symbol, "15m")
+    df = get_klines(symbol, LIVE_TF)
     if df is None or len(df) < 250:
         return None
     df = df.iloc[:-1]  # son satır hâlâ açık olan mum
@@ -152,12 +156,12 @@ def setup_message(symbol, side, r, df):
     risk = abs(r["entry"] - r["stop"])
     qty = tr.RISK_USD / risk if risk else 0
     notional = qty * r["entry"]
-    valid_until = int(ts[r["confirm"]]) + (tr.ENTRY_WINDOW + 1) * 15 * 60 * 1000
-    tv = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol}.P&interval=15"
+    valid_until = int(ts[r["confirm"]]) + (tr.ENTRY_WINDOW + 1) * TF_SEC * 1000
+    tv = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol}.P&interval={TF_MIN}"
     emoji = "🟢" if side == "LONG" else "🔴"
     order = "BUY STOP" if side == "LONG" else "SELL STOP"
     return (
-        f"📋 <b>EMİR HAZIR</b>  {emoji} <b>{side} {html.escape(symbol)}</b> (15m)\n\n"
+        f"📋 <b>EMİR HAZIR</b>  {emoji} <b>{side} {html.escape(symbol)}</b> ({LIVE_TF})\n\n"
         f"Giriş ({order}): <code>{p(r['entry'])}</code>\n"
         f"Stop: <code>{p(r['stop'])}</code>  (%{100 * risk / r['entry']:.2f})\n"
         f"TP (1:{tr.RR:g}): <code>{p(r['tp'])}</code>\n"
@@ -176,7 +180,7 @@ def send_setup(symbol, side, r, df):
         os.makedirs(CHART_DIR, exist_ok=True)
         ts = df["timestamp"].values
         trade = {
-            "_ctx": charts.context(df, r), "coin": symbol, "zaman_dilimi": "15m", "yon": side,
+            "_ctx": charts.context(df, r), "coin": symbol, "zaman_dilimi": LIVE_TF, "yon": side,
             "durum": "pending", "giris": r["entry"], "stop": r["stop"], "tp": r["tp"],
             "temas": fmt(ts[r["touch"]], "%d.%m.%Y %H:%M"),
             "temas_utc": pd.Timestamp(int(ts[r["touch"]]), unit="ms", tz="UTC").strftime("%H:%M"),
@@ -285,12 +289,12 @@ def status_text():
     if _stats["running_since"]:
         running = f"\n⏳ Şu an tarama sürüyor ({time.time() - _stats['running_since']:.0f} sn)"
     if _stats["last_run"] is None:
-        nxt = (int(time.time() // 900) + 1) * 900 + 10
-        return (f"📋 Canlı tarama: ilk tarama {hhmm(nxt)}'de yapılacak (her 15 dk'lık mum kapanışında)."
+        nxt = (int(time.time() // TF_SEC) + 1) * TF_SEC + 10
+        return (f"📋 Canlı tarama ({LIVE_TF}): ilk tarama {hhmm(nxt)}'de yapılacak (her {TF_MIN} dk'lık mum kapanışında)."
                 + running)
     up_h = (time.time() - _stats["started"]) / 3600
     lines = [
-        f"📋 <b>Canlı tarama</b> (bot {up_h:.1f} saattir açık, {_stats['cycles']} tarama)",
+        f"📋 <b>Canlı tarama {LIVE_TF}</b> (bot {up_h:.1f} saattir açık, {_stats['cycles']} tarama)",
         f"Son tarama {hhmm(_stats['last_run'])}: {_stats['ok']}/{_stats['scanned']} coin, "
         f"{_stats['touches']} temas, {_stats['ready']} onay adayı, {_stats['sent']} bildirim ({_stats['secs']:.0f} sn)",
         f"Açıldığından beri gönderilen EMİR HAZIR: {_stats['total_sent']}"
@@ -317,8 +321,8 @@ def maybe_run():
     Sadece kapanıştan sonraki ilk 60 sn içinde başlar (backtest o sırada Binance'e yol verir);
     bot çeyreğin ortasında açılırsa ilk tarama bir sonraki kapanışta yapılır."""
     now = time.time()
-    bucket = int(now // 900)
-    sec = now - bucket * 900
+    bucket = int(now // TF_SEC)
+    sec = now - bucket * TF_SEC
     if sec < 10 or sec > 60 or bucket == _state["last_bucket"]:
         return
     _state["last_bucket"] = bucket

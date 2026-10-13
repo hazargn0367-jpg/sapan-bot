@@ -20,7 +20,8 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 destek -> kural 9 (dip/tepeden sonra iğneli mumlar = destek/direnç), ay ay + grafik PDF
   (varsayılan: hacmi en yüksek 500 coin, canlı bildirimlerle aynı; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi + canlı tarama durumu
-  /incele AXSUSDT 01.08.2026 02:00 -> bir işlemin tüm kurallardaki değerlendirmesi + grafik (TR saati)
+  /incele AXSUSDT 01.08.2026 02:00 -> bir işlemin tüm kurallardaki değerlendirmesi + grafik (TR saati, 15m)
+  /incele AXSUSDT 13.10 22:05 5m  -> 5 dakikalık canlı bildirimi incele
   /iptal          -> çalışan backtest'i durdurur
   /bildirim aç | kapat -> EMA20 temas bildirimleri
   /sinyal aç | kapat -> kurallara uyan setup'larda EMİR HAZIR bildirimleri

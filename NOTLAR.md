@@ -100,6 +100,14 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   olmayan kısım (coin başına ~1 istek, 2 ağırlık). Sahte arşiv/API ile veri birebir aynı çıktı. Arşive ulaşılamazsa API'ye döner
   (`--api` ile zorla API). Rapor sonunda "Veri: X arşiv dosyası, Y API parçası".
 
+- 13.10 21:5x: kullanıcı isteği: canlı EMİR HAZIR taraması 5 dakikalık grafikte (config.LIVE_TF, Render'da LIVE_TF ile değişir).
+  Amaç kârlılık değil, canlı bildirimlerin kurallara uyduğunu daha sık görmek. Kurallar mum sayısıyla tanımlı, aynen geçerli.
+  5m'de stoplar dar: %0.3'ten dar stoplu setup'lar elenir, komisyon payı 15m'den büyük. Backtest'ler hâlâ 15m.
+  /incele için sona 5m: `/incele COIN 13.10 22:05 5m`.
+- /backtest 90 destek (500 coin): canlı 261 işlem %33 -15.1R (işlem başı -0.06R; aylar -9.5/-8.9/+3.4).
+  Kural 9 hiçbir varyasyonda işlem başı sonucu iyileştirmedi (elediği işlemler ortalama işlemler) → canlıya eklenmedi.
+  500 coinde işlem başı sonuç 200 coinden (-0.31R) çok daha iyi. PDF çizerken bellek 458MB'a çıktı, bekçi durdurdu (PDF gelmedi).
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.
