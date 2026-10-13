@@ -58,7 +58,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2:
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.
 - Denenecek: 1 saatlik zaman dilimi (stoplar geniş → komisyon payı küçük).
-- Doğrulanacak: canlıdaki 1:2.2 TP (`/backtest 30 tp` ve `/backtest 30 tp önceki`).
+- TP testi (canlı kurallar, iki ay toplamı, 59 işlem): 1:1.5 -12.2R · 1:2 -13.8R · 1:2.2 -16.9R · 1:2.5 -19.4R.
+  Farklar gürültü seviyesinde (aynı ayar ayrı çalıştırmalarda ±3R oynuyor: hacim listesi ve dönem sınırı değişiyor).
+  Sorun TP oranı değil, giriş avantajının olmaması. Kullanıcı işlemleri elle seçecek, TP'yi kendisi belirleyebilir.
 
 ## Telegram komutları
 - `/sinyal aç|kapat` – EMİR HAZIR bildirimleri
