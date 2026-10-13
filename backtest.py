@@ -13,6 +13,7 @@ Seçenekler:
     --ago 30                       dönemi 30 gün geriye kaydır (önceki ay)
     --compare                      TP/başabaş/filtre ayarlarını tek seferde karşılaştır
     --no-filters                   ek filtreleri kapat (seans, stop %0.5-3)
+    --atr-min 0.875                stop en az 0.875 ATR olsun
 
 Bitince Telegram'a özet mesaj ve tüm setup'ların listesi (CSV) gelir.
 """
@@ -52,6 +53,7 @@ STATUS_TR = {
     "cancel_touch": "Onaydan önce temas mumunun ucu kırıldı",
     "no_confirm": "3 mumda onay gelmedi",
     "atr": "Stop mesafesi 1.5 ATR'den büyük",
+    "atr_min": "Stop mesafesi ATR alt sınırının altında",
     "min_risk": "Stop mesafesi çok dar",
     "max_risk": "Stop mesafesi %3'ten geniş",
     "session": "Temas 00-08 UTC (Asya seansı)",
@@ -258,6 +260,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
     msg.append(f"  ↳ Onaydan önce iptal: {c('cancel_touch')}")
     msg.append(f"  ↳ 3 mumda onay yok: {c('no_confirm')}")
     msg.append(f"  ↳ ATR filtresine takıldı: {c('atr')}")
+    if tr.MIN_ATR_MULT > 0:
+        msg.append(f"  ↳ Stop {tr.MIN_ATR_MULT:g} ATR'den kısa: {c('atr_min')}")
     min_pct = tr.MIN_RISK_PCT if tr.FILTERS else tr.BASE_MIN_RISK_PCT
     if tr.FILTERS:
         msg.append(f"  ↳ Asya seansı (00-08 UTC): {c('session')}")
@@ -293,14 +297,20 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
     return "\n".join(msg)
 
 
-# (TP oranı, başabaş tetik R, filtreler açık mı)
-COMPARE_CONFIGS = [(2.0, 0.0, False), (2.0, 0.0, True), (2.0, 1.0, True), (2.5, 0.0, True),
-                   (2.5, 1.0, True), (3.0, 0.0, True), (3.0, 1.0, True)]
+# (TP oranı, başabaş tetik R, filtreler açık mı, ATR alt sınırı)
+COMPARE_CONFIGS = [(2.0, 0.0, False, 0.0), (2.0, 0.0, True, 0.0), (2.0, 1.0, True, 0.0),
+                   (2.5, 0.0, True, 0.0), (2.5, 1.0, True, 0.0), (3.0, 0.0, True, 0.0),
+                   (3.0, 1.0, True, 0.0), (2.0, 0.0, True, 0.875), (2.0, 1.0, True, 0.875)]
 
 
-def cfg_name(rr, be, filt=True):
+def cfg_name(rr, be, filt=True, atr_min=0.0):
     return (f"1:{rr:g}" + (f" + başabaş {be:g}R" if be > 0 else "")
+            + (f" + en az {atr_min:g} ATR" if atr_min > 0 else "")
             + ("" if filt else " (filtresiz)"))
+
+
+def apply_cfg(cfg):
+    tr.RR, tr.BE_TRIGGER, tr.FILTERS, tr.MIN_ATR_MULT = cfg
 
 
 def build_compare(results, period_txt, n_coins, minutes):
@@ -311,13 +321,14 @@ def build_compare(results, period_txt, n_coins, minutes):
         t = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
         scored.append((cfg, stats(t)))
     best = max((x for x in scored if x[1]), key=lambda x: x[1]["net"], default=None)
-    for (rr, be, filt), s in scored:
-        star = " ⭐" if best and (rr, be, filt) == best[0] else ""
+    for cfg, s in scored:
+        be = cfg[1]
+        star = " ⭐" if best and cfg == best[0] else ""
         if not s:
-            msg.append(f"<b>{cfg_name(rr, be, filt)}</b>: işlem yok")
+            msg.append(f"<b>{cfg_name(*cfg)}</b>: işlem yok")
             continue
         bep = f", {s['be']} başabaş" if be > 0 else ""
-        msg.append(f"<b>{cfg_name(rr, be, filt)}</b>{star}")
+        msg.append(f"<b>{cfg_name(*cfg)}</b>{star}")
         msg.append(f"  {s['n']} işlem, %{s['wr']:.0f} TP{bep}")
         msg.append(f"  <b>{s['net']:+.1f}R ({usd(s['net'])})</b>, düşüş {s['dd']:.1f}R, "
                    f"en uzun stop serisi {s['streak']}")
@@ -334,24 +345,35 @@ def main():
     ap.add_argument("--be", type=float, default=0.0, help="başabaş tetik (R), 0 = kapalı")
     ap.add_argument("--ago", type=int, default=0, help="dönemi kaç gün geriye kaydır (önceki ay için = days)")
     ap.add_argument("--compare", action="store_true", help="tüm TP/başabaş ayarlarını karşılaştır")
-    ap.add_argument("--no-filters", action="store_true", help="ek filtreleri kapat (seans, stop %0.5-3)")
+    ap.add_argument("--no-filters", action="store_true", help="ek filtreleri kapat (seans, stop %%0.5-3)")
+    ap.add_argument("--atr-min", type=float, default=0.0, help="stop en az kaç ATR (0 = kapalı)")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
     tr.RR = args.rr
     tr.BE_TRIGGER = args.be
     tr.FILTERS = not args.no_filters
-    configs = COMPARE_CONFIGS if args.compare else [(args.rr, args.be, tr.FILTERS)]
+    configs = COMPARE_CONFIGS if args.compare else [(args.rr, args.be, tr.FILTERS, args.atr_min)]
+    apply_cfg(configs[0])
     p0, p1 = period(args.days, args.ago)
     period_txt = (f"{pd.Timestamp(p0, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} – "
                   f"{pd.Timestamp(p1, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} ({args.days} gün)")
 
     t0 = time.time()
-    ticks = get_tick_sizes()
+    ticks = {}
+    for attempt in range(3):
+        try:
+            ticks = get_tick_sizes()
+            break
+        except Exception as e:
+            log.warning("Tık büyüklükleri alınamadı (%d. deneme): %s", attempt + 1, e)
+            time.sleep(10)
+    if not ticks:
+        raise RuntimeError("Binance'ten coin bilgileri alınamadı (3 deneme)")
     symbols = ([s.strip().upper() for s in args.symbols.split(",") if s.strip()]
                or get_symbols())
     log.info("Backtest başlıyor: %d coin, %d gün, %s, %d ayar", len(symbols), args.days, tfs, len(configs))
     what = (f"{len(configs)} farklı ayar karşılaştırılacak" if args.compare else
-            cfg_name(tr.RR, tr.BE_TRIGGER, tr.FILTERS))
+            cfg_name(*configs[0]))
     send_message(f"⏳ Backtest başladı: {len(symbols)} coin, {period_txt}, {what}. "
                  f"Bitince sonuçlar buraya gelecek.")
 
@@ -378,9 +400,9 @@ def main():
                 for tf in tfs:
                     df = prepare(frames[tf])
                     signals = find_signals(df)
-                    for rr, be, filt in configs:
-                        tr.RR, tr.BE_TRIGGER, tr.FILTERS = rr, be, filt
-                        results[(rr, be, filt)] += run_df(df, symbol, tf, tick, signals,
+                    for cfg in configs:
+                        apply_cfg(cfg)
+                        results[cfg] += run_df(df, symbol, tf, tick, signals,
                                                     with_ctx=not args.compare)
                     if not args.compare:
                         for ex_sym, ex_tf, ex_when in EXAMPLES:
@@ -400,9 +422,9 @@ def main():
         log.info("\n%s", report)
         send_message(report)
         parts = []
-        for (rr, be, filt), d in frames_all.items():
+        for cfg, d in frames_all.items():
             if not d.empty:
-                parts.append(d.assign(ayar=cfg_name(rr, be, filt)))
+                parts.append(d.assign(ayar=cfg_name(*cfg)))
         if parts:
             out = pd.concat(parts)
             path = f"karsilastirma_{time.strftime('%Y%m%d_%H%M')}.csv"
@@ -411,7 +433,7 @@ def main():
             send_document(path, "Tüm ayarların işlemleri ('ayar' sütununa göre filtrele)")
         return
 
-    tr.RR, tr.BE_TRIGGER, tr.FILTERS = configs[0]
+    apply_cfg(configs[0])
     rows = results[configs[0]]
     df_all = pd.DataFrame(rows)
     report = build_report(df_all, period_txt, len(symbols), minutes, examples_txt)
@@ -443,4 +465,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        log.exception("Backtest hata verdi")
+        send_message(f"⚠️ Backtest hata verdi: {type(e).__name__}: {e}")
+        raise

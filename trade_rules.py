@@ -26,6 +26,7 @@ CONFIRM_WINDOW = 3     # temastan sonra onay için beklenecek mum
 ENTRY_WINDOW = 2       # onaydan sonra girişin gerçekleşmesi için beklenecek mum
 ATR_PERIOD = 14
 ATR_MAX_MULT = 1.5     # giriş-stop mesafesi en fazla bu kadar ATR
+MIN_ATR_MULT = 0.0     # >0 ise giriş-stop mesafesi en az bu kadar ATR (örn. 0.875: ATR 40 -> en az 35)
 BASE_MIN_RISK_PCT = 0.3  # filtresiz modda en dar stop (%)
 
 # ---- Ek filtreler (30 günlük analizden; FILTERS=False ile kapatılır) ----
@@ -58,7 +59,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
-    status: session | no_close | cancel_touch | no_confirm | atr | min_risk | max_risk | cancel_confirm |
+    status: session | no_close | cancel_touch | no_confirm | atr | atr_min | min_risk | max_risk | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
     H = df["High"].values
@@ -105,6 +106,9 @@ def simulate(df, i, side, tick):
 
     if risk > ATR_MAX_MULT * A[conf]:
         res["status"] = "atr"
+        return res
+    if MIN_ATR_MULT > 0 and risk < MIN_ATR_MULT * A[conf]:
+        res["status"] = "atr_min"
         return res
     risk_pct = 100 * risk / entry
     if risk_pct < (MIN_RISK_PCT if FILTERS else BASE_MIN_RISK_PCT):

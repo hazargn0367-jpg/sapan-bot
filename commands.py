@@ -7,6 +7,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 30 önceki -> bir önceki 30 günlük dönem
   /backtest 30 hepsi -> TP/başabaş/filtre ayarlarını tek seferde karşılaştır
   /backtest 30 filtresiz -> ek filtreler kapalı
+  /backtest 30 atr -> stop en az 0.875 ATR
   /durum          -> backtest ilerlemesi
   /iptal          -> çalışan backtest'i durdurur
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
@@ -53,6 +54,8 @@ def start_backtest(text):
         args += ["--compare"]
     if "filtresiz" in low:
         args += ["--no-filters"]
+    if "atr" in low:
+        args += ["--atr-min", "0.875"]
     log_file = open(os.path.join(HERE, "backtest.log"), "w")
     _bt_proc = subprocess.Popen(
         [sys.executable, "-u", "backtest.py", "--days", str(days)] + args,
@@ -74,6 +77,13 @@ def status_text():
     if running:
         return "⏳ Backtest çalışıyor" + (f": {progress}" if progress else ", veri çekiliyor...")
     if _bt_proc is not None:
+        if _bt_proc.returncode not in (0, None):
+            try:
+                with open(os.path.join(HERE, "backtest.log"), encoding="utf-8", errors="ignore") as f:
+                    tail = [ln.rstrip() for ln in f if ln.strip()][-3:]
+            except OSError:
+                tail = []
+            return "⚠️ Son backtest hatayla kapandı:\n" + "\n".join(tail)
         return "✅ Son backtest bitti." + (f"\nSon satır: {progress}" if progress else "")
     return "Çalışan backtest yok. Başlatmak için: /backtest"
 
