@@ -23,6 +23,7 @@ import pandas as pd
 
 import strategy as st
 import trade_rules as tr
+import exchanges
 from exchanges import get_klines, get_tick_sizes, get_top_symbols
 from telegram import send_message, send_photo
 
@@ -104,8 +105,8 @@ def p(x):
 def refresh_universe():
     if not _state["symbols"] or time.time() - _state["symbols_time"] > 3600:
         try:
-            syms = get_top_symbols(UNIVERSE)
-            ticks = get_tick_sizes()
+            syms = get_top_symbols(UNIVERSE, max_wait=120)
+            ticks = get_tick_sizes(max_wait=120)
             if syms:
                 _state.update(symbols=syms, ticks=ticks, symbols_time=time.time())
                 log.info("Setup taraması: %d coin", len(syms))
@@ -227,6 +228,13 @@ def follow_up(symbol, df):
 
 def run_cycle():
     apply_rules()
+    wait = exchanges.blocked_for()
+    if wait > 120:
+        # Binance IP'yi engellemiş: istek atmak engeli uzatır, bu tarama atlanır
+        _stats["last_error"] = (f"{time.strftime('%H:%M')} Binance engeli: tarama atlandı "
+                                f"(~{wait / 60:.0f} dk daha)")
+        log.warning("Binance engeli sürüyor (%d sn), tarama atlandı", wait)
+        return
     symbols = refresh_universe()
     if not symbols:
         return

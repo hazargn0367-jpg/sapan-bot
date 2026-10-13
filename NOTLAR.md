@@ -88,6 +88,13 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - Kural 8 düzeltilmiş haliyle AXS'yi eliyor, ADA'yı tutuyor. Etkisi küçük: 83 işlemden 5'ini eledi (1 TP, net -2.3R).
   En iyi: 7 (1R) + 8 → 49 işlem, %28.6, -10.3R (işlem başı -0.21R); aylar -4.6 / +1.3 / -7.0.
 
+- 13.10 20:48 ve 21:02: Binance 418 (IP geçici engeli). Backtest coin listesini alamayıp 0 coinle "bitti" dedi.
+  Sebep: bot ve backtest ayrı programlar, birinin 429/418 beklemesini diğeri bilmiyordu; coin listesi/tık istekleri hiç
+  beklemiyordu. Ayrıca Render'ın çıkış IP'si başka servislerle ortak olabilir (Binance sınırı IP başına).
+  Düzeltme: bütün istekler tek yoldan (exchanges._get), bekleme /tmp/binance_pause dosyasında ortak; engel >10 dk ise
+  backtest "⛔ durdu" der (0 coinle sonuç vermez), canlı tarama engel sürerken atlanır; /durum'da Binance satırı
+  (IP'nin o anki kullanımı: bizim tarama yokken yüksekse IP ortak kullanılıyor).
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.

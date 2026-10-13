@@ -35,7 +35,7 @@ import charts
 import live_setups
 import strategy as st
 import trade_rules as tr
-from exchanges import get_klines_range, get_symbols, get_tick_sizes, get_top_symbols
+from exchanges import BinanceBlocked, fetch_symbols, get_klines_range, get_tick_sizes, get_top_symbols
 from telegram import send_document, send_message, send_photos
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -45,6 +45,7 @@ CACHE_DIR = "/tmp/bt_cache"
 WARMUP = 300  # ilk mumlarda EMA100 oturmadığı için atlanır
 FETCH_THREADS = 6  # aynı anda kaç coinin verisi çekilsin
 MAX_IN_FLIGHT = 12  # bellekte aynı anda en fazla kaç coinin ham verisi dursun
+BAN_WAIT = 600  # Binance IP engeli/sınırı en fazla bu kadar sn sürecekse beklenir, daha uzunsa backtest durur
 TZ = "Europe/Istanbul"
 
 # Senin fotoğraflarla anlattığın örnekler (Türkiye saati, temas mumu)
@@ -109,7 +110,7 @@ def clean_cache():
 def load_15m(symbol, days, ago=0):
     start_ms, end_ms = period(days, ago)
     start_ms -= WARMUP * 15 * 60 * 1000
-    return get_klines_range(symbol, "15m", start_ms, end_ms)
+    return get_klines_range(symbol, "15m", start_ms, end_ms, max_wait=BAN_WAIT)
 
 
 def to_30m(df15):
@@ -629,8 +630,10 @@ def main():
     ticks = {}
     for attempt in range(3):
         try:
-            ticks = get_tick_sizes()
+            ticks = get_tick_sizes(max_wait=BAN_WAIT)
             break
+        except BinanceBlocked:
+            raise
         except Exception as e:
             log.warning("Tık büyüklükleri alınamadı (%d. deneme): %s", attempt + 1, e)
             time.sleep(10)
@@ -638,7 +641,9 @@ def main():
         raise RuntimeError("Binance'ten coin bilgileri alınamadı (3 deneme)")
     symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
     if not symbols:
-        symbols = get_top_symbols(args.top) if args.top > 0 else get_symbols()
+        symbols = get_top_symbols(args.top, max_wait=BAN_WAIT) if args.top > 0 else fetch_symbols(BAN_WAIT)
+    if not symbols:
+        raise RuntimeError("Binance coin listesi boş geldi")
     log.info("Backtest başlıyor: %d coin, %d gün, %s, %d ayar", len(symbols), args.days, tfs, len(configs))
     what = (f"{len(configs)} farklı ayar karşılaştırılacak" if args.compare else
             f"TP 1:{tr.RR:g}" + (f", başabaş {tr.BE_TRIGGER:g}R" if tr.BE_TRIGGER > 0 else ""))
@@ -649,18 +654,22 @@ def main():
     def fetch(symbol):
         try:
             return load_15m(symbol, args.days, args.ago)
+        except BinanceBlocked:
+            raise  # engel uzun sürecek: bütün backtest durur (eksik coinle yanlış sonuç vermesin)
         except Exception as e:
             log.error("%s verisi alınamadı: %s", symbol, e)
             return None
 
     results = {cfg["ad"]: [] for cfg in configs}
+    n_ok = 0
     btc_map = None
     examples_txt = []
     def process(n, symbol, df15):
-        nonlocal btc_map
+        nonlocal btc_map, n_ok
         try:
             if df15 is None or len(df15) < WARMUP + 50:
                 return
+            n_ok += 1
             tick = ticks.get(symbol, 0.0)
             for tf in tfs:
                 df = prepare(df15 if tf == "15m" else to_30m(df15))
@@ -713,9 +722,12 @@ def main():
         results[cfg["ad"]] = apply_portfolio(results[cfg["ad"]], cfg.get("max_open", 0),
                                              cfg.get("cluster_max", 0), cfg.get("btc", False), btc_map)
     minutes = (time.time() - t0) / 60
+    coins_txt = f"{n_ok}/{len(symbols)}" if n_ok < len(symbols) else f"{len(symbols)}"
+    if n_ok == 0:
+        raise RuntimeError(f"Hiçbir coinin verisi alınamadı ({len(symbols)} coin denendi)")
     if args.compare:
         frames_all = {cfg: pd.DataFrame(rows) for cfg, rows in results.items()}
-        report = build_compare(frames_all, period_txt, len(symbols), minutes, p0=p0, days=args.days)
+        report = build_compare(frames_all, period_txt, coins_txt, minutes, p0=p0, days=args.days)
         log.info("\n%s", report)
         send_message(report)
         parts = [d.assign(ayar=name) for name, d in frames_all.items() if not d.empty]
@@ -749,7 +761,7 @@ def main():
     apply_cfg(configs[0])
     rows = results[configs[0]["ad"]]
     df_all = pd.DataFrame(rows)
-    report = build_report(df_all, period_txt, len(symbols), minutes, examples_txt, p0=p0, days=args.days)
+    report = build_report(df_all, period_txt, coins_txt, minutes, examples_txt, p0=p0, days=args.days)
     log.info("\n%s", report)
     send_message(report)
 
@@ -783,6 +795,10 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except BinanceBlocked as e:
+        log.error("Backtest durdu: %s", e)
+        send_message(f"⛔ Backtest durdu: {e}. Engel bitince tekrar başlat (/durum'da Binance satırına bak).")
+        raise SystemExit(3)
     except Exception as e:
         log.exception("Backtest hata verdi")
         send_message(f"⚠️ Backtest hata verdi: {type(e).__name__}: {e}")

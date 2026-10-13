@@ -45,7 +45,7 @@ def inspect(text, chart_path="/tmp/incele.png"):
         return "Kullanım: /incele AXSUSDT 01.08.2026 02:00 (temas mumunun Türkiye saati)", None
     sym, ts_tr = parsed
     t_ms = int(ts_tr.tz_convert("UTC").value // 10**6)
-    df = get_klines_range(sym, "15m", t_ms - 600 * 900_000, t_ms + 40 * 900_000, yield_live=False)
+    df = get_klines_range(sym, "15m", t_ms - 600 * 900_000, t_ms + 40 * 900_000, yield_live=False, max_wait=60)
     if df is None or df.empty:
         return f"{sym} için veri alınamadı.", None
     df = tr.add_atr(st.add_indicators(df.reset_index(drop=True)))
