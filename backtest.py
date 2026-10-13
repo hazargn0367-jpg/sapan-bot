@@ -31,6 +31,7 @@ import gc
 import numpy as np
 import pandas as pd
 
+import archive
 import charts
 import live_setups
 import strategy as st
@@ -43,9 +44,10 @@ log = logging.getLogger("bot")
 
 CACHE_DIR = "/tmp/bt_cache"
 WARMUP = 300  # ilk mumlarda EMA100 oturmadığı için atlanır
-FETCH_THREADS = 6  # aynı anda kaç coinin verisi çekilsin
+FETCH_THREADS = 10  # aynı anda kaç coinin verisi çekilsin (arşiv dosyaları sınırsız; API kısmı ortak sınıra uyar)
 MAX_IN_FLIGHT = 12  # bellekte aynı anda en fazla kaç coinin ham verisi dursun
 BAN_WAIT = 600  # Binance IP engeli/sınırı en fazla bu kadar sn sürecekse beklenir, daha uzunsa backtest durur
+USE_ARCHIVE = True  # geçmiş veri Binance dosya arşivinden (API sınırı/engeli yok); --api ile kapatılır
 TZ = "Europe/Istanbul"
 
 # Senin fotoğraflarla anlattığın örnekler (Türkiye saati, temas mumu)
@@ -110,7 +112,18 @@ def clean_cache():
 def load_15m(symbol, days, ago=0):
     start_ms, end_ms = period(days, ago)
     start_ms -= WARMUP * 15 * 60 * 1000
+    if USE_ARCHIVE:
+        return archive.get_range(symbol, "15m", start_ms, end_ms, api_max_wait=BAN_WAIT)
     return get_klines_range(symbol, "15m", start_ms, end_ms, max_wait=BAN_WAIT)
+
+
+def archive_reachable():
+    """Arşive ulaşılabiliyor mu (BTC'nin geçen ayki dosyası)."""
+    d = (pd.Timestamp.now(tz="UTC").replace(day=1) - pd.Timedelta(days=1))
+    try:
+        return archive._download(archive._monthly_url("BTCUSDT", "15m", d)) is not None
+    except Exception:
+        return False
 
 
 def to_30m(df15):
@@ -602,6 +615,7 @@ def main():
     ap.add_argument("--max-open", type=int, default=0, help="aynı anda en fazla açık işlem (0 = sınırsız)")
     ap.add_argument("--cluster", type=int, default=0, help="aynı mumda bu kadar sinyal varsa girme (0 = kapalı)")
     ap.add_argument("--btc", action="store_true", help="BTC yön filtresi")
+    ap.add_argument("--api", action="store_true", help="veriyi arşiv yerine sadece Binance API'den çek")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
     if args.compare:
@@ -627,6 +641,13 @@ def main():
 
     t0 = time.time()
     clean_cache()
+    global USE_ARCHIVE
+    if args.api:
+        USE_ARCHIVE = False
+    elif not archive_reachable():
+        USE_ARCHIVE = False
+        log.warning("Binance arşivine ulaşılamadı, veri API'den çekilecek")
+    log.info("Veri kaynağı: %s", "Binance arşivi + bugün API" if USE_ARCHIVE else "Binance API")
     ticks = {}
     for attempt in range(3):
         try:
@@ -728,6 +749,8 @@ def main():
     if args.compare:
         frames_all = {cfg: pd.DataFrame(rows) for cfg, rows in results.items()}
         report = build_compare(frames_all, period_txt, coins_txt, minutes, p0=p0, days=args.days)
+        if USE_ARCHIVE:
+            report += "\n\n" + archive.summary()
         log.info("\n%s", report)
         send_message(report)
         parts = [d.assign(ayar=name) for name, d in frames_all.items() if not d.empty]
@@ -762,6 +785,8 @@ def main():
     rows = results[configs[0]["ad"]]
     df_all = pd.DataFrame(rows)
     report = build_report(df_all, period_txt, coins_txt, minutes, examples_txt, p0=p0, days=args.days)
+    if USE_ARCHIVE:
+        report += "\n\n" + archive.summary()
     log.info("\n%s", report)
     send_message(report)
 

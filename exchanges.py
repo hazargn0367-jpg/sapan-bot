@@ -214,15 +214,16 @@ def get_tick_sizes(max_wait=None):
     return ticks
 
 
-def get_klines_range(symbol, interval, start_ms, end_ms, yield_live=True, max_wait=None):
+def get_klines_range(symbol, interval, start_ms, end_ms, yield_live=True, max_wait=None, limit=1000):
     """Geçmiş mum verisi (sadece kapanmış mumlar), sayfa sayfa çeker.
-    Her sayfa hemen sayı dizisine çevrilir (ham JSON listeleri coin başına ~8MB tutuyordu)."""
+    Her sayfa hemen sayı dizisine çevrilir (ham JSON listeleri coin başına ~8MB tutuyordu).
+    limit=499: mum başına en az ağırlık (499 mum = 2 ağırlık, 1000 mum = 5)."""
     parts = []
     cursor = start_ms
     while cursor < end_ms:
         res = _get("/fapi/v1/klines",
                    params={"symbol": symbol, "interval": interval,
-                           "startTime": cursor, "endTime": end_ms, "limit": 1000},
+                           "startTime": cursor, "endTime": end_ms, "limit": limit},
                    timeout=20, max_wait=max_wait, live_window=yield_live)
         batch = res.json()
         if not batch:
@@ -233,7 +234,7 @@ def get_klines_range(symbol, interval, start_ms, end_ms, yield_live=True, max_wa
                       np.array([k[6] for k in batch], dtype=np.int64),
                       np.array([k[1:5] for k in batch], dtype=np.float64)))
         del batch, res
-        if n_batch < 1000:
+        if n_batch < limit:
             break
 
     if not parts:

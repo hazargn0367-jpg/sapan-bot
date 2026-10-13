@@ -95,6 +95,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   backtest "⛔ durdu" der (0 coinle sonuç vermez), canlı tarama engel sürerken atlanır; /durum'da Binance satırı
   (IP'nin o anki kullanımı: bizim tarama yokken yüksekse IP ortak kullanılıyor).
 
+- 21:25'te 500 coinlik backtest yine 418 aldı (14 dk). Çözüm: backtest geçmiş veriyi Binance dosya arşivinden
+  (data.binance.vision, archive.py) çeker: tamamlanmış aylar aylık, bu ay günlük dosya; API'den sadece bugün ve arşivde
+  olmayan kısım (coin başına ~1 istek, 2 ağırlık). Sahte arşiv/API ile veri birebir aynı çıktı. Arşive ulaşılamazsa API'ye döner
+  (`--api` ile zorla API). Rapor sonunda "Veri: X arşiv dosyası, Y API parçası".
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.
@@ -114,6 +119,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - `/backtest 90 destek` – kural 9 varyasyonları, ay ay
 
 ## Dosyalar
+- `archive.py` backtest verisi (Binance dosya arşivi) · `memwatch.py` bellek bekçisi
 - `strategy.py` temas kuralları · `trade_rules.py` onay/giriş/çıkış + 1-6 kurallar
 - `live_setups.py` canlı EMİR HAZIR · `backtest.py` testler ve karşılaştırma setleri
 - `exchanges.py` Binance · `telegram.py` · `charts.py` · `commands.py` · `bot.py` ana döngü
