@@ -54,6 +54,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2:
 
 - 03:00-07:00 TR filtresi iki ayda da iyileştirdi (canlı ayar: önceki ay -4.4R, son ay -6.4R; toplam -10.8R / 59 işlem).
 
+- 13.10 06:00–12:20 arası canlı bildirimlerde hata: TP düzenlemesi FILTERS=False'u yoruma çevirdi, eski filtreler
+  (03-11 TR ve stop %0.5-3) açık kaldı. Düzeltildi; açılış mesajı artık uygulanan kuralları listeler.
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.
@@ -65,7 +68,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2:
 ## Telegram komutları
 - `/sinyal aç|kapat` – EMİR HAZIR bildirimleri
 - `/bildirim aç|kapat` – EMA20 temas bildirimleri
-- `/backtest [gün] [TP] [başabaş] [önceki] [hepsi|yeni|koruma|son|son2] [filtresiz] [tüm]`
+- `/backtest [gün] [TP] [başabaş] [önceki] [hepsi|yeni|koruma|son|son2|saat|tp] [filtresiz] [tüm]`
+- `/backtest 90 canlı` – canlı ayarın aynısı, ay ay sonuç, tüm işlemlerin numaralı listesi + grafikleri (PDF)
 - `/durum`, `/iptal`
 
 ## Dosyalar

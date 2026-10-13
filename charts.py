@@ -116,6 +116,8 @@ def draw(trade, path=None, pdf=None):
         title = (f"{trade['coin']}  {trade['zaman_dilimi']}  {trade['yon']}   "
                  f"temas: {trade['temas']} TR / {trade['temas_utc']} UTC")
         badge_txt, badge = trade.get("etiket", "EMİR HAZIR"), (None, "#2962ff")
+    if "_no" in trade:
+        title = f"#{trade['_no']}  " + (f"[{trade['_ay']}. ay]  " if "_ay" in trade else "") + title
     ax.set_title(title, color=TXT, fontsize=10.5, loc="left")
     ax.text(0.99, 0.97, badge_txt, transform=ax.transAxes, ha="right", va="top",
             fontsize=15, fontweight="bold", color="white",
@@ -130,8 +132,44 @@ def draw(trade, path=None, pdf=None):
     plt.close(fig)
 
 
+def _index_pages(trades, pdf, per_page=26):
+    """PDF'in başına numaralı işlem listesi."""
+    rows = []
+    for t in trades:
+        res = {"win": "TP", "be": "BAŞABAŞ"}.get(t["durum"], "STOP")
+        rows.append([f"#{t['_no']}", f"{t['_ay']}. ay" if "_ay" in t else "", t["coin"], t["yon"],
+                     f"{t['temas']} TR", f"{t['temas_utc']} UTC", res, f"{t['R_net']:+.2f}R", f"{t['dolar']:+.0f}$"])
+    total = sum(t["R_net"] for t in trades)
+    wins = sum(t["durum"] == "win" for t in trades)
+    for start in range(0, len(rows), per_page):
+        fig, ax = plt.subplots(figsize=(11, 8.5))
+        fig.patch.set_facecolor(BG)
+        ax.axis("off")
+        if start == 0:
+            ax.set_title(f"İşlem listesi: {len(trades)} işlem, {wins} TP, toplam {total:+.1f}R",
+                         color=TXT, fontsize=13, loc="left")
+        chunk = rows[start:start + per_page]
+        table = ax.table(cellText=chunk, colLabels=["No", "Ay", "Coin", "Yön", "Temas", "", "Sonuç", "R", "$"],
+                         loc="upper left", cellLoc="left", colLoc="left")
+        table.auto_set_font_size(False)
+        table.set_fontsize(11)
+        table.auto_set_column_width(col=list(range(9)))
+        table.scale(1.15, 1.5)
+        for (r, c), cell in table.get_celld().items():
+            cell.set_edgecolor(GRID)
+            cell.set_facecolor(BG if r else "#1e222d")
+            txt = cell.get_text()
+            txt.set_color(TXT)
+            if r and c in (6, 7, 8):
+                txt.set_color({"TP": UP, "STOP": DOWN}.get(chunk[r - 1][6], "#9e9e9e"))
+        pdf.savefig(fig, facecolor=BG)
+        plt.close(fig)
+
+
 def make_pdf(trades, path):
+    trades = [dict(t, _no=k + 1) for k, t in enumerate(trades)]
     with PdfPages(path) as pdf:
+        _index_pages(trades, pdf)
         for t in trades:
             draw(t, pdf=pdf)
 

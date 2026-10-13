@@ -304,7 +304,12 @@ def line(label, s):
             f"{s['net']:+.1f}R ({usd(s['net'])})")
 
 
-def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
+def month_label(touch_ts, p0):
+    """Dönem başından itibaren 30 günlük dilim: 1. ay, 2. ay, ..."""
+    return int((touch_ts - p0) // (30 * 86400 * 1000)) + 1
+
+
+def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, days=30):
     trades = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
     s = stats(trades)
     funnel = df_all["durum"].value_counts() if not df_all.empty else pd.Series(dtype=int)
@@ -314,6 +319,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
 
     be_txt = f", başabaş +{tr.BE_TRIGGER:g}R" if tr.BE_TRIGGER > 0 else ""
     f_txt = ", filtreli" if tr.FILTERS else ", filtresiz"
+    if tr.TOUCH_WICK_MIN > 0 and tr.REQUIRE_PRIOR_TOUCH:
+        f_txt = ", canlı ayar: 6 kural + toplu + 03-07 yok"
     msg = [f"📊 <b>BACKTEST SONUCU (TP 1:{tr.RR:g}{be_txt}{f_txt})</b>",
            f"{period_txt}, {n_coins} coin ({minutes:.0f} dk sürdü)", ""]
     msg.append("<b>Huni</b>")
@@ -367,6 +374,13 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
             msg.append(line(tf, stats(trades[trades["zaman_dilimi"] == tf])))
         for side in ("LONG", "SHORT"):
             msg.append(line(side, stats(trades[trades["yon"] == side])))
+        if p0 is not None and days > 30:
+            msg += ["", "<b>Ay ay</b>"]
+            months = trades["_touch_ts"].apply(lambda t: month_label(t, p0))
+            for m in range(1, (days + 29) // 30 + 1):
+                a = pd.Timestamp(p0 + (m - 1) * 30 * 86400000, unit="ms", tz="UTC").tz_convert(TZ)
+                b = pd.Timestamp(min(p0 + m * 30 * 86400000, p0 + days * 86400000), unit="ms", tz="UTC").tz_convert(TZ)
+                msg.append(line(f"{m}. ay ({a:%d.%m}–{b:%d.%m})", stats(trades[months == m])))
     else:
         msg.append("Hiç işlem oluşmadı.")
     if examples_txt:
@@ -498,7 +512,8 @@ def main():
     ap.add_argument("--days", type=int, default=7)
     ap.add_argument("--symbols", default="")
     ap.add_argument("--tf", default="15m")
-    ap.add_argument("--rr", type=float, default=2.0)
+    ap.add_argument("--rr", type=float, default=None)
+    ap.add_argument("--preset", default=None, help="canli: canlı bildirimlerdeki ayarın aynısı")
     ap.add_argument("--be", type=float, default=0.0, help="başabaş tetik (R), 0 = kapalı")
     ap.add_argument("--ago", type=int, default=0, help="dönemi kaç gün geriye kaydır (önceki ay için = days)")
     ap.add_argument("--compare", nargs="?", const="hepsi", default=None,
@@ -517,8 +532,15 @@ def main():
     if args.compare:
         configs = COMPARE_SETS[args.compare]
         chart_idx = CHART_CFG.get(args.compare, 0)
+    elif args.preset == "canli":
+        import live_setups
+        rules = dict(live_setups.LIVE_RULES)
+        if args.rr is not None:
+            rules["RR"] = args.rr
+        configs = [C("canlı ayar", **rules, cluster_max=live_setups.CLUSTER_MAX)]
+        chart_idx = 0
     else:
-        configs = [C("tekli", RR=args.rr, BE_TRIGGER=args.be, FILTERS=not args.no_filters,
+        configs = [C("tekli", RR=2.0 if args.rr is None else args.rr, BE_TRIGGER=args.be, FILTERS=not args.no_filters,
                      MIN_ATR_MULT=args.atr_min, WICK_MAX_BODY=args.wick,
                      REQUIRE_PRIOR_TOUCH=args.prior_touch, STOP_BUFFER_ATR=args.stop_buf,
                      max_open=args.max_open, cluster_max=args.cluster, btc=args.btc)]
@@ -629,7 +651,7 @@ def main():
     apply_cfg(configs[0])
     rows = results[configs[0]["ad"]]
     df_all = pd.DataFrame(rows)
-    report = build_report(df_all, period_txt, len(symbols), minutes, examples_txt)
+    report = build_report(df_all, period_txt, len(symbols), minutes, examples_txt, p0=p0, days=args.days)
     log.info("\n%s", report)
     send_message(report)
 
@@ -639,19 +661,22 @@ def main():
             path, index=False, sep=";", decimal=",", encoding="utf-8-sig")
         send_document(path, "Tüm setup'lar ve işlemler (Excel/Sheets ile açılır)")
 
-        trades = df_all[df_all["durum"].isin(["win", "loss", "be"])].sort_values("_exit_ts")
+        trades = df_all[df_all["durum"].isin(["win", "loss", "be"])].sort_values("_touch_ts")
         recs = trades.to_dict("records")
+        for rec in recs:
+            rec["_ay"] = month_label(rec["_touch_ts"], p0)
         if recs:
             try:
                 folder = "/tmp/bt_charts"
                 os.makedirs(folder, exist_ok=True)
                 send_photos(charts.make_samples(recs, folder),
                             "Örnek işlemler: son 5 TP ve son 5 stop")
-                pdf_recs = recs[-200:]
+                pdf_recs = recs[-400:]
                 pdf_path = f"backtest_grafikler_{time.strftime('%Y%m%d_%H%M')}.pdf"
                 charts.make_pdf(pdf_recs, pdf_path)
-                note = "" if len(recs) <= 200 else f" (son 200 / toplam {len(recs)})"
-                send_document(pdf_path, f"Tüm işlemlerin grafikleri{note}, her sayfada bir işlem")
+                note = "" if len(recs) <= 400 else f" (son 400 / toplam {len(recs)})"
+                send_document(pdf_path, f"Tüm işlemlerin grafikleri{note}: ilk sayfalarda numaralı liste, "
+                                        f"sonra her sayfada bir işlem")
             except Exception as e:
                 log.exception("Grafikler oluşturulamadı: %s", e)
                 send_message(f"⚠️ Grafikler oluşturulamadı: {e}")

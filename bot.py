@@ -81,6 +81,7 @@ def main():
     setup = "açık" if config.SETUP_ALERTS else "kapalı"
     send_message(f"✅ Bot başladı\n"
                  f"📋 Emir bildirimleri: {setup} (hacmi en yüksek {live_setups.UNIVERSE} coin, 15dk)\n"
+                 f"Kurallar: {live_setups.rules_summary()}\n"
                  f"🔔 Temas bildirimleri: {durum}\n"
                  "Komutlar: /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal")
     start_listener()

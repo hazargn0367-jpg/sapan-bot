@@ -37,7 +37,8 @@ CHART_DIR = "/tmp/live_charts"
 
 # Backtest'teki "1-6 + toplu" ayarı
 LIVE_RULES = dict(
-    RR=2.2, BE_TRIGGER=0.0,     # komisyon sonrası kazanç ~2R olsun diye 1:2.2 FILTERS=False, MIN_ATR_MULT=0.0,
+    RR=2.2,                     # komisyon sonrası kazanç ~2R olsun diye 1:2.2
+    BE_TRIGGER=0.0, FILTERS=False, MIN_ATR_MULT=0.0,
     WICK_MAX_BODY=1.0,          # 1: onay mumunda uzun ters iğne yok
     REQUIRE_PRIOR_TOUCH=True,   # 2: trend teyidi
     STOP_BUFFER_ATR=0.3,        # 3: stop payı
@@ -64,6 +65,25 @@ _active = {}   # (coin, temas_ts) -> {"side", "status", "entry", "stop", "tp"}
 def apply_rules():
     for k, v in LIVE_RULES.items():
         setattr(tr, k, v)
+
+
+def rules_summary():
+    """Şu an gerçekten uygulanan kuralların kısa özeti (açılış mesajı için)."""
+    apply_rules()
+    parts = [
+        f"TP 1:{tr.RR:g}",
+        "onay iğnesi ≤ gövde" if tr.WICK_MAX_BODY else None,
+        "trend teyidi" if tr.REQUIRE_PRIOR_TOUCH else None,
+        f"stop payı {tr.STOP_BUFFER_ATR:g} ATR" if tr.STOP_BUFFER_ATR else None,
+        "temiz tepe/dip" if tr.CLEAN_PIVOT_MAX else None,
+        "fitil temas" if tr.TOUCH_WICK_MIN else None,
+        f"tepe iğnesi ≤ {tr.PIVOT_WICK_MAX:g} gövde" if tr.PIVOT_WICK_MAX else None,
+        f"toplu sinyal ≥{CLUSTER_MAX} yok",
+        (f"{tr.QUIET_UTC[0] + 3:02d}-{tr.QUIET_UTC[1] + 3:02d} TR yok"
+         if tr.QUIET_UTC[0] < tr.QUIET_UTC[1] else None),
+        "⚠️ ESKİ FİLTRELER AÇIK" if tr.FILTERS else None,
+    ]
+    return ", ".join(p for p in parts if p)
 
 
 def prepare(df):
