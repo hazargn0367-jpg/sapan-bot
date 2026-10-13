@@ -136,6 +136,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - `/incele COIN gg.aa.yyyy SS:DD` – bir işlemin tüm kurallardaki değerlendirmesi + grafik (p, q, önceki düzeltme çizgisi,
   kural 9 iğneli mumlar mavi üçgen)
 - `/backtest 90 destek` – kural 9 varyasyonları, ay ay
+- `/backtest 30 canlı 5m` – sona 5m yazılırsa test 5 dakikalık grafikte (veri ayrı önbellekte)
 
 ## Dosyalar
 - `archive.py` backtest verisi (Binance dosya arşivi) · `memwatch.py` bellek bekçisi

@@ -121,17 +121,24 @@ def clean_cache():
 
 
 KLINE_CACHE = "/tmp/kline_cache"  # coin başına 15dk verisi (diskte): sonraki testler sadece yeni mumları çeker
+BASE_TF = "15m"  # indirilen veri: 15m (30m bundan üretilir) ya da 5m
 BAR_MS = 15 * 60 * 1000
+
+
+def set_base_tf(tf):
+    global BASE_TF, BAR_MS
+    BASE_TF = tf
+    BAR_MS = int(tf[:-1]) * 60 * 1000
 
 
 def _fetch_range(symbol, start_ms, end_ms):
     if USE_ARCHIVE:
-        return archive.get_range(symbol, "15m", start_ms, end_ms, api_max_wait=BAN_WAIT)
-    return get_klines_range(symbol, "15m", start_ms, end_ms, max_wait=BAN_WAIT)
+        return archive.get_range(symbol, BASE_TF, start_ms, end_ms, api_max_wait=BAN_WAIT)
+    return get_klines_range(symbol, BASE_TF, start_ms, end_ms, max_wait=BAN_WAIT)
 
 
 def _cache_path(symbol):
-    return os.path.join(KLINE_CACHE, f"{symbol}_15m.npz")
+    return os.path.join(KLINE_CACHE, f"{symbol}_{BASE_TF}.npz")
 
 
 def _to_arr(df):
@@ -706,6 +713,9 @@ def main():
     ap.add_argument("--api", action="store_true", help="veriyi arşiv yerine sadece Binance API'den çek")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
+    if "5m" in tfs:
+        tfs = ["5m"]  # 5 dakikalık test tek başına çalışır
+        set_base_tf("5m")
     if args.compare:
         configs = COMPARE_SETS[args.compare]
         chart_idx = CHART_CFG.get(args.compare, 0)
@@ -726,6 +736,8 @@ def main():
     p0, p1 = period(args.days, args.ago)
     period_txt = (f"{pd.Timestamp(p0, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} – "
                   f"{pd.Timestamp(p1, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} ({args.days} gün)")
+    if BASE_TF == "5m":
+        period_txt += ", 5 dakikalık grafik"
 
     t0 = time.time()
     clean_cache()
@@ -786,8 +798,8 @@ def main():
             n_ok += 1
             tick = ticks.get(symbol, 0.0)
             for tf in tfs:
-                df = prepare(df15 if tf == "15m" else to_30m(df15))
-                if symbol == "BTCUSDT" and tf == "15m":
+                df = prepare(df15 if tf == BASE_TF else to_30m(df15))
+                if symbol == "BTCUSDT" and tf == BASE_TF:
                     btc_map = btc_trend_map(df)
                 signals = find_signals(df)
                 ts_ = df["timestamp"].values

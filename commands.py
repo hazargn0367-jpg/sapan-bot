@@ -17,6 +17,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 canlı -> canlı bildirimlerdeki ayarın aynısı, tüm işlemlerin grafikleri PDF
   /backtest 90 dip -> canlı ayar + önceki tepe/dibe mesafe (0.5/1/1.5/2.2R), ay ay
   /backtest 90 yapı -> kural 7 (önünde yer) ve kural 8 (yapı bozulmamış), ay ay + grafik PDF
+  /backtest 7 canlı 5m -> canlı ayar 5 dakikalık grafikte (sona 5m yazılırsa her test 5m'de çalışır)
   /backtest 90 destek -> kural 9 (dip/tepeden sonra iğneli mumlar = destek/direnç), ay ay + grafik PDF
   (varsayılan: hacmi en yüksek 500 coin, canlı bildirimlerle aynı; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi + canlı tarama durumu
@@ -51,7 +52,9 @@ def start_backtest(text):
     if _bt_proc is not None and _bt_proc.poll() is None:
         send_message("⏳ Backtest zaten çalışıyor, bitince sonuçlar gelecek.")
         return
-    nums = re.findall(r"\d+(?:[.,]\d+)?", re.sub(r"son2", " ", text.lower()))
+    tf_m = re.search(r"\b(5m|15m|30m|5dk|5 dk)\b", text.lower())
+    clean = re.sub(r"\b(5m|15m|30m|5dk|5 dk)\b|son2", " ", text.lower())
+    nums = re.findall(r"\d+(?:[.,]\d+)?", clean)
     days = 7
     args = []
     if nums:
@@ -89,6 +92,8 @@ def start_backtest(text):
         args += ["--compare", "hepsi"]
     if "filtresiz" in low:
         args += ["--no-filters"]
+    if tf_m:
+        args += ["--tf", "5m" if tf_m.group(1).startswith("5") else tf_m.group(1)]
     if "tüm" in low or "tum" in low:
         args += ["--top", "0"]
     if "atr" in low:
