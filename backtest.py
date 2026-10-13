@@ -9,6 +9,8 @@ Seçenekler:
     --symbols NEARUSDT,QNTUSDT     sadece bu coinler (varsayılan: hepsi)
     --tf 15m,30m                   zaman dilimleri (varsayılan: 15m)
     --rr 2.5                       TP = riskin kaç katı (varsayılan 2)
+    --be 1                         1R kârda stop girişe (varsayılan kapalı)
+    --ago 30                       dönemi 30 gün geriye kaydır (önceki ay)
 
 Bitince Telegram'a özet mesaj ve tüm setup'ların listesi (CSV) gelir.
 """
@@ -68,14 +70,20 @@ COND_TR = [
 
 
 # ---------------------------------------------------------------- veri
-def load_15m(symbol, days):
+def period(days, ago):
+    """Test edilen dönemin başlangıç/bitiş zamanı (ms)."""
+    end_ms = int(time.time() * 1000) - ago * 86400 * 1000
+    return end_ms - days * 86400 * 1000, end_ms
+
+
+def load_15m(symbol, days, ago=0):
     os.makedirs(CACHE_DIR, exist_ok=True)
-    path = os.path.join(CACHE_DIR, f"{symbol}_{days}_{time.strftime('%Y%m%d%H')}.pkl")
+    path = os.path.join(CACHE_DIR, f"{symbol}_{days}_{ago}_{time.strftime('%Y%m%d%H')}.pkl")
     if os.path.exists(path):
         with open(path, "rb") as f:
             return pickle.load(f)
-    end_ms = int(time.time() * 1000)
-    start_ms = end_ms - days * 86400 * 1000 - WARMUP * 15 * 60 * 1000
+    start_ms, end_ms = period(days, ago)
+    start_ms -= WARMUP * 15 * 60 * 1000
     df = get_klines_range(symbol, "15m", start_ms, end_ms)
     with open(path, "wb") as f:
         pickle.dump(df, f)
@@ -215,7 +223,7 @@ def line(label, s):
             f"{s['net']:+.1f}R ({usd(s['net'])})")
 
 
-def build_report(df_all, days, n_coins, minutes, examples_txt):
+def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
     trades = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
     s = stats(trades)
     funnel = df_all["durum"].value_counts() if not df_all.empty else pd.Series(dtype=int)
@@ -225,7 +233,7 @@ def build_report(df_all, days, n_coins, minutes, examples_txt):
 
     be_txt = f", başabaş +{tr.BE_TRIGGER:g}R" if tr.BE_TRIGGER > 0 else ""
     msg = [f"📊 <b>BACKTEST SONUCU (TP 1:{tr.RR:g}{be_txt})</b>",
-           f"Son {days} gün, {n_coins} coin ({minutes:.0f} dk sürdü)", ""]
+           f"{period_txt}, {n_coins} coin ({minutes:.0f} dk sürdü)", ""]
     msg.append("<b>Huni</b>")
     msg.append(f"Temas sinyali: {len(df_all)}")
     msg.append(f"  ↳ EMA20 yanlış tarafta kapanış: {c('no_close')}")
@@ -270,24 +278,28 @@ def main():
     ap.add_argument("--tf", default="15m")
     ap.add_argument("--rr", type=float, default=tr.RR)
     ap.add_argument("--be", type=float, default=0.0, help="başabaş tetik (R), 0 = kapalı")
+    ap.add_argument("--ago", type=int, default=0, help="dönemi kaç gün geriye kaydır (önceki ay için = days)")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
     tr.RR = args.rr
     tr.BE_TRIGGER = args.be
+    p0, p1 = period(args.days, args.ago)
+    period_txt = (f"{pd.Timestamp(p0, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} – "
+                  f"{pd.Timestamp(p1, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} ({args.days} gün)")
 
     t0 = time.time()
     ticks = get_tick_sizes()
     symbols = ([s.strip().upper() for s in args.symbols.split(",") if s.strip()]
                or get_symbols())
     log.info("Backtest başlıyor: %d coin, %d gün, %s", len(symbols), args.days, tfs)
-    send_message(f"⏳ Backtest başladı: {len(symbols)} coin, son {args.days} gün, TP 1:{tr.RR:g}"
+    send_message(f"⏳ Backtest başladı: {len(symbols)} coin, {period_txt}, TP 1:{tr.RR:g}"
                  f"{f', başabaş +{tr.BE_TRIGGER:g}R' if tr.BE_TRIGGER > 0 else ''}. "
                  f"Bitince sonuçlar buraya gelecek.")
 
     rows, examples_txt = [], []
     for n, symbol in enumerate(symbols, 1):
         try:
-            df15 = load_15m(symbol, args.days)
+            df15 = load_15m(symbol, args.days, args.ago)
             if len(df15) < WARMUP + 50:
                 continue
             frames = {"15m": df15, "30m": to_30m(df15)}
@@ -305,7 +317,7 @@ def main():
                      el / 60, el / n * (len(symbols) - n) / 60)
 
     df_all = pd.DataFrame(rows)
-    report = build_report(df_all, args.days, len(symbols), (time.time() - t0) / 60, examples_txt)
+    report = build_report(df_all, period_txt, len(symbols), (time.time() - t0) / 60, examples_txt)
     log.info("\n%s", report)
     send_message(report)
 
