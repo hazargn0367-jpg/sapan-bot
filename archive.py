@@ -28,6 +28,17 @@ BASE = "https://data.binance.vision/data/futures/um"
 DAY_MS = 86_400_000
 
 _lock = threading.Lock()
+_pool = None  # arşiv indirmeleri için ortak iş parçacığı havuzu (ağ beklemesi: aynı anda çok dosya)
+POOL_SIZE = 24
+
+
+def _download_many(urls):
+    global _pool
+    with _lock:
+        if _pool is None:
+            from concurrent.futures import ThreadPoolExecutor
+            _pool = ThreadPoolExecutor(max_workers=POOL_SIZE)
+    return list(_pool.map(_download, urls))
 stats = {"files": 0, "missing": 0, "api_ranges": 0, "skipped_recent": 0, "mb": 0.0}
 
 
@@ -158,31 +169,38 @@ def get_range(symbol, interval, start_ms, end_ms, api_max_wait=None, now_ms=None
         covered.append((a, b))
         _add("files")
 
-    def daily(d0, d1):
-        d = d0
-        while _ms(d) < d1:
-            nd = d + dt.timedelta(days=1)
-            c = _download(_daily_url(symbol, interval, d))
-            if c is None:
-                _add("missing")
-            else:
-                use(c, _ms(d), _ms(nd))
-            d = nd
+    first_day = _dt(start_ms - start_ms % DAY_MS)
 
+    def days(d0, d1):
+        out, d = [], d0
+        while _ms(d) < d1:
+            out.append(d)
+            d += dt.timedelta(days=1)
+        return out
+
+    # 1) tamamlanmış aylar: aylık dosyalar (hepsi aynı anda); bu ay: günlük dosyalar
+    months, daily_list = [], []
     m = _dt(start_ms).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     while _ms(m) < arch_end:
         nm = _next_month(m)
-        if nm <= this_month:  # tamamlanmış ay
-            c = _download(_monthly_url(symbol, interval, m))
-            if c is not None:
-                use(c, _ms(m), _ms(nm))
-            elif m == prev_month:  # geçen ayın dosyası henüz yayınlanmamış olabilir: günlüklere bak
-                daily(max(m, _dt(start_ms - start_ms % DAY_MS)), min(_ms(nm), arch_end))
-            else:
-                _add("missing")
-        else:  # bu ay: günlük dosyalar (dün dahil)
-            daily(max(m, _dt(start_ms - start_ms % DAY_MS)), arch_end)
+        if nm <= this_month:
+            months.append((m, nm))
+        else:
+            daily_list += days(max(m, first_day), arch_end)
         m = nm
+    for (m, nm), c in zip(months, _download_many([_monthly_url(symbol, interval, m) for m, _ in months])):
+        if c is not None:
+            use(c, _ms(m), _ms(nm))
+        elif m == prev_month:  # geçen ayın dosyası henüz yayınlanmamış olabilir: günlüklere bak
+            daily_list = days(max(m, first_day), min(_ms(nm), arch_end)) + daily_list
+        else:
+            _add("missing")
+    # 2) günlük dosyalar (hepsi aynı anda)
+    for d, c in zip(daily_list, _download_many([_daily_url(symbol, interval, d) for d in daily_list])):
+        if c is None:
+            _add("missing")
+        else:
+            use(c, _ms(d), _ms(d + dt.timedelta(days=1)))
 
     # Arşivde olmayan kısımlar API'den (bugün dahil)
     for a, b in _gaps(start_ms, end_ms, covered):

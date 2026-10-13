@@ -81,8 +81,9 @@ def sample(child=None):
     bot = rss_mb(os.getpid())
     bt = rss_mb(child.pid) if child is not None and child.poll() is None else 0.0
     cg = cgroup_mb()
-    # Gerçekten geri alınamayan kısım: programlar + bellekteki dosyalar. Okunamazsa süreçlerin toplamı.
-    used = max(bot + bt, cg["anon"] + cg["shmem"]) if cg else bot + bt
+    # Gerçekten geri alınamayan kısım: programlar (anon) + bellekteki dosyalar. Süreçlerin RSS toplamı ortak
+    # kütüphaneleri (numpy, pandas...) iki kez sayar ve diskten okunan dosyaları da içerir: sadece yedek ölçü.
+    used = cg["anon"] + cg["shmem"] if cg else bot + bt
     s = {"t": time.time(), "bot": bot, "bt": bt, "used": used, "cg": cg}
     _last.clear()
     _last.update(s)
