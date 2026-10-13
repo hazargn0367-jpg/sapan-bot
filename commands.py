@@ -1,8 +1,9 @@
 """
 Telegram komutları (bot arka planda dinler):
-  /backtest       -> son 30 günle backtest başlatır
+  /backtest       -> son 7 günle backtest başlatır
   /backtest 60    -> son 60 günle backtest başlatır
   /durum          -> backtest ilerlemesi
+  /iptal          -> çalışan backtest'i durdurur
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
 """
 
@@ -29,7 +30,7 @@ def start_backtest(text):
         send_message("⏳ Backtest zaten çalışıyor, bitince sonuçlar gelecek.")
         return
     parts = text.split()
-    days = 30
+    days = 7
     if len(parts) > 1 and parts[1].isdigit():
         days = max(1, min(180, int(parts[1])))
     log_file = open(os.path.join(HERE, "backtest.log"), "w")
@@ -84,6 +85,12 @@ def _listen():
                     start_backtest(text)
                 elif text.lower().startswith("/durum"):
                     send_message(status_text())
+                elif text.lower().startswith("/iptal"):
+                    if _bt_proc is not None and _bt_proc.poll() is None:
+                        _bt_proc.terminate()
+                        send_message("🛑 Backtest durduruldu.")
+                    else:
+                        send_message("Çalışan backtest yok.")
         except Exception as e:
             log.error("Komut dinleme hatası: %s", e)
             time.sleep(5)
