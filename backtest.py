@@ -21,10 +21,11 @@ import time
 import numpy as np
 import pandas as pd
 
+import charts
 import strategy as st
 import trade_rules as tr
 from exchanges import get_klines_range, get_symbols, get_tick_sizes
-from telegram import send_document, send_message
+from telegram import send_document, send_message, send_photos
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("bot")
@@ -140,7 +141,7 @@ def run_df(df, symbol, tf, tick):
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
                            R_brut=round(r["r_gross"], 3), R_net=round(r["r_net"], 3),
                            dolar=round(r["r_net"] * tr.RISK_USD, 2),
-                           _exit_ts=int(ts[r["exit_bar"]]))
+                           _exit_ts=int(ts[r["exit_bar"]]), _ctx=charts.context(df, r))
                 next_free = r["exit_bar"] + 1
             else:
                 next_free = len(df)
@@ -291,6 +292,23 @@ def main():
         df_all.drop(columns=[c for c in df_all.columns if c.startswith("_")]).to_csv(
             path, index=False, sep=";", decimal=",", encoding="utf-8-sig")
         send_document(path, "Tüm setup'lar ve işlemler (Excel/Sheets ile açılır)")
+
+        trades = df_all[df_all["durum"].isin(["win", "loss"])].sort_values("_exit_ts")
+        recs = trades.to_dict("records")
+        if recs:
+            try:
+                folder = "/tmp/bt_charts"
+                os.makedirs(folder, exist_ok=True)
+                send_photos(charts.make_samples(recs, folder),
+                            "Örnek işlemler: son 5 TP ve son 5 stop")
+                pdf_recs = recs[-200:]
+                pdf_path = f"backtest_grafikler_{time.strftime('%Y%m%d_%H%M')}.pdf"
+                charts.make_pdf(pdf_recs, pdf_path)
+                note = "" if len(recs) <= 200 else f" (son 200 / toplam {len(recs)})"
+                send_document(pdf_path, f"Tüm işlemlerin grafikleri{note}, her sayfada bir işlem")
+            except Exception as e:
+                log.exception("Grafikler oluşturulamadı: %s", e)
+                send_message(f"⚠️ Grafikler oluşturulamadı: {e}")
 
 
 if __name__ == "__main__":

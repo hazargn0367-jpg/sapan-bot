@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 backtest.log
 backtest_*.csv
+backtest_grafikler_*.pdf

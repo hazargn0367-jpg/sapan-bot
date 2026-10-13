@@ -60,6 +60,34 @@ def send_document(path, caption=""):
         return False
 
 
+def send_photos(paths, caption=""):
+    """En fazla 10 fotoğrafı tek albüm olarak gönderir."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID or not paths:
+        return False
+    import json
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMediaGroup"
+    files, media = {}, []
+    try:
+        for k, p in enumerate(paths[:10]):
+            files[f"f{k}"] = open(p, "rb")
+            item = {"type": "photo", "media": f"attach://f{k}"}
+            if k == 0 and caption:
+                item["caption"] = caption[:1000]
+            media.append(item)
+        r = requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "media": json.dumps(media)},
+                          files=files, timeout=120)
+        if r.status_code != 200:
+            log.error("Telegram fotoğraf hatası %s: %s", r.status_code, r.text)
+            return False
+        return True
+    except (requests.RequestException, OSError) as e:
+        log.error("Fotoğraflar gönderilemedi: %s", e)
+        return False
+    finally:
+        for f in files.values():
+            f.close()
+
+
 def format_signal(symbol, tf_label, sig):
     s = html.escape(symbol)
     tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol}.P"
