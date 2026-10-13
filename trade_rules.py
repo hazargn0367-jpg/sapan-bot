@@ -132,23 +132,37 @@ def pivot_wick_ok(df, i, side):
     return wick <= PIVOT_WICK_MAX * body
 
 
+SWING_K = 3  # salınım tepesi/dibi: iki yanında bu kadar mumdan yüksek (düşük) olan mum
+
+
+def last_swing_before(H, L, p, lo, long, k=SWING_K):
+    """p'den önceki en yakın salınım tepesi (LONG) / dibi (SHORT); yoksa None."""
+    for m in range(p - 2, lo + k - 1, -1):
+        a, b = m - k, m + k + 1
+        if long and H[m] >= H[a:b].max():
+            return m
+        if not long and L[m] <= L[a:b].min():
+            return m
+    return None
+
+
 def structure_ok(df, i, side, mode="wick"):
     """Kural 8: yükselen dip (LONG) / alçalan tepe (SHORT) yapısı bozulmamış olmalı.
-    LONG: önceki tepe (q) ile son tepe (p) arasındaki düzeltmenin dibi = önceki dip.
-    Son tepeden sonraki düzeltme (temasa kadar) bu dibin altına inmişse yapı bozulmuştur."""
+    LONG: son tepeden (p) hemen önceki salınım tepesi (q) ile p arasındaki düzeltmenin dibi = önceki dip.
+    Son tepeden sonraki düzeltme (temasa kadar) bu dibin altına inmişse yapı bozulmuştur. SHORT tersi."""
     long = side == "LONG"
     H, L, C = df["High"].values, df["Low"].values, df["Close"].values
     start = max(0, i - st.LOOKBACK)
     p = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
-    past_end = p - st.PEAK_GAP
-    if past_end <= start or p + 1 > i:
+    if p + 1 > i:
+        return True
+    q = last_swing_before(H, L, p, start, long)
+    if q is None:
         return True
     if long:
-        q = start + int(np.argmax(H[start:past_end]))
         prior = L[q:p].min()
         cur = (L if mode == "wick" else C)[p + 1:i + 1].min()
         return cur >= prior
-    q = start + int(np.argmin(L[start:past_end]))
     prior = H[q:p].max()
     cur = (H if mode == "wick" else C)[p + 1:i + 1].max()
     return cur <= prior
