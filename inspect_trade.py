@@ -54,7 +54,13 @@ def inspect(text, chart_path="/tmp/incele.png"):
         return f"{sym} {ts_tr:%d.%m.%Y %H:%M} mumu veride yok (15dk'lık mum başlangıç saati olmalı).", None
     i = int(hits[0])
     live_setups.apply_rules()
-    tick = get_tick_sizes().get(sym, 0.0)
+    # Fiyat adımı: önce canlı taramanın elindeki liste (Binance'e fazladan istek atmamak için)
+    tick = live_setups._state["ticks"].get(sym)
+    if tick is None:
+        try:
+            tick = get_tick_sizes().get(sym, 0.0)
+        except Exception:
+            tick = 0.0
     H, L, C, O = (df[c].values for c in ("High", "Low", "Close", "Open"))
     fmt = lambda k: pd.Timestamp(int(df["timestamp"].values[k]), unit="ms", tz="UTC").tz_convert(TZ).strftime("%d.%m %H:%M")
     p8 = lambda x: f"{x:.8g}"
