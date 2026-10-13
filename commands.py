@@ -8,6 +8,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 30 hepsi -> TP/başabaş/filtre ayarlarını tek seferde karşılaştır
   /backtest 30 filtresiz -> ek filtreler kapalı
   /backtest 30 atr -> stop en az 0.875 ATR
+  /backtest 30 yeni önceki -> grafik incelemesinden gelen kuralları karşılaştır
   /durum          -> backtest ilerlemesi
   /iptal          -> çalışan backtest'i durdurur
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
@@ -50,8 +51,10 @@ def start_backtest(text):
     low = text.lower()
     if "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
-    if any(w in low for w in ("hepsi", "karşılaştır", "karsilastir")):
-        args += ["--compare"]
+    if "yeni" in low:
+        args += ["--compare", "yeni"]
+    elif any(w in low for w in ("hepsi", "karşılaştır", "karsilastir")):
+        args += ["--compare", "hepsi"]
     if "filtresiz" in low:
         args += ["--no-filters"]
     if "atr" in low:

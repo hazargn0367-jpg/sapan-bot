@@ -11,7 +11,7 @@ Seçenekler:
     --rr 2.5                       TP = riskin kaç katı (varsayılan 2)
     --be 1                         1R kârda stop girişe (varsayılan kapalı)
     --ago 30                       dönemi 30 gün geriye kaydır (önceki ay)
-    --compare                      TP/başabaş/filtre ayarlarını tek seferde karşılaştır
+    --compare [hepsi|yeni]         ayar setini tek seferde karşılaştır
     --no-filters                   ek filtreleri kapat (seans, stop %0.5-3)
     --atr-min 0.875                stop en az 0.875 ATR olsun
 
@@ -54,6 +54,8 @@ STATUS_TR = {
     "no_confirm": "3 mumda onay gelmedi",
     "atr": "Stop mesafesi 1.5 ATR'den büyük",
     "atr_min": "Stop mesafesi ATR alt sınırının altında",
+    "wick": "Onay mumunun ters iğnesi uzun",
+    "no_prior_touch": "Trend teyidi yok (önceden EMA20 teması yok)",
     "min_risk": "Stop mesafesi çok dar",
     "max_risk": "Stop mesafesi %3'ten geniş",
     "session": "Temas 00-08 UTC (Asya seansı)",
@@ -163,7 +165,7 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True):
             "temas": fmt_time(ts[i]), "temas_utc": fmt_utc(ts[i]), "durum": r["status"],
             "sonuc": STATUS_TR[r["status"]],
         }
-        if "confirm" in r:
+        if "entry" in r:
             row.update(onay=fmt_time(ts[r["confirm"]]), giris=r["entry"], stop=r["stop"],
                        tp=r["tp"], atr=r["atr"], risk_atr=r["risk"] / r["atr"])
         if "entry_bar" in r:
@@ -262,6 +264,10 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
     msg.append(f"  ↳ ATR filtresine takıldı: {c('atr')}")
     if tr.MIN_ATR_MULT > 0:
         msg.append(f"  ↳ Stop {tr.MIN_ATR_MULT:g} ATR'den kısa: {c('atr_min')}")
+    if tr.REQUIRE_PRIOR_TOUCH:
+        msg.append(f"  ↳ Trend teyidi yok: {c('no_prior_touch')}")
+    if tr.WICK_MAX_BODY > 0:
+        msg.append(f"  ↳ Onay mumunda uzun iğne: {c('wick')}")
     min_pct = tr.MIN_RISK_PCT if tr.FILTERS else tr.BASE_MIN_RISK_PCT
     if tr.FILTERS:
         msg.append(f"  ↳ Asya seansı (00-08 UTC): {c('session')}")
@@ -297,38 +303,64 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
     return "\n".join(msg)
 
 
-# (TP oranı, başabaş tetik R, filtreler açık mı, ATR alt sınırı)
-COMPARE_CONFIGS = [(2.0, 0.0, False, 0.0), (2.0, 0.0, True, 0.0), (2.0, 1.0, True, 0.0),
-                   (2.5, 0.0, True, 0.0), (2.5, 1.0, True, 0.0), (3.0, 0.0, True, 0.0),
-                   (3.0, 1.0, True, 0.0), (2.0, 0.0, True, 0.875), (2.0, 1.0, True, 0.875)]
+# Her ayar: varsayılanların üzerine yazılan değerler. "ad" raporda görünür.
+PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
+              "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR"]
+DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
-def cfg_name(rr, be, filt=True, atr_min=0.0):
-    return (f"1:{rr:g}" + (f" + başabaş {be:g}R" if be > 0 else "")
-            + (f" + en az {atr_min:g} ATR" if atr_min > 0 else "")
-            + ("" if filt else " (filtresiz)"))
+def C(ad, **kw):
+    return {"ad": ad, **kw}
+
+
+COMPARE_SETS = {
+    "hepsi": [
+        C("1:2 (filtresiz)", FILTERS=False), C("1:2"), C("1:2 + başabaş 1R", BE_TRIGGER=1.0),
+        C("1:2.5", RR=2.5), C("1:2.5 + başabaş 1R", RR=2.5, BE_TRIGGER=1.0),
+        C("1:3", RR=3.0), C("1:3 + başabaş 1R", RR=3.0, BE_TRIGGER=1.0),
+        C("1:2 + en az 0.875 ATR", MIN_ATR_MULT=0.875),
+        C("1:2 + başabaş 1R + en az 0.875 ATR", BE_TRIGGER=1.0, MIN_ATR_MULT=0.875),
+    ],
+    # Grafik incelemesinden gelen kurallar; hepsi 1:2, eski saat/stop filtreleri kapalı
+    "yeni": [
+        C("Taban (senin ilk kuralların)", FILTERS=False),
+        C("+ iğne ≤ 1 gövde", FILTERS=False, WICK_MAX_BODY=1.0),
+        C("+ iğne ≤ 0.5 gövde", FILTERS=False, WICK_MAX_BODY=0.5),
+        C("+ trend teyidi", FILTERS=False, REQUIRE_PRIOR_TOUCH=True),
+        C("+ stop payı 0.2 ATR", FILTERS=False, STOP_BUFFER_ATR=0.2),
+        C("Hepsi: iğne≤1, trend, pay 0.1", FILTERS=False, WICK_MAX_BODY=1.0, REQUIRE_PRIOR_TOUCH=True, STOP_BUFFER_ATR=0.1),
+        C("Hepsi: iğne≤1, trend, pay 0.2", FILTERS=False, WICK_MAX_BODY=1.0, REQUIRE_PRIOR_TOUCH=True, STOP_BUFFER_ATR=0.2),
+        C("Hepsi: iğne≤1, trend, pay 0.3", FILTERS=False, WICK_MAX_BODY=1.0, REQUIRE_PRIOR_TOUCH=True, STOP_BUFFER_ATR=0.3),
+        C("Hepsi: iğne≤0.5, trend, pay 0.2", FILTERS=False, WICK_MAX_BODY=0.5, REQUIRE_PRIOR_TOUCH=True, STOP_BUFFER_ATR=0.2),
+    ],
+}
+CHART_CFG = {"hepsi": 0, "yeni": 6}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
-    tr.RR, tr.BE_TRIGGER, tr.FILTERS, tr.MIN_ATR_MULT = cfg
+    for k in PARAM_KEYS:
+        setattr(tr, k, cfg.get(k, DEFAULTS[k]))
+
+
+def cfg_name(cfg):
+    return cfg["ad"]
 
 
 def build_compare(results, period_txt, n_coins, minutes):
     msg = ["📊 <b>KARŞILAŞTIRMA</b>", f"{period_txt}, {n_coins} coin ({minutes:.0f} dk sürdü)",
            f"1R = {tr.RISK_USD:g}$, komisyon dahil", ""]
     scored = []
-    for cfg, df_all in results.items():
+    for name, df_all in results.items():
         t = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
-        scored.append((cfg, stats(t)))
+        scored.append((name, stats(t)))
     best = max((x for x in scored if x[1]), key=lambda x: x[1]["net"], default=None)
-    for cfg, s in scored:
-        be = cfg[1]
-        star = " ⭐" if best and cfg == best[0] else ""
+    for name, s in scored:
+        star = " ⭐" if best and name == best[0] else ""
         if not s:
-            msg.append(f"<b>{cfg_name(*cfg)}</b>: işlem yok")
+            msg.append(f"<b>{name}</b>: işlem yok")
             continue
-        bep = f", {s['be']} başabaş" if be > 0 else ""
-        msg.append(f"<b>{cfg_name(*cfg)}</b>{star}")
+        bep = f", {s['be']} başabaş" if s["be"] > 0 else ""
+        msg.append(f"<b>{name}</b>{star}")
         msg.append(f"  {s['n']} işlem, %{s['wr']:.0f} TP{bep}")
         msg.append(f"  <b>{s['net']:+.1f}R ({usd(s['net'])})</b>, düşüş {s['dd']:.1f}R, "
                    f"en uzun stop serisi {s['streak']}")
@@ -344,15 +376,23 @@ def main():
     ap.add_argument("--rr", type=float, default=2.0)
     ap.add_argument("--be", type=float, default=0.0, help="başabaş tetik (R), 0 = kapalı")
     ap.add_argument("--ago", type=int, default=0, help="dönemi kaç gün geriye kaydır (önceki ay için = days)")
-    ap.add_argument("--compare", action="store_true", help="tüm TP/başabaş ayarlarını karşılaştır")
+    ap.add_argument("--compare", nargs="?", const="hepsi", default=None,
+                    help="ayar setini karşılaştır: hepsi | yeni")
     ap.add_argument("--no-filters", action="store_true", help="ek filtreleri kapat (seans, stop %%0.5-3)")
     ap.add_argument("--atr-min", type=float, default=0.0, help="stop en az kaç ATR (0 = kapalı)")
+    ap.add_argument("--wick", type=float, default=0.0, help="onay iğnesi en fazla kaç gövde (0 = kapalı)")
+    ap.add_argument("--prior-touch", action="store_true", help="trend teyidi: önceden EMA20 teması")
+    ap.add_argument("--stop-buf", type=float, default=0.0, help="stop payı (ATR)")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
-    tr.RR = args.rr
-    tr.BE_TRIGGER = args.be
-    tr.FILTERS = not args.no_filters
-    configs = COMPARE_CONFIGS if args.compare else [(args.rr, args.be, tr.FILTERS, args.atr_min)]
+    if args.compare:
+        configs = COMPARE_SETS[args.compare]
+        chart_idx = CHART_CFG.get(args.compare, 0)
+    else:
+        configs = [C("tekli", RR=args.rr, BE_TRIGGER=args.be, FILTERS=not args.no_filters,
+                     MIN_ATR_MULT=args.atr_min, WICK_MAX_BODY=args.wick,
+                     REQUIRE_PRIOR_TOUCH=args.prior_touch, STOP_BUFFER_ATR=args.stop_buf)]
+        chart_idx = 0
     apply_cfg(configs[0])
     p0, p1 = period(args.days, args.ago)
     period_txt = (f"{pd.Timestamp(p0, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} – "
@@ -373,7 +413,7 @@ def main():
                or get_symbols())
     log.info("Backtest başlıyor: %d coin, %d gün, %s, %d ayar", len(symbols), args.days, tfs, len(configs))
     what = (f"{len(configs)} farklı ayar karşılaştırılacak" if args.compare else
-            cfg_name(*configs[0]))
+            f"TP 1:{tr.RR:g}" + (f", başabaş {tr.BE_TRIGGER:g}R" if tr.BE_TRIGGER > 0 else ""))
     send_message(f"⏳ Backtest başladı: {len(symbols)} coin, {period_txt}, {what}. "
                  f"Bitince sonuçlar buraya gelecek.")
 
@@ -384,7 +424,7 @@ def main():
             log.error("%s verisi alınamadı: %s", symbol, e)
             return None
 
-    results = {cfg: [] for cfg in configs}
+    results = {cfg["ad"]: [] for cfg in configs}
     examples_txt = []
     with ThreadPoolExecutor(max_workers=FETCH_THREADS) as ex:
         futures = {ex.submit(fetch, sym): sym for sym in symbols}
@@ -400,10 +440,10 @@ def main():
                 for tf in tfs:
                     df = prepare(frames[tf])
                     signals = find_signals(df)
-                    for cfg in configs:
+                    for ci, cfg in enumerate(configs):
                         apply_cfg(cfg)
-                        results[cfg] += run_df(df, symbol, tf, tick, signals,
-                                                    with_ctx=not args.compare)
+                        results[cfg["ad"]] += run_df(df, symbol, tf, tick, signals,
+                                                     with_ctx=(ci == chart_idx))
                     if not args.compare:
                         for ex_sym, ex_tf, ex_when in EXAMPLES:
                             if ex_sym == symbol and ex_tf == tf:
@@ -421,20 +461,30 @@ def main():
         report = build_compare(frames_all, period_txt, len(symbols), minutes)
         log.info("\n%s", report)
         send_message(report)
-        parts = []
-        for cfg, d in frames_all.items():
-            if not d.empty:
-                parts.append(d.assign(ayar=cfg_name(*cfg)))
+        parts = [d.assign(ayar=name) for name, d in frames_all.items() if not d.empty]
         if parts:
             out = pd.concat(parts)
             path = f"karsilastirma_{time.strftime('%Y%m%d_%H%M')}.csv"
             out.drop(columns=[c for c in out.columns if c.startswith("_")]).to_csv(
                 path, index=False, sep=";", decimal=",", encoding="utf-8-sig")
             send_document(path, "Tüm ayarların işlemleri ('ayar' sütununa göre filtrele)")
+        chart_name = configs[chart_idx]["ad"]
+        d = frames_all[chart_name]
+        if not d.empty:
+            recs = d[d["durum"].isin(["win", "loss", "be"])].sort_values("_exit_ts").to_dict("records")
+            if recs:
+                try:
+                    apply_cfg(configs[chart_idx])
+                    folder = "/tmp/bt_charts"
+                    os.makedirs(folder, exist_ok=True)
+                    send_photos(charts.make_samples(recs, folder),
+                                f"Örnek işlemler ({chart_name}): son 5 TP ve son 5 stop/başabaş")
+                except Exception as e:
+                    log.exception("Grafikler oluşturulamadı: %s", e)
         return
 
     apply_cfg(configs[0])
-    rows = results[configs[0]]
+    rows = results[configs[0]["ad"]]
     df_all = pd.DataFrame(rows)
     report = build_report(df_all, period_txt, len(symbols), minutes, examples_txt)
     log.info("\n%s", report)

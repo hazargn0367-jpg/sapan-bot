@@ -19,7 +19,10 @@ Mum içinde hangi hareketin önce olduğu bilinmediği durumlarda TEMKİNLİ dav
  - Aynı mum hem stopa hem TP'ye değerse -> stop sayılır
 """
 
+import numpy as np
 import pandas as pd
+
+import strategy as st
 
 # ---- Parametreler ----
 CONFIRM_WINDOW = 3     # temastan sonra onay için beklenecek mum
@@ -34,6 +37,11 @@ FILTERS = True
 MIN_RISK_PCT = 0.5       # stop mesafesi en az %0.5 (daha darında komisyon riskin %15-22'si)
 MAX_RISK_PCT = 3.0       # stop mesafesi en fazla %3 (daha genişi aşırı oynak/pump coinler)
 SESSION_START_UTC = 8    # temas mumu 00:00-08:00 UTC (03:00-11:00 TR) arasındaysa işlem yok
+
+# ---- Grafik incelemesinden gelen kurallar (varsayılan kapalı, backtest'te açılır) ----
+WICK_MAX_BODY = 0.0          # >0: onay mumunun ters iğnesi (LONG'da üst) gövdenin bu katından uzunsa işlem yok
+REQUIRE_PRIOR_TOUCH = False  # trend başladıktan sonra, tepeden önce en az bir EMA20 teması olmalı
+STOP_BUFFER_ATR = 0.0        # stop onay mumunun ucundan bu kadar ATR daha uzağa konur
 RR = 2.0               # hedef: riskin kaç katı
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
@@ -52,6 +60,33 @@ def add_atr(df):
     return df
 
 
+def prior_touch_ok(df, i, side):
+    """Trend teyidi: trend başladıktan ve fiyat EMA20'den ayrıldıktan sonra,
+    son tepeden (LONG) / dipten (SHORT) önce en az bir kez EMA20'ye temas edilmiş mi?"""
+    long = side == "LONG"
+    E20, E50, E100 = df["EMA20"].values, df["EMA50"].values, df["EMA100"].values
+    H, L = df["High"].values, df["Low"].values
+
+    def aligned(j):
+        return (E20[j] > E50[j] > E100[j]) if long else (E20[j] < E50[j] < E100[j])
+
+    # Trendin başladığı mum: dizilimin kesintisiz sürdüğü en eski mum
+    s = i
+    while s - 1 >= max(0, i - 600) and aligned(s - 1):
+        s -= 1
+    # Kalkış: fiyatın EMA20'den tamamen ayrıldığı ilk mum (kesişme anındaki temaslar sayılmaz)
+    k = s
+    while k < i and not ((L[k] > E20[k]) if long else (H[k] < E20[k])):
+        k += 1
+    # Son tepe/dip (strategy.py ile aynı tanım)
+    start = max(0, i - st.LOOKBACK)
+    pivot = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    for m in range(k + 1, pivot):
+        if (L[m] <= E20[m] * st.TOLERANCE_LONG) if long else (H[m] >= E20[m] * st.TOLERANCE_SHORT):
+            return True
+    return False
+
+
 def touch_closes_right_side(df, i, side):
     c = df.iloc[i]
     return c["Close"] > c["EMA20"] if side == "LONG" else c["Close"] < c["EMA20"]
@@ -59,7 +94,8 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
-    status: session | no_close | cancel_touch | no_confirm | atr | atr_min | min_risk | max_risk | cancel_confirm |
+    status: session | no_close | no_prior_touch | cancel_touch | no_confirm | wick | atr | atr_min |
+            min_risk | max_risk | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
     H = df["High"].values
@@ -80,6 +116,10 @@ def simulate(df, i, side, tick):
         res["status"] = "no_close"
         return res
 
+    if REQUIRE_PRIOR_TOUCH and not prior_touch_ok(df, i, side):
+        res["status"] = "no_prior_touch"
+        return res
+
     # --- Onay ---
     conf = None
     for j in range(i + 1, i + 1 + CONFIRM_WINDOW):
@@ -96,18 +136,27 @@ def simulate(df, i, side, tick):
         res["status"] = "no_confirm"
         return res
 
+    if WICK_MAX_BODY > 0:
+        body = abs(C[conf] - O[conf])
+        wick = (H[conf] - max(O[conf], C[conf])) if long else (min(O[conf], C[conf]) - L[conf])
+        if wick > WICK_MAX_BODY * body:
+            res.update(confirm=conf, status="wick")
+            return res
+
+    buf = STOP_BUFFER_ATR * A[conf]
     if long:
-        entry, stop = H[conf] + tick, L[conf] - tick
+        entry, stop = H[conf] + tick, L[conf] - tick - buf
     else:
-        entry, stop = L[conf] - tick, H[conf] + tick
+        entry, stop = L[conf] - tick, H[conf] + tick + buf
     risk = abs(entry - stop)
+    base_risk = risk - buf  # ATR sınırları stop payı eklenmeden önceki mesafeye uygulanır
     tp = entry + RR * risk if long else entry - RR * risk
     res.update(confirm=conf, entry=entry, stop=stop, tp=tp, risk=risk, atr=A[conf])
 
-    if risk > ATR_MAX_MULT * A[conf]:
+    if base_risk > ATR_MAX_MULT * A[conf]:
         res["status"] = "atr"
         return res
-    if MIN_ATR_MULT > 0 and risk < MIN_ATR_MULT * A[conf]:
+    if MIN_ATR_MULT > 0 and base_risk < MIN_ATR_MULT * A[conf]:
         res["status"] = "atr_min"
         return res
     risk_pct = 100 * risk / entry
