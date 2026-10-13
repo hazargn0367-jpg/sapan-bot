@@ -25,7 +25,7 @@ BASE_URL = "https://fapi.binance.com"
 KLINE_LIMIT = 499  # Binance'te 100-499 arası mum = 2 ağırlık (rate limit dostu)
 WEIGHT_LIMIT = 2400
 WEIGHT_SOFT_LIMIT = 2000  # buna yaklaşınca dakika dolana kadar beklenir (backtest bunu 1200'e indirir)
-BACKTEST_SOFT_LIMIT = 1500  # backtest en fazla bu kadar kullanır: canlı 5dk taraması (~1000) + backtest < 2400
+BACKTEST_SOFT_LIMIT = 1000  # backtest en fazla bu kadar kullanır: canlı 5dk taraması (~1000) + backtest < 2400
 PAUSE_FILE = "/tmp/binance_pause"
 import config  # noqa: E402
 
@@ -259,11 +259,11 @@ def get_klines_range(symbol, interval, start_ms, end_ms, yield_live=True, max_wa
     }).drop_duplicates("timestamp").reset_index(drop=True)
 
 
-def get_klines(symbol, interval, max_wait=120):
+def get_klines(symbol, interval, max_wait=120, limit=KLINE_LIMIT):
     """Binance vadeli mum verisi (canlı tarama). Son satır şu an açık olan (canlı) mumdur.
     Binance uzun süre engelliyse beklemez, None döner (tarama saatlerce takılmasın)."""
     try:
-        res = _get("/fapi/v1/klines", params={"symbol": symbol, "interval": interval, "limit": KLINE_LIMIT},
+        res = _get("/fapi/v1/klines", params={"symbol": symbol, "interval": interval, "limit": limit},
                    timeout=10, max_wait=max_wait)
         rows = res.json()
     except Exception as e:

@@ -29,7 +29,7 @@ DAY_MS = 86_400_000
 
 _lock = threading.Lock()
 _pool = None  # arşiv indirmeleri için ortak iş parçacığı havuzu (ağ beklemesi: aynı anda çok dosya)
-POOL_SIZE = 24
+POOL_SIZE = 12
 
 
 def _download_many(urls):
@@ -59,21 +59,17 @@ def parse_zip(content):
     """Arşiv zip'i -> (açılış zamanı, kapanış zamanı, OHLC). Başlık satırı olan/olmayan iki biçim de,
     milisaniye/mikrosaniye zaman damgası da okunur."""
     with zipfile.ZipFile(io.BytesIO(content)) as zf:
-        text = zf.read(zf.namelist()[0]).decode("utf-8", "ignore")
-    ts, ct, ohlc = [], [], []
-    for line in text.splitlines():
-        p = line.split(",")
-        if len(p) < 7 or not p[0].strip().isdigit():
-            continue  # başlık ya da boş satır
-        t, c = int(p[0]), int(p[6])
-        if t > 10 ** 14:  # mikrosaniye
-            t //= 1000
-            c //= 1000
-        ts.append(t)
-        ct.append(c)
-        ohlc.append((float(p[1]), float(p[2]), float(p[3]), float(p[4])))
-    return (np.array(ts, dtype=np.int64), np.array(ct, dtype=np.int64),
-            np.array(ohlc, dtype=np.float64).reshape(-1, 4))
+        raw = zf.read(zf.namelist()[0])
+    head = raw[:1]
+    skip = 0 if head.isdigit() else 1  # başlık satırı
+    if not raw.strip() or (skip and b"\n" not in raw):
+        return np.empty(0, np.int64), np.empty(0, np.int64), np.empty((0, 4))
+    d = pd.read_csv(io.BytesIO(raw), header=None, skiprows=skip, usecols=[0, 1, 2, 3, 4, 6],
+                    dtype={0: np.int64, 1: np.float64, 2: np.float64, 3: np.float64, 4: np.float64, 6: np.int64})
+    ts, ct = d[0].to_numpy(np.int64), d[6].to_numpy(np.int64)
+    if len(ts) and ts[0] > 10 ** 14:  # mikrosaniye
+        ts, ct = ts // 1000, ct // 1000
+    return ts, ct, d[[1, 2, 3, 4]].to_numpy(np.float64)
 
 
 def _download(url, why=None):

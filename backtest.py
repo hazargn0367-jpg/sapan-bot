@@ -588,7 +588,7 @@ COMPARE_SETS["tp"] = [
     C("Canlı kurallar 1:2.5", **_LIVE, RR=2.5),
     C("Canlı kurallar 1:1.5", **_LIVE, RR=1.5),
 ]
-_LIVE_NOW = dict(live_setups.LIVE_RULES, cluster_max=live_setups.CLUSTER_MAX)
+_LIVE_NOW = dict(live_setups.LIVE_RULES, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)
 COMPARE_SETS["dip"] = [
     C("Canlı ayar (1:2.2)", **_LIVE_NOW),
     C("+ önünde en az 0.5R yer", **_LIVE_NOW, ROOM_MIN_R=0.5),
@@ -691,6 +691,8 @@ def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
 
 def send_samples(recs, name, n_each=15):
     """3 aya yayılmış 15 TP ve 15 stop grafiği, 10'arlı albümler halinde (PDF yok: bellek)."""
+    gc.collect()
+    _trim_memory()  # matplotlib yüklenmeden önce boşalan belleği geri ver
     folder = "/tmp/bt_charts"
     shutil.rmtree(folder, ignore_errors=True)
     os.makedirs(folder, exist_ok=True)
@@ -739,7 +741,7 @@ def main():
         rules = dict(live_setups.LIVE_RULES)
         if args.rr is not None:
             rules["RR"] = args.rr
-        configs = [C("canlı ayar", **rules, cluster_max=live_setups.CLUSTER_MAX)]
+        configs = [C("canlı ayar", **rules, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)]
         chart_idx = 0
     else:
         configs = [C("tekli", RR=2.0 if args.rr is None else args.rr, BE_TRIGGER=args.be, FILTERS=not args.no_filters,

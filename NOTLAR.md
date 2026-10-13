@@ -123,6 +123,14 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   komisyon 0.14R/işlem). Haftalar -4.5/-13.0/+15.3/-7.2/+8.1. Toplu sinyalle elenen 141 işlem (89 farklı mum) %40 TP, ~+24.5R:
   5m'de bu ay filtre zarar ettirdi. 15m'de (f324b8b2) elenenler ~-1.4R. Test: `/backtest 30 toplu 5m` ve `/backtest 90 toplu`.
 
+- 14.10 02:16 Binance 103 dk IP engeli (engeller uzuyor). Sebep: 5m canlı tarama 1000 ağırlık/5dk + backtest 1500 → sınır aşılıyor.
+  Düzeltme: canlı tarama mumları bellekte tutar, her taramada son 40 mum (1 ağırlık) → ~500/tarama; backtest en fazla 1000/dk;
+  yeni açılan bot ilk taramadan önce tek hafif istekle engel kontrolü. Arşiv zip'i pandas C ayrıştırıcıyla (bellek), havuz 12.
+- 30 gün 5m toplu karşılaştırma: 5 coin -1.1R (130) | 8: -11.7R (166) | 12: -14.7R (182) | kapalı +16.3R (271; SHORT +21.9R).
+  Kapalının kârı birkaç büyük toplu hareketten; tutarsız → değiştirilmedi. 15m 90 gün ve 5m önceki ay testi bekliyor.
+- Kullanıcı isteği: aynı anda en fazla 2 işlem (MAX_OPEN=2). Canlıda giriş bekleyen + açık ≥2 ise yeni EMİR HAZIR yok, "⏸" mesajı.
+  Backtest canlı ayarında max_open=2 (dolmuş işlemler, girişten çıkışa).
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.

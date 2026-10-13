@@ -25,13 +25,14 @@ import config
 import strategy as st
 import trade_rules as tr
 import exchanges
-from exchanges import get_klines, get_tick_sizes, get_top_symbols
+from exchanges import KLINE_LIMIT as KLINE_KEEP, get_klines, get_tick_sizes, get_top_symbols
 from telegram import send_message, send_photo
 
 log = logging.getLogger("bot")
 
 UNIVERSE = 500          # hacme göre ilk kaç coin taransın
 CLUSTER_MAX = 5         # aynı mumda bu kadar coin aynı yönde temas verirse girme (toplu hareket)
+MAX_OPEN = 2            # aynı anda en fazla bu kadar işlem (giriş bekleyen + açık); doluysa yeni EMİR HAZIR gönderilmez
 SCAN_THREADS = 6
 RECOVER_BARS = 60   # yeniden başlarken son 60 mumdaki (5m'de 5 saat) bildirilmiş setup'lar takibe geri alınır
 LIVE_TF = config.LIVE_TF                 # canlı tarama zaman dilimi (varsayılan 5m)
@@ -87,6 +88,7 @@ def rules_summary():
         "fitil temas" if tr.TOUCH_WICK_MIN else None,
         f"tepe iğnesi ≤ {tr.PIVOT_WICK_MAX:g} gövde" if tr.PIVOT_WICK_MAX else None,
         f"toplu sinyal ≥{CLUSTER_MAX} yok",
+        f"aynı anda en fazla {MAX_OPEN} işlem" if MAX_OPEN else None,
         (f"{tr.QUIET_UTC[0] + 3:02d}-{tr.QUIET_UTC[1] + 3:02d} TR yok"
          if tr.QUIET_UTC[0] < tr.QUIET_UTC[1] else None),
         "⚠️ ESKİ FİLTRELER AÇIK" if tr.FILTERS else None,
@@ -114,14 +116,38 @@ def refresh_universe():
             ticks = get_tick_sizes(max_wait=120)
             if syms:
                 _state.update(symbols=syms, ticks=ticks, symbols_time=time.time())
+                for k in [k for k in _kcache if k not in set(syms)]:
+                    _kcache.pop(k, None)
                 log.info("Setup taraması: %d coin", len(syms))
         except Exception as e:
             log.error("Coin listesi alınamadı: %s", e)
     return _state["symbols"]
 
 
+_kcache = {}          # coin -> son ~500 mum (açık mum dahil): her taramada sadece yeni mumlar çekilir
+INCREMENTAL_LIMIT = 40   # 40 mum = Binance'te 1 ağırlık (499 mum = 2): taramanın yükü yarıya iner
+
+
+def fetch_candles(symbol):
+    """Son KLINE_LIMIT mum. Bellekte varsa sadece son 40 mum çekilip eklenir (açık mum her seferinde yenilenir)."""
+    old = _kcache.get(symbol)
+    step = TF_SEC * 1000
+    if old is not None and len(old) and (time.time() * 1000 - int(old["timestamp"].iloc[-1])) < (INCREMENTAL_LIMIT - 5) * step:
+        new = get_klines(symbol, LIVE_TF, limit=INCREMENTAL_LIMIT)
+        if new is None:
+            return None
+        df = (pd.concat([old, new]).drop_duplicates("timestamp", keep="last")
+              .sort_values("timestamp").tail(KLINE_KEEP).reset_index(drop=True))
+    else:
+        df = get_klines(symbol, LIVE_TF)
+        if df is None:
+            return None
+    _kcache[symbol] = df
+    return df
+
+
 def closed_candles(symbol):
-    df = get_klines(symbol, LIVE_TF)
+    df = fetch_candles(symbol)
     if df is None or len(df) < 250:
         return None
     df = df.iloc[:-1]  # son satır hâlâ açık olan mum
@@ -244,6 +270,12 @@ def run_cycle():
                                 f"(~{wait / 60:.0f} dk daha)")
         log.warning("Binance engeli sürüyor (%d sn), tarama atlandı", wait)
         return
+    if not _state.get("probed"):
+        _state["probed"] = True
+        exchanges.probe_weight()
+        if exchanges.blocked_for() > 120:
+            _stats["last_error"] = f"{time.strftime('%H:%M')} Binance engeli: tarama atlandı"
+            return
     symbols = refresh_universe()
     if not symbols:
         return
@@ -283,6 +315,8 @@ def run_cycle():
 
     sent = 0
     cluster_skipped = 0
+    busy = sum(1 for v in _active.values() if v["status"] in ("pending", "open"))
+    limit_skipped = []
     for symbol, side, r, df in candidates:
         touch_ts = int(df["timestamp"].values[r["touch"]])
         if (symbol, touch_ts) in _active:
@@ -291,9 +325,17 @@ def run_cycle():
             log.info("Toplu sinyal, atlandı: %s %s (%d coin)", symbol, side, counts[(touch_ts, side)])
             cluster_skipped += 1
             continue
+        if MAX_OPEN and busy >= MAX_OPEN:
+            log.info("Açık işlem sınırı (%d), atlandı: %s %s", MAX_OPEN, symbol, side)
+            limit_skipped.append(f"{symbol} {side}")
+            continue
         send_setup(symbol, side, r, df)
         _active[(symbol, touch_ts)] = {"side": side, "status": "pending"}
         sent += 1
+        busy += 1
+    if limit_skipped:
+        send_message(f"⏸ Zaten {MAX_OPEN} işlem açık/giriş bekliyor, yeni setup bildirilmedi: "
+                     + ", ".join(html.escape(x) for x in limit_skipped))
     ok = sum(1 for r in results if r[1] is not None)
     _stats.update(cycles=_stats["cycles"] + 1, last_run=time.time(), scanned=len(todo), ok=ok,
                   touches=sum(counts.values()), ready=len(candidates), cluster=cluster_skipped,
@@ -321,7 +363,7 @@ def status_text():
         f"{_stats['touches']} temas, {_stats['ready']} onay adayı, {_stats['sent']} bildirim ({_stats['secs']:.0f} sn)",
         f"Açıldığından beri gönderilen EMİR HAZIR: {_stats['total_sent']}"
         + (f" (son: {hhmm(_stats['last_sent'])})" if _stats["last_sent"] else ""),
-        f"Takipteki setup: {len(_active)}",
+        f"Takipteki setup: {len(_active)} (en fazla {MAX_OPEN})",
     ]
     if running:
         lines.append(running.strip())
