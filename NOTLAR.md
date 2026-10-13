@@ -18,7 +18,7 @@ Son güncelleme: 13.10.2026 (ilk çalışma gecesi)
 - Tepeden sonra EMA20'ye ilk temas, geri çekilmede en fazla 2 ters mum
 - Temas mumu: iğnesi EMA20'ye değer (%0.03 tolerans), EMA20'nin üstünde kapatır; Stoch(5,3) LONG < 30, SHORT > 70
 - Onay: sonraki 3 mum içinde temas mumunun tepesinin üstünde kapatan ilk mum; o ana kadar temas dibinin altına inilmez
-- Giriş: onay tepesi + 1 tık; Stop: onay dibi − 1 tık; TP: 1:2
+- Giriş: onay tepesi + 1 tık; Stop: onay dibi − 1 tık; TP: 1:2 (canlıda 1:2.2: komisyon sonrası TP ~+2R, stop ~-1.12R)
 - ATR(14, RMA): giriş-stop ≤ 1.5 ATR
 - Giriş emri 2 mum geçerli; girişten önce onay dibinin altına inilirse iptal
 - Mum içi belirsizlikte temkinli: aynı mumda stop+TP → stop
@@ -52,10 +52,13 @@ Hacmi en yüksek 200 coin, 15dk, 1:2:
 - TradingView kullanıcıda farklı saat diliminde; bot TR ve UTC saatini birlikte yazar.
 - Bot, kullanıcının NEARUSDT 10.10 örnek işlemini (14:00 TR, giriş 5.273, stop 5.235) birebir buldu.
 
+- 03:00-07:00 TR filtresi iki ayda da iyileştirdi (canlı ayar: önceki ay -4.4R, son ay -6.4R; toplam -10.8R / 59 işlem).
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.
 - Denenecek: 1 saatlik zaman dilimi (stoplar geniş → komisyon payı küçük).
+- Doğrulanacak: canlıdaki 1:2.2 TP (`/backtest 30 tp` ve `/backtest 30 tp önceki`).
 
 ## Telegram komutları
 - `/sinyal aç|kapat` – EMİR HAZIR bildirimleri

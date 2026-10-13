@@ -37,7 +37,7 @@ CHART_DIR = "/tmp/live_charts"
 
 # Backtest'teki "1-6 + toplu" ayarı
 LIVE_RULES = dict(
-    RR=2.0, BE_TRIGGER=0.0, FILTERS=False, MIN_ATR_MULT=0.0,
+    RR=2.2, BE_TRIGGER=0.0,     # komisyon sonrası kazanç ~2R olsun diye 1:2.2 FILTERS=False, MIN_ATR_MULT=0.0,
     WICK_MAX_BODY=1.0,          # 1: onay mumunda uzun ters iğne yok
     REQUIRE_PRIOR_TOUCH=True,   # 2: trend teyidi
     STOP_BUFFER_ATR=0.3,        # 3: stop payı

@@ -452,7 +452,14 @@ COMPARE_SETS["saat"] = [
     C("1-6 + toplu", **_R16, cluster_max=5),
     C("1-6 + toplu + 03-07 TR yok (canlıdaki)", **_R16, cluster_max=5, QUIET_UTC=(0, 4)),
 ]
-CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3}  # grafikleri çizilecek ayar (listedeki sırası)
+_LIVE = dict(**_R16, cluster_max=5, QUIET_UTC=(0, 4))
+COMPARE_SETS["tp"] = [
+    C("Canlı kurallar 1:2", **_LIVE, RR=2.0),
+    C("Canlı kurallar 1:2.2 (canlıdaki)", **_LIVE, RR=2.2),
+    C("Canlı kurallar 1:2.5", **_LIVE, RR=2.5),
+    C("Canlı kurallar 1:1.5", **_LIVE, RR=1.5),
+]
+CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
