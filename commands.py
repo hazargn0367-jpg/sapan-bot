@@ -2,6 +2,7 @@
 Telegram komutları (bot arka planda dinler):
   /backtest       -> son 7 günle backtest başlatır
   /backtest 60    -> son 60 günle backtest başlatır
+  /backtest 30 2.5 -> 30 gün, TP = riskin 2.5 katı
   /durum          -> backtest ilerlemesi
   /iptal          -> çalışan backtest'i durdurur
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
@@ -9,6 +10,7 @@ Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
 
 import logging
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -29,13 +31,17 @@ def start_backtest(text):
     if _bt_proc is not None and _bt_proc.poll() is None:
         send_message("⏳ Backtest zaten çalışıyor, bitince sonuçlar gelecek.")
         return
-    parts = text.split()
+    nums = re.findall(r"\d+(?:[.,]\d+)?", text)
     days = 7
-    if len(parts) > 1 and parts[1].isdigit():
-        days = max(1, min(180, int(parts[1])))
+    args = []
+    if nums:
+        days = max(1, min(180, int(float(nums[0].replace(",", ".")))))
+    if len(nums) > 1:
+        rr = max(0.5, min(10.0, float(nums[1].replace(",", "."))))
+        args = ["--rr", str(rr)]
     log_file = open(os.path.join(HERE, "backtest.log"), "w")
     _bt_proc = subprocess.Popen(
-        [sys.executable, "-u", "backtest.py", "--days", str(days)],
+        [sys.executable, "-u", "backtest.py", "--days", str(days)] + args,
         cwd=HERE, stdout=log_file, stderr=subprocess.STDOUT,
     )
     log.info("Backtest başlatıldı (%d gün)", days)

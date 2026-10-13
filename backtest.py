@@ -8,6 +8,7 @@ Seçenekler:
     --days 7                       kaç günlük veri (varsayılan 7)
     --symbols NEARUSDT,QNTUSDT     sadece bu coinler (varsayılan: hepsi)
     --tf 15m,30m                   zaman dilimleri (varsayılan: 15m)
+    --rr 2.5                       TP = riskin kaç katı (varsayılan 2)
 
 Bitince Telegram'a özet mesaj ve tüm setup'ların listesi (CSV) gelir.
 """
@@ -220,7 +221,7 @@ def build_report(df_all, days, n_coins, minutes, examples_txt):
     def c(*keys):
         return int(sum(funnel.get(k, 0) for k in keys))
 
-    msg = [f"📊 <b>BACKTEST SONUCU</b>",
+    msg = [f"📊 <b>BACKTEST SONUCU (TP 1:{tr.RR:g})</b>",
            f"Son {days} gün, {n_coins} coin ({minutes:.0f} dk sürdü)", ""]
     msg.append("<b>Huni</b>")
     msg.append(f"Temas sinyali: {len(df_all)}")
@@ -263,15 +264,17 @@ def main():
     ap.add_argument("--days", type=int, default=7)
     ap.add_argument("--symbols", default="")
     ap.add_argument("--tf", default="15m")
+    ap.add_argument("--rr", type=float, default=tr.RR)
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
+    tr.RR = args.rr
 
     t0 = time.time()
     ticks = get_tick_sizes()
     symbols = ([s.strip().upper() for s in args.symbols.split(",") if s.strip()]
                or get_symbols())
     log.info("Backtest başlıyor: %d coin, %d gün, %s", len(symbols), args.days, tfs)
-    send_message(f"⏳ Backtest başladı: {len(symbols)} coin, son {args.days} gün. "
+    send_message(f"⏳ Backtest başladı: {len(symbols)} coin, son {args.days} gün, TP 1:{tr.RR:g}. "
                  f"Bitince sonuçlar buraya gelecek.")
 
     rows, examples_txt = [], []
