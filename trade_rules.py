@@ -50,6 +50,10 @@ PIVOT_WICK_MAX = 0.0         # >0: tepe (LONG) / dip (SHORT) mumunun o yöndeki 
 QUIET_UTC = (0, 0)           # (başlangıç, bitiş) UTC saat: temas bu aralıktaysa işlem yok. (0, 4) = 03:00-07:00 TR
 ROOM_MIN_R = 0.0             # >0: giriş ile önceki tepe (LONG) / dip (SHORT) arası en az bu kadar R olmalı (önünde yer)
 STRUCTURE_BREAK = ""         # "wick" / "close": şu anki düzeltme önceki düzeltmenin dibini (LONG) / tepesini (SHORT) kırdıysa işlem yok
+SUPPORT_N = 0                # >0: son dipten (SHORT) / tepeden (LONG) sonraki bu kadar mum incelenir (kural 9)
+SUPPORT_MIN = 2              # bunların en az bu kadarı dibe (tepeye) doğru iğneliyse destek (direnç) oluşmuş: işlem yok
+SUPPORT_WICK_BODY = 1.0      # "iğneli" mum: dibe (tepeye) doğru iğne >= gövdenin bu katı
+SUPPORT_WICK_ATR = 0.1       # ve iğne >= bu kadar ATR (minik mumların iğnesi sayılmasın)
 RR = 2.0               # hedef: riskin kaç katı
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
@@ -181,6 +185,28 @@ def structure_ok(df, i, side, mode="wick"):
     return structure_details(df, i, side, mode)["ok"]
 
 
+def support_details(df, i, side, n=None, need=None, wick_body=None, wick_atr=None):
+    """Kural 9: son dipten (SHORT) sonra gelen mumlar dibe doğru iğne bırakarak yükseldiyse orada
+    alıcı var (destek) demektir; LONG'da tepeden sonra yukarı iğneli mumlar (direnç).
+    Temas mumundan önceki mumlara bakılır."""
+    n = SUPPORT_N if n is None else n
+    need = SUPPORT_MIN if need is None else need
+    wick_body = SUPPORT_WICK_BODY if wick_body is None else wick_body
+    wick_atr = SUPPORT_WICK_ATR if wick_atr is None else wick_atr
+    long = side == "LONG"
+    O, H, L, C, A = (df[c].values for c in ("Open", "High", "Low", "Close", "ATR"))
+    start = max(0, i - st.LOOKBACK)
+    p = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    rows = []
+    for m in range(p + 1, min(p + 1 + n, i)):
+        body, up, down = candle_parts(O[m], H[m], L[m], C[m])
+        wick = up if long else down
+        ok = wick > 0 and wick >= wick_body * body and wick >= wick_atr * A[m]
+        rows.append({"bar": m, "wick": wick, "body": body, "atr": A[m], "ok": bool(ok)})
+    count = sum(r["ok"] for r in rows)
+    return {"p": p, "rows": rows, "count": count, "support": n > 0 and count >= need}
+
+
 def touch_closes_right_side(df, i, side):
     c = df.iloc[i]
     return c["Close"] > c["EMA20"] if side == "LONG" else c["Close"] < c["EMA20"]
@@ -188,7 +214,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
-    status: session | quiet | no_close | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | quiet | no_close | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -230,6 +256,9 @@ def simulate(df, i, side, tick):
         return res
     if PIVOT_WICK_MAX > 0 and not pivot_wick_ok(df, i, side):
         res["status"] = "pivot_wick"
+        return res
+    if SUPPORT_N > 0 and support_details(df, i, side)["support"]:
+        res["status"] = "support"
         return res
 
     # --- Onay ---

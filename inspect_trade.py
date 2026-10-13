@@ -106,6 +106,24 @@ def inspect(text, chart_path="/tmp/incele.png"):
         lines.append(f"Şimdiki düzeltmenin {pull}: {fmt(sd['cur_idx'])} → {p8(sd['cur'])}")
         lines.append(f"{ok(sd['ok'])} Yapı {'sağlam' if sd['ok'] else 'BOZUK (önceki düzeltme kırılmış)'}")
 
+    sup = tr.support_details(df, i, side, n=3, need=2, wick_body=0.5, wick_atr=tr.SUPPORT_WICK_ATR)
+    abl = "Tepeden" if long else "Dipten"
+    lines += ["", f"<b>9) {abl} sonraki mumlar (testte)</b>"]
+    if not sup["rows"]:
+        lines.append(f"{peak[0].capitalize()} ile temas arasında mum yok")
+    for k, row in enumerate(sup["rows"], 1):
+        ratio = row["wick"] / row["body"] if row["body"] > 0 else float("inf")
+        lines.append(f"{'🟡' if row['ok'] else '⚪'} {k}. mum {fmt(row['bar'])}: {'alt' if not long else 'üst'} iğne {p8(row['wick'])}, "
+                     f"gövde {p8(row['body'])} (iğne/gövde {ratio:.1f}, {row['wick'] / row['atr']:.2f} ATR)")
+    first2 = sup["rows"][:2]
+    v_full = len(first2) == 2 and all(rw["wick"] >= rw["body"] and rw["wick"] >= tr.SUPPORT_WICK_ATR * rw["atr"] for rw in first2)
+    v_half = len(first2) == 2 and all(rw["ok"] for rw in first2)
+    v_3 = sup["count"] >= 2
+    word = "destek" if not long else "direnç"
+    lines.append(f"İlk 2 mum iğneli (iğne ≥ gövde): {'evet → ' + word if v_full else 'hayır'}")
+    lines.append(f"İlk 2 mum iğneli (iğne ≥ ½ gövde): {'evet → ' + word if v_half else 'hayır'}")
+    lines.append(f"3 mumun 2'si iğneli (iğne ≥ ½ gövde): {'evet → ' + word if v_3 else 'hayır'}")
+
     r = tr.simulate(df, i, side, tick)
     try:
         from backtest import STATUS_TR
@@ -116,7 +134,7 @@ def inspect(text, chart_path="/tmp/incele.png"):
     if "entry" in r:
         lines.append(f"Onay {fmt(r['confirm'])}, giriş {p8(r['entry'])}, stop {p8(r['stop'])}, TP {p8(r['tp'])}")
     if "room_r" in r:
-        lines.append(f"7) Önceki {peak[0]}ye mesafe: {r['room_r']:.2f}R")
+        lines.append(f"7) Önceki {'tepeye' if long else 'dibe'} mesafe: {r['room_r']:.2f}R")
     lines += ["", f"Grafikte farklı görüyorsan (ör. önceki düzeltmenin {pull} hangi mum olmalı) saatini yaz, tanımı ona göre düzeltelim."]
     path = None
     try:
@@ -124,7 +142,8 @@ def inspect(text, chart_path="/tmp/incele.png"):
         title = f"{sym}  15m  {side}   temas {ts_tr:%d.%m.%Y %H:%M} TR   sonuç: {status_tr}"
         if sd.get("q") is not None:
             title += "   yapı: " + ("sağlam" if sd["ok"] else "BOZUK")
-        charts.draw_inspect(df, i, side, r, sd, title, chart_path)
+        charts.draw_inspect(df, i, side, r, sd, title, chart_path,
+                            wick_bars=[rw["bar"] for rw in sup["rows"] if rw["ok"]])
         path = chart_path
     except Exception as e:
         lines.append(f"(Grafik çizilemedi: {type(e).__name__}: {e})")

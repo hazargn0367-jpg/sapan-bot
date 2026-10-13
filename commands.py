@@ -17,6 +17,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 canlı -> canlı bildirimlerdeki ayarın aynısı, tüm işlemlerin grafikleri PDF
   /backtest 90 dip -> canlı ayar + önceki tepe/dibe mesafe (0.5/1/1.5/2.2R), ay ay
   /backtest 90 yapı -> kural 7 (önünde yer) ve kural 8 (yapı bozulmamış), ay ay + grafik PDF
+  /backtest 90 destek -> kural 9 (dip/tepeden sonra iğneli mumlar = destek/direnç), ay ay + grafik PDF
   (varsayılan: hacmi en yüksek 200 coin; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi + canlı tarama durumu
   /incele AXSUSDT 01.08.2026 02:00 -> bir işlemin tüm kurallardaki değerlendirmesi + grafik (TR saati)
@@ -63,7 +64,9 @@ def start_backtest(text):
     low = text.lower()
     if "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
-    if "yapı" in low or "yapi" in low:
+    if "destek" in low:
+        args += ["--compare", "destek"]
+    elif "yapı" in low or "yapi" in low:
         args += ["--compare", "yapi"]
     elif re.search(r"\bdip\b", low):
         args += ["--compare", "dip"]
@@ -161,8 +164,9 @@ def _listen():
                             msg, chart = inspect_trade.inspect(t)
                             send_message(msg)
                             if chart:
-                                send_photo(chart, "Kural 8 noktaları: p = son tepe/dip, q = önceki salınım, "
-                                                  "turuncu çizgi = önceki düzeltmenin ucu")
+                                send_photo(chart, "p = son tepe/dip, q = ondan önceki salınım tepesi/dibi, "
+                                                  "turuncu çizgi = önceki düzeltmenin ucu (kural 8), "
+                                                  "mavi üçgen = dip/tepeden sonraki iğneli mum (kural 9)")
                         except Exception as e:
                             send_message(f"⚠️ İnceleme hatası: {type(e).__name__}: {e}")
                     threading.Thread(target=_run, daemon=True).start()

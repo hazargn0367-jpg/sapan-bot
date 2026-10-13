@@ -132,7 +132,7 @@ def draw(trade, path=None, pdf=None):
     plt.close(fig)
 
 
-def draw_inspect(df, i, side, r, sd, title, path):
+def draw_inspect(df, i, side, r, sd, title, path, wick_bars=()):
     """/incele grafiği: temas, onay, giriş/stop/TP ve kural 8'in kullandığı noktalar
     (önceki salınım q, son tepe/dip p, önceki ve şimdiki düzeltmenin ucu)."""
     long = side == "LONG"
@@ -182,11 +182,10 @@ def draw_inspect(df, i, side, r, sd, title, path):
                     arrowprops=dict(arrowstyle="-", color=color, lw=0.8))
 
     # Kural 8 noktaları
-    peak_word = "tepe" if long else "dip"
     pull_word = "dibi" if long else "tepesi"
-    mark(sd["p"], f"p: son {peak_word}", "#ffffff", below=not long)
+    mark(sd["p"], "p", "#ffffff", below=not long)
     if sd.get("q") is not None:
-        mark(sd["q"], f"q: önceki salınım {peak_word}", "#90caf9", below=not long)
+        mark(sd["q"], "q", "#90caf9", below=not long)
         y = sd["prior"]
         ax.hlines(y, sd["prior_idx"] - lo, n - 1, color="#ff9800", linewidth=1.0, linestyles="--")
         ax.text(n - 0.5, y, f"önceki düzeltme {pull_word} {y:.8g}", color="#ff9800", fontsize=7.5, va="center")
@@ -196,6 +195,11 @@ def draw_inspect(df, i, side, r, sd, title, path):
     mark(i, "Temas", "#ffeb3b", below=long)
     if "confirm" in r:
         mark(r["confirm"], "Onay", "#ce93d8", below=not long)
+    for b in wick_bars:  # kural 9: dip/tepeden sonraki iğneli mumlar (küçük üçgen, yazı kalabalık olmasın)
+        if 0 <= b - lo < n:
+            cb = ctx.iloc[b - lo]
+            ax.plot(b - lo, cb["Low"] - pad * 0.35 if not long else cb["High"] + pad * 0.35,
+                    marker="^" if not long else "v", markersize=7, color="#4dd0e1")
     if "entry" in r:
         e0 = r.get("entry_bar", r["confirm"] + 1) - lo
         e1 = r.get("exit_bar", r["confirm"] + 3) - lo + 0.5

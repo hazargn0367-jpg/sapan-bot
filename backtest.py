@@ -67,6 +67,7 @@ STATUS_TR = {
     "no_room": "Giriş önceki tepe/dibe çok yakın (önünde yer yok)",
     "structure_break": "Düzeltme önceki düzeltmeyi kırmış (yapı bozuk)",
     "pivot_wick": "Tepe/dip mumunun iğnesi çok uzun",
+    "support": "Dip/tepeden sonra iğneli mumlar (destek/direnç oluşmuş)",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
     "skip_open": "Açık işlem sınırı dolu (portföy koruması)",
@@ -402,7 +403,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
 # Her ayar: varsayılanların üzerine yazılan değerler. "ad" raporda görünür.
 PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR",
-              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R", "STRUCTURE_BREAK"]
+              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R", "STRUCTURE_BREAK",
+              "SUPPORT_N", "SUPPORT_MIN", "SUPPORT_WICK_BODY", "SUPPORT_WICK_ATR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -500,7 +502,17 @@ COMPARE_SETS["yapi"] = [
     C("+ 7 (0.5R) + 8 (iğne)", **_LIVE_NOW, ROOM_MIN_R=0.5, STRUCTURE_BREAK="wick"),
     C("+ 7 (1R) + 8 (iğne)", **_LIVE_NOW, ROOM_MIN_R=1.0, STRUCTURE_BREAK="wick"),
 ]
-CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4}  # grafikleri çizilecek ayar (listedeki sırası)
+_S9 = dict(SUPPORT_N=2, SUPPORT_MIN=2, SUPPORT_WICK_BODY=0.5)
+COMPARE_SETS["destek"] = [
+    C("Canlı ayar (1:2.2)", **_LIVE_NOW),
+    C("+ 9: dip/tepeden sonraki 2 mum iğneli (iğne ≥ gövde)", **_LIVE_NOW, **dict(_S9, SUPPORT_WICK_BODY=1.0)),
+    C("+ 9: dip/tepeden sonraki 2 mum iğneli (iğne ≥ ½ gövde)", **_LIVE_NOW, **_S9),
+    C("+ 9: sonraki 3 mumun 2'si iğneli (iğne ≥ ½ gövde)", **_LIVE_NOW, **dict(_S9, SUPPORT_N=3)),
+    C("+ 7 (1R) + 8", **_LIVE_NOW, ROOM_MIN_R=1.0, STRUCTURE_BREAK="wick"),
+    C("+ 7 (1R) + 8 + 9 (½ gövde)", **_LIVE_NOW, ROOM_MIN_R=1.0, STRUCTURE_BREAK="wick", **_S9),
+]
+CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
+             "destek": 2}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -514,11 +526,11 @@ def cfg_name(cfg):
 
 # Kullanıcının grafikten gösterdiği örnek işlemler (TR saati): hangi ayarda ne olduğu raporda gösterilir
 CHECK_TRADES = [
-    ("NILUSDT", "31.07.2026 23:30", "kural 8 örneği değil: alçalan tepe korunmuş"),
+    ("NILUSDT", "31.07.2026 23:30", "girmezdim: dipten sonra 2 iğneli mum (destek)"),
     ("AXSUSDT", "01.08.2026 02:00", "girmezdim (yapı)"),
     ("ADAUSDT", "01.08.2026 13:30", "iyi işlem"),
 ]
-SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ", "structure_break": "elendi(yapı)",
+SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
                 "no_room": "elendi(yer)", "open": "açık"}
 
 
@@ -559,7 +571,9 @@ def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
             if not hit.empty:
                 st_ = hit["durum"].iloc[0]
                 cells.append(f"{no}) {SHORT_STATUS.get(st_, 'elendi')}")
-        if cells:
+            else:
+                cells.append(f"{no}) elendi")  # karşılaştırmada sadece işlemler saklanır
+        if cells and any("elendi" not in c for c in cells):
             checks.append(f"• {coin} {when} ({note})\n   " + "  ".join(cells))
     if checks:
         msg += ["", "<b>Senin örneklerin</b>"] + checks
