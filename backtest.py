@@ -139,6 +139,7 @@ def run_df(df, symbol, tf, tick):
             if r["status"] in ("win", "loss"):
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
                            R_brut=round(r["r_gross"], 3), R_net=round(r["r_net"], 3),
+                           dolar=round(r["r_net"] * tr.RISK_USD, 2),
                            _exit_ts=int(ts[r["exit_bar"]]))
                 next_free = r["exit_bar"] + 1
             else:
@@ -188,11 +189,15 @@ def stats(trades):
     }
 
 
+def usd(r):
+    return f"{r * tr.RISK_USD:+,.0f}$".replace(",", ".")
+
+
 def line(label, s):
     if not s:
         return f"{label}: işlem yok"
     return (f"{label}: {s['n']} işlem, %{s['wr']:.0f} kazanma, "
-            f"{s['net']:+.1f}R (işlem başı {s['avg']:+.2f}R)")
+            f"{s['net']:+.1f}R ({usd(s['net'])})")
 
 
 def build_report(df_all, days, n_coins, minutes, examples_txt):
@@ -220,10 +225,11 @@ def build_report(df_all, days, n_coins, minutes, examples_txt):
         msg.append("<b>Sonuç</b>")
         msg.append(f"İşlem: {s['n']} | TP: {s['wins']} | Stop: {s['n'] - s['wins']}")
         msg.append(f"Kazanma oranı: %{s['wr']:.1f} (1:{tr.RR:g} için başabaş ~%{be:.0f})")
-        msg.append(f"Toplam (komisyonsuz): {s['gross']:+.1f}R")
-        msg.append(f"Toplam (komisyonlu): <b>{s['net']:+.1f}R</b>")
-        msg.append(f"İşlem başı ortalama: {s['avg']:+.2f}R")
-        msg.append(f"En büyük düşüş: {s['dd']:.1f}R")
+        msg.append(f"1R = {tr.RISK_USD:g}$")
+        msg.append(f"Toplam (komisyonsuz): {s['gross']:+.1f}R ({usd(s['gross'])})")
+        msg.append(f"Toplam (komisyonlu): <b>{s['net']:+.1f}R ({usd(s['net'])})</b>")
+        msg.append(f"İşlem başı ortalama: {s['avg']:+.2f}R ({usd(s['avg'])})")
+        msg.append(f"En büyük düşüş: {s['dd']:.1f}R ({usd(s['dd'])})")
         msg.append(f"En uzun stop serisi: {s['streak']}")
         msg.append(f"Ortalama stop mesafesi: %{s['risk_med']:.2f}")
         msg.append("")

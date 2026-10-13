@@ -24,6 +24,7 @@ ENTRY_WINDOW = 2       # onaydan sonra girişin gerçekleşmesi için beklenecek
 ATR_PERIOD = 14
 ATR_MAX_MULT = 1.5     # giriş-stop mesafesi en fazla bu kadar ATR
 RR = 2.0               # hedef: riskin kaç katı
+RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
 FEE_TAKER = 0.0005     # Binance vadeli piyasa emri komisyonu (%0.05)
 FEE_MAKER = 0.0002     # Binance vadeli limit emri komisyonu (%0.02)
 
