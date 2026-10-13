@@ -42,6 +42,9 @@ SESSION_START_UTC = 8    # temas mumu 00:00-08:00 UTC (03:00-11:00 TR) arasında
 WICK_MAX_BODY = 0.0          # >0: onay mumunun ters iğnesi (LONG'da üst) gövdenin bu katından uzunsa işlem yok
 REQUIRE_PRIOR_TOUCH = False  # trend başladıktan sonra, tepeden önce en az bir EMA20 teması olmalı
 STOP_BUFFER_ATR = 0.0        # stop onay mumunun ucundan bu kadar ATR daha uzağa konur
+CLEAN_PIVOT_MAX = 0          # >0: son tepe/dip seviyesine bu kadar veya daha fazla mum dokunduysa (destek/direnç) işlem yok
+CLEAN_PIVOT_ATR = 0.3        # "seviyeye dokundu" sayılma mesafesi (ATR)
+CLEAN_PIVOT_BEFORE = 5       # tepeden/dipten kaç mum öncesinden itibaren sayılsın
 RR = 2.0               # hedef: riskin kaç katı
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
@@ -87,6 +90,20 @@ def prior_touch_ok(df, i, side):
     return False
 
 
+def pivot_touches(df, i, side):
+    """Son tepeye (LONG) / dibe (SHORT) yakın uç veren mum sayısı.
+    Çok mum aynı seviyeye dokunduysa orada direnç/destek oluşmuş demektir."""
+    long = side == "LONG"
+    H, L, A = df["High"].values, df["Low"].values, df["ATR"].values
+    start = max(0, i - st.LOOKBACK)
+    pivot = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    tol = CLEAN_PIVOT_ATR * A[pivot]
+    lo = max(0, pivot - CLEAN_PIVOT_BEFORE)
+    if long:
+        return int((H[lo:i] >= H[pivot] - tol).sum())
+    return int((L[lo:i] <= L[pivot] + tol).sum())
+
+
 def touch_closes_right_side(df, i, side):
     c = df.iloc[i]
     return c["Close"] > c["EMA20"] if side == "LONG" else c["Close"] < c["EMA20"]
@@ -94,7 +111,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
-    status: session | no_close | no_prior_touch | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | no_close | no_prior_touch | dirty_pivot | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -118,6 +135,9 @@ def simulate(df, i, side, tick):
 
     if REQUIRE_PRIOR_TOUCH and not prior_touch_ok(df, i, side):
         res["status"] = "no_prior_touch"
+        return res
+    if CLEAN_PIVOT_MAX > 0 and pivot_touches(df, i, side) >= CLEAN_PIVOT_MAX:
+        res["status"] = "dirty_pivot"
         return res
 
     # --- Onay ---

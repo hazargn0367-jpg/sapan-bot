@@ -108,6 +108,10 @@ def draw(trade, path=None, pdf=None):
     title = (f"{trade['coin']}  {trade['zaman_dilimi']}  {trade['yon']}   {res}   "
              f"{trade['R_net']:+.2f}R ({trade['dolar']:+.0f}$)   temas: {trade['temas']} TR / {trade['temas_utc']} UTC")
     ax.set_title(title, color=TXT, fontsize=10.5, loc="left")
+    badge = {"win": ("✓ TP", UP), "be": ("BAŞABAŞ", "#9e9e9e")}.get(trade["durum"], ("✗ STOP", DOWN))
+    ax.text(0.99, 0.97, f"{badge[0]}  {trade['R_net']:+.2f}R", transform=ax.transAxes, ha="right", va="top",
+            fontsize=15, fontweight="bold", color="white",
+            bbox=dict(boxstyle="round,pad=0.35", facecolor=badge[1], edgecolor="none"))
     ax.legend(loc="upper left", fontsize=7, facecolor=BG, edgecolor=GRID, labelcolor=TXT)
     fig.tight_layout()
 

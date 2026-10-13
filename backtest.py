@@ -58,6 +58,7 @@ STATUS_TR = {
     "atr_min": "Stop mesafesi ATR alt sınırının altında",
     "wick": "Onay mumunun ters iğnesi uzun",
     "no_prior_touch": "Trend teyidi yok (önceden EMA20 teması yok)",
+    "dirty_pivot": "Son tepe/dip temiz değil (destek/direnç oluşmuş)",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
     "skip_open": "Açık işlem sınırı dolu (portföy koruması)",
@@ -324,6 +325,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
         msg.append(f"  ↳ Trend teyidi yok: {c('no_prior_touch')}")
     if tr.WICK_MAX_BODY > 0:
         msg.append(f"  ↳ Onay mumunda uzun iğne: {c('wick')}")
+    if tr.CLEAN_PIVOT_MAX > 0:
+        msg.append(f"  ↳ Tepe/dip temiz değil: {c('dirty_pivot')}")
     min_pct = tr.MIN_RISK_PCT if tr.FILTERS else tr.BASE_MIN_RISK_PCT
     if tr.FILTERS:
         msg.append(f"  ↳ Asya seansı (00-08 UTC): {c('session')}")
@@ -364,7 +367,7 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
 
 # Her ayar: varsayılanların üzerine yazılan değerler. "ad" raporda görünür.
 PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
-              "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR"]
+              "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -405,7 +408,20 @@ COMPARE_SETS["koruma"] = [
     C("Yeni kurallar + BTC + en fazla 3", **_NEW, btc=True, max_open=3),
     C("Yeni + toplu + BTC + en fazla 3", **_NEW, cluster_max=5, btc=True, max_open=3),
 ]
-CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5}  # grafikleri çizilecek ayar (listedeki sırası)
+_NEW3 = dict(FILTERS=False, WICK_MAX_BODY=1.0, REQUIRE_PRIOR_TOUCH=True, STOP_BUFFER_ATR=0.3)
+_CLEAN = dict(CLEAN_PIVOT_MAX=3, CLEAN_PIVOT_ATR=0.3)
+COMPARE_SETS["son"] = [
+    C("Taban", FILTERS=False),
+    C("Kurallar 1-3 (iğne, trend, pay 0.3)", **_NEW3),
+    C("1-3 + temiz dip (0.3 ATR)", **_NEW3, **_CLEAN),
+    C("1-3 + temiz dip (0.5 ATR)", **_NEW3, CLEAN_PIVOT_MAX=3, CLEAN_PIVOT_ATR=0.5),
+    C("1-4 + BTC yönü", **_NEW3, **_CLEAN, btc=True),
+    C("1-4 + en fazla 3 açık", **_NEW3, **_CLEAN, max_open=3),
+    C("1-4 + BTC + en fazla 3", **_NEW3, **_CLEAN, btc=True, max_open=3),
+    C("1-4 + toplu sinyal yok", **_NEW3, **_CLEAN, cluster_max=5),
+    C("1-4 + toplu + BTC + en fazla 3", **_NEW3, **_CLEAN, cluster_max=5, btc=True, max_open=3),
+]
+CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
