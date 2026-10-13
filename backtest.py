@@ -21,6 +21,7 @@ Bitince Telegram'a özet mesaj ve tüm setup'ların listesi (CSV) gelir.
 """
 
 import argparse
+import html
 import logging
 import os
 import shutil
@@ -36,6 +37,7 @@ import charts
 import live_setups
 import strategy as st
 import trade_rules as tr
+import exchanges
 from exchanges import BinanceBlocked, fetch_symbols, get_klines_range, get_tick_sizes, get_top_symbols
 from telegram import send_document, send_message, send_photos
 
@@ -118,12 +120,11 @@ def load_15m(symbol, days, ago=0):
 
 
 def archive_reachable():
-    """Arşive ulaşılabiliyor mu (BTC'nin geçen ayki dosyası)."""
-    d = (pd.Timestamp.now(tz="UTC").replace(day=1) - pd.Timedelta(days=1))
+    """(ulaşılıyor mu, açıklama)"""
     try:
-        return archive._download(archive._monthly_url("BTCUSDT", "15m", d)) is not None
-    except Exception:
-        return False
+        return archive.probe()
+    except Exception as e:
+        return False, f"{type(e).__name__}: {e}"
 
 
 def to_30m(df15):
@@ -657,12 +658,14 @@ def main():
     t0 = time.time()
     clean_cache()
     global USE_ARCHIVE
+    exchanges.WEIGHT_SOFT_LIMIT = exchanges.BACKTEST_SOFT_LIMIT  # canlı taramaya pay bırak
     if args.api:
-        USE_ARCHIVE = False
-    elif not archive_reachable():
-        USE_ARCHIVE = False
-        log.warning("Binance arşivine ulaşılamadı, veri API'den çekilecek")
-    log.info("Veri kaynağı: %s", "Binance arşivi + bugün API" if USE_ARCHIVE else "Binance API")
+        USE_ARCHIVE, source = False, "Binance API (--api)"
+    else:
+        ok, why = archive_reachable()
+        USE_ARCHIVE = ok
+        source = (f"Binance arşivi ({why})" if ok else f"Binance API, arşive ulaşılamadı: {why}")
+    log.info("Veri kaynağı: %s", source)
     ticks = {}
     for attempt in range(3):
         try:
@@ -685,7 +688,7 @@ def main():
             f"TP 1:{tr.RR:g}" + (f", başabaş {tr.BE_TRIGGER:g}R" if tr.BE_TRIGGER > 0 else ""))
     universe = f"hacmi en yüksek {len(symbols)} coin" if args.top > 0 and not args.symbols else f"{len(symbols)} coin"
     send_message(f"⏳ Backtest başladı: {universe}, {period_txt}, {what}. "
-                 f"Bitince sonuçlar buraya gelecek.")
+                 f"Bitince sonuçlar buraya gelecek.\nVeri: {html.escape(source)}")
 
     def fetch(symbol):
         try:
@@ -764,8 +767,7 @@ def main():
     if args.compare:
         frames_all = {cfg: pd.DataFrame(rows) for cfg, rows in results.items()}
         report = build_compare(frames_all, period_txt, coins_txt, minutes, p0=p0, days=args.days)
-        if USE_ARCHIVE:
-            report += "\n\n" + archive.summary()
+        report += "\n\n" + (archive.summary() if USE_ARCHIVE else f"Veri: {html.escape(source)}")
         log.info("\n%s", report)
         send_message(report)
         parts = [d.assign(ayar=name) for name, d in frames_all.items() if not d.empty]
@@ -793,8 +795,7 @@ def main():
     rows = results[configs[0]["ad"]]
     df_all = pd.DataFrame(rows)
     report = build_report(df_all, period_txt, coins_txt, minutes, examples_txt, p0=p0, days=args.days)
-    if USE_ARCHIVE:
-        report += "\n\n" + archive.summary()
+    report += "\n\n" + (archive.summary() if USE_ARCHIVE else f"Veri: {html.escape(source)}")
     log.info("\n%s", report)
     send_message(report)
 

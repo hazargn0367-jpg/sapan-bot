@@ -65,22 +65,52 @@ def parse_zip(content):
             np.array(ohlc, dtype=np.float64).reshape(-1, 4))
 
 
-def _download(url):
-    """Dosyanın içeriği; yoksa (404) ya da 3 denemede alınamazsa None."""
+def _download(url, why=None):
+    """Dosyanın içeriği; yoksa (404) ya da 3 denemede alınamazsa None.
+    why (liste) verilirse son hatanın kısa açıklaması eklenir."""
     for attempt in range(3):
         try:
             r = exchanges._thread_session().get(url, timeout=30)
-        except requests.RequestException:
+        except requests.RequestException as e:
+            if why is not None:
+                why.append(f"{type(e).__name__}: {str(e)[:120]}")
             time.sleep(1 + attempt)
             continue
         if r.status_code == 404:
+            if why is not None:
+                why.append("HTTP 404 (dosya yok)")
             return None
         if r.status_code != 200:
+            if why is not None:
+                why.append(f"HTTP {r.status_code}")
             time.sleep(1 + attempt)
             continue
         _add("mb", len(r.content) / 2 ** 20)
         return r.content
     return None
+
+
+def probe():
+    """Arşive ulaşılabiliyor mu: (True/False, açıklama). Önce BTC'nin geçen ayki aylık dosyası,
+    olmazsa 2 gün önceki günlük dosyası denenir."""
+    now = _dt(time.time() * 1000)
+    last_month = (now.replace(day=1) - dt.timedelta(days=1)).replace(day=1)
+    why_m, why_d = [], []
+    c = _download(_monthly_url("BTCUSDT", "15m", last_month), why_m)
+    if c is not None:
+        try:
+            n = len(parse_zip(c)[0])
+            return n > 0, f"aylık dosya {n} mum"
+        except Exception as e:
+            why_m.append(f"zip okunamadı: {e}")
+    c = _download(_daily_url("BTCUSDT", "15m", now - dt.timedelta(days=2)), why_d)
+    if c is not None:
+        try:
+            n = len(parse_zip(c)[0])
+            return n > 0, f"aylık dosya yok ({why_m[-1] if why_m else '?'}), günlük var ({n} mum)"
+        except Exception as e:
+            why_d.append(f"zip okunamadı: {e}")
+    return False, f"aylık: {why_m[-1] if why_m else '?'}; günlük: {why_d[-1] if why_d else '?'}"
 
 
 def _monthly_url(symbol, interval, d):

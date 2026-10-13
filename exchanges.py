@@ -24,7 +24,8 @@ log = logging.getLogger("bot")
 BASE_URL = "https://fapi.binance.com"
 KLINE_LIMIT = 499  # Binance'te 100-499 arası mum = 2 ağırlık (rate limit dostu)
 WEIGHT_LIMIT = 2400
-WEIGHT_SOFT_LIMIT = 2000  # buna yaklaşınca dakika dolana kadar beklenir (canlı bota pay kalır)
+WEIGHT_SOFT_LIMIT = 2000  # buna yaklaşınca dakika dolana kadar beklenir (backtest bunu 1200'e indirir)
+BACKTEST_SOFT_LIMIT = 1200  # backtest en fazla bu kadar kullanır: canlı 5dk taraması (~1000) + backtest < 2400
 PAUSE_FILE = "/tmp/binance_pause"
 import config  # noqa: E402
 
@@ -120,7 +121,13 @@ def _throttle(res):
     if used:
         _status.update(weight=used, weight_at=time.time())
     if used > WEIGHT_SOFT_LIMIT:
-        _set_pause(time.time() + (61 - time.gmtime().tm_sec), f"İstek sınırına yaklaşıldı ({used})", warn=False)
+        # Sadece bu program bekler (dosyaya yazılmaz): backtest kendi sınırında yavaşlar, canlı tarama etkilenmez
+        global _pause_until
+        with _pause_lock:
+            until = time.time() + (61 - time.gmtime().tm_sec)
+            if until > _pause_until:
+                _pause_until = until
+                log.info("İstek sınırına yaklaşıldı (%d/%d), %d sn bekleniyor", used, WEIGHT_SOFT_LIMIT, int(until - time.time()))
 
 
 def _get(path, params=None, timeout=15, max_wait=None, live_window=False):
