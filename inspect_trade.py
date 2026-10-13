@@ -44,7 +44,8 @@ def inspect(text, chart_path="/tmp/incele.png"):
     parsed = parse(text)
     if not parsed:
         return ("Kullanım: /incele AXSUSDT 01.08.2026 02:00 (temas mumunun Türkiye saati, 15dk)\n"
-                "5 dakikalık canlı bildirim için sona 5m ekle: /incele AXSUSDT 13.10 22:05 5m"), None
+                "5 dakikalık canlı bildirim için sona 5m ekle: /incele AXSUSDT 13.10 22:05 5m\n"
+                "Saat olarak EMİR HAZIR mesajındaki temas ya da onay saatini yazabilirsin (en yakın temas bulunur)."), None
     sym, ts_tr, tf = parsed
     tf_ms = config.tf_minutes(tf) * 60_000
     t_ms = int(ts_tr.tz_convert("UTC").value // 10**6)
@@ -57,6 +58,14 @@ def inspect(text, chart_path="/tmp/incele.png"):
         return f"{sym} {ts_tr:%d.%m.%Y %H:%M} mumu veride yok ({tf} mumun başlangıç saati olmalı).", None
     i = int(hits[0])
     live_setups.apply_rules()
+    # Verilen mum temas değilse (ör. EMİR HAZIR mesajının saati yazıldıysa) önceki 6 mumdaki en yakın teması al
+    moved = None
+    if not st.evaluate_at(df, i):
+        for j in range(i - 1, max(0, i - 7), -1):
+            if st.evaluate_at(df, j):
+                moved, i = i, j
+                ts_tr = pd.Timestamp(int(df["timestamp"].values[j]), unit="ms", tz="UTC").tz_convert(TZ)
+                break
     # Fiyat adımı: önce canlı taramanın elindeki liste (Binance'e fazladan istek atmamak için)
     tick = live_setups._state["ticks"].get(sym)
     if tick is None:
@@ -71,7 +80,8 @@ def inspect(text, chart_path="/tmp/incele.png"):
 
     d = st.diagnose(df, i)
     side = d.get("side")
-    lines = [f"🔍 <b>{html.escape(sym)} {tf} {ts_tr:%d.%m.%Y %H:%M} TR</b>",
+    lines = [f"🔍 <b>{html.escape(sym)} {tf} {ts_tr:%d.%m.%Y %H:%M} TR</b>"
+             + (f" (yazdığın saatte temas yoktu, en yakın temas mumu bu)" if moved is not None else ""),
              f"Temas mumu: A {p8(O[i])} Y {p8(H[i])} D {p8(L[i])} K {p8(C[i])} | EMA20 {p8(df['EMA20'].values[i])} | Stoch {df['Stoch_K'].values[i]:.1f}",
              "", "<b>Temel şartlar</b>"]
     for key, label in [("trend", "Net trend"), ("pivot_recent", "Tepe/dip son 30 mumda"),
