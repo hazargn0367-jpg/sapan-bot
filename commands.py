@@ -18,6 +18,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 dip -> canlı ayar + önceki tepe/dibe mesafe (0.5/1/1.5/2.2R), ay ay
   /backtest 90 yapı -> kural 7 (önünde yer) ve kural 8 (yapı bozulmamış), ay ay + grafik PDF
   /backtest 7 canlı 5m -> canlı ayar 5 dakikalık grafikte (sona 5m yazılırsa her test 5m'de çalışır)
+  /backtest 30 toplu 5m -> toplu sinyal filtresi: 5 / 8 / 12 coin / kapalı karşılaştırması
   /backtest 90 destek -> kural 9 (dip/tepeden sonra iğneli mumlar = destek/direnç), ay ay + grafik PDF
   (varsayılan: hacmi en yüksek 500 coin, canlı bildirimlerle aynı; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi + canlı tarama durumu
@@ -68,7 +69,9 @@ def start_backtest(text):
     low = text.lower()
     if "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
-    if "destek" in low:
+    if "toplu" in low:
+        args += ["--compare", "toplu"]
+    elif "destek" in low:
         args += ["--compare", "destek"]
     elif "yapı" in low or "yapi" in low:
         args += ["--compare", "yapi"]

@@ -605,8 +605,15 @@ COMPARE_SETS["destek"] = [
     C("+ 7 (1R) + 8", **_LIVE_NOW, ROOM_MIN_R=1.0, STRUCTURE_BREAK="wick"),
     C("+ 7 (1R) + 8 + 9 (½ gövde)", **_LIVE_NOW, ROOM_MIN_R=1.0, STRUCTURE_BREAK="wick", **_S9),
 ]
+_LIVE_NO_CLUSTER = dict(live_setups.LIVE_RULES)
+COMPARE_SETS["toplu"] = [
+    C("Canlı ayar (aynı mumda 5+ coin varsa girme)", **_LIVE_NOW),
+    C("Toplu sinyal sınırı 8 coin", **_LIVE_NO_CLUSTER, cluster_max=8),
+    C("Toplu sinyal sınırı 12 coin", **_LIVE_NO_CLUSTER, cluster_max=12),
+    C("Toplu sinyal filtresi kapalı", **_LIVE_NO_CLUSTER),
+]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
-             "destek": 2}  # grafikleri çizilecek ayar (listedeki sırası)
+             "destek": 2, "toplu": 3}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
