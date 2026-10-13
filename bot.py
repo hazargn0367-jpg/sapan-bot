@@ -42,6 +42,8 @@ def get_symbols():
 
 
 def scan():
+    if not config.TOUCH_ALERTS:
+        return
     symbols = get_symbols()
     if not symbols:
         log.warning("Coin listesi alınamadı, bekleniyor...")
@@ -74,7 +76,9 @@ def scan():
 
 def main():
     log.info("Keskin Nişancı Trend & Kırılım Botu Devrede...")
-    send_message("✅ Bot başladı\nKomutlar: /backtest  /durum  /iptal")
+    durum = "açık" if config.TOUCH_ALERTS else "kapalı"
+    send_message(f"✅ Bot başladı (temas bildirimleri {durum})\n"
+                 "Komutlar: /backtest  /durum  /iptal  /bildirim aç|kapat")
     start_listener()
     while True:
         try:

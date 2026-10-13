@@ -13,6 +13,7 @@ Telegram komutları (bot arka planda dinler):
   (varsayılan: hacmi en yüksek 200 coin; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi
   /iptal          -> çalışan backtest'i durdurur
+  /bildirim aç | kapat -> EMA20 temas bildirimleri
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
 """
 
@@ -124,6 +125,14 @@ def _listen():
                     start_backtest(text)
                 elif text.lower().startswith("/durum"):
                     send_message(status_text())
+                elif text.lower().startswith("/bildirim"):
+                    low = text.lower()
+                    if "kapa" in low:
+                        config.TOUCH_ALERTS = False
+                    elif "aç" in low or "ac" in low:
+                        config.TOUCH_ALERTS = True
+                    send_message("🔔 Temas bildirimleri " + ("açık" if config.TOUCH_ALERTS else "kapalı")
+                                 + ". (Bot yeniden başlarsa kapalı başlar.)")
                 elif text.lower().startswith("/iptal"):
                     if _bt_proc is not None and _bt_proc.poll() is None:
                         _bt_proc.terminate()

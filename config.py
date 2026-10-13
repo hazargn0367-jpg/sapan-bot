@@ -16,3 +16,6 @@ SCAN_SLEEP = int(os.environ.get("SCAN_SLEEP", "15"))
 
 # Ortak coin listesi kaç saniyede bir yenilensin (her turda çekmeye gerek yok)
 SYMBOL_REFRESH_SECONDS = int(os.environ.get("SYMBOL_REFRESH_SECONDS", "3600"))
+
+# EMA20 temas bildirimleri (Telegram'dan /bildirim aç | kapat ile değiştirilebilir)
+TOUCH_ALERTS = os.environ.get("TOUCH_ALERTS", "0") == "1"
