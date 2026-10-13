@@ -59,6 +59,9 @@ STATUS_MSG = {
 }
 
 _state = {"symbols": [], "symbols_time": 0.0, "ticks": {}, "last_bucket": None}
+_stats = {"started": time.time(), "cycles": 0, "last_run": None, "scanned": 0, "ok": 0, "touches": 0,
+          "ready": 0, "cluster": 0, "sent": 0, "secs": 0.0, "total_sent": 0, "last_sent": None,
+          "last_error": None}
 _active = {}   # (coin, temas_ts) -> {"side", "status", "entry", "stop", "tp"}
 
 
@@ -237,18 +240,45 @@ def run_cycle():
             candidates.append((symbol, side, r, df))
 
     sent = 0
+    cluster_skipped = 0
     for symbol, side, r, df in candidates:
         touch_ts = int(df["timestamp"].values[r["touch"]])
         if (symbol, touch_ts) in _active:
             continue
         if counts[(touch_ts, side)] >= CLUSTER_MAX:
             log.info("Toplu sinyal, atlandı: %s %s (%d coin)", symbol, side, counts[(touch_ts, side)])
+            cluster_skipped += 1
             continue
         send_setup(symbol, side, r, df)
         _active[(symbol, touch_ts)] = {"side": side, "status": "pending"}
         sent += 1
-    log.info("Setup taraması bitti: %d coin, %d yeni emir, %d takipte, %.0f sn",
-             len(todo), sent, len(_active), time.time() - t0)
+    ok = sum(1 for _, df, _, _ in results if df is not None)
+    _stats.update(cycles=_stats["cycles"] + 1, last_run=time.time(), scanned=len(todo), ok=ok,
+                  touches=sum(counts.values()), ready=len(candidates), cluster=cluster_skipped,
+                  sent=sent, secs=time.time() - t0, total_sent=_stats["total_sent"] + sent)
+    if sent:
+        _stats["last_sent"] = time.time()
+    log.info("Setup taraması bitti: %d/%d coin, %d temas, %d aday, %d yeni emir, %d takipte, %.0f sn",
+             ok, len(todo), sum(counts.values()), len(candidates), sent, len(_active), time.time() - t0)
+
+
+def status_text():
+    """/durum için canlı tarama özeti."""
+    if _stats["last_run"] is None:
+        return "📋 Canlı tarama: henüz ilk tarama yapılmadı (her 15 dk'lık mum kapanışında çalışır)."
+    hhmm = lambda t: pd.Timestamp(t, unit="s", tz="UTC").tz_convert(TZ).strftime("%H:%M")
+    up_h = (time.time() - _stats["started"]) / 3600
+    lines = [
+        f"📋 <b>Canlı tarama</b> (bot {up_h:.1f} saattir açık, {_stats['cycles']} tarama)",
+        f"Son tarama {hhmm(_stats['last_run'])}: {_stats['ok']}/{_stats['scanned']} coin, "
+        f"{_stats['touches']} temas, {_stats['ready']} onay adayı, {_stats['sent']} bildirim ({_stats['secs']:.0f} sn)",
+        f"Açıldığından beri gönderilen EMİR HAZIR: {_stats['total_sent']}"
+        + (f" (son: {hhmm(_stats['last_sent'])})" if _stats["last_sent"] else ""),
+        f"Takipteki setup: {len(_active)}",
+    ]
+    if _stats["last_error"]:
+        lines.append(f"⚠️ Son hata: {_stats['last_error']}")
+    return "\n".join(lines)
 
 
 def _safe_scan(symbol):
@@ -270,3 +300,4 @@ def maybe_run():
         run_cycle()
     except Exception as e:
         log.exception("Setup taraması hatası: %s", e)
+        _stats["last_error"] = f"{time.strftime('%H:%M')} {type(e).__name__}: {e}"[:200]

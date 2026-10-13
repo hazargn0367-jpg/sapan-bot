@@ -70,10 +70,18 @@ def _thread_session():
     return _local.session
 
 
+LIVE_SCAN_WINDOW = 75  # her 15dk'lık mum kapanışından sonraki 75 sn canlı taramaya ayrılır
+
+
 def _wait_if_paused():
+    """Sadece backtest kullanır: istek sınırına yaklaşıldıysa ya da canlı tarama
+    zamanıysa (15dk'lık mum kapanışından sonraki ilk 75 sn) bekler."""
     delay = _pause_until - time.time()
     if delay > 0:
         time.sleep(delay)
+    sec = time.time() % 900
+    if sec < LIVE_SCAN_WINDOW:
+        time.sleep(LIVE_SCAN_WINDOW - sec)
 
 
 def _throttle(res):

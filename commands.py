@@ -18,7 +18,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 dip -> canlı ayar + önceki tepe/dibe mesafe (0.5/1/1.5/2.2R), ay ay
   /backtest 90 yapı -> kural 7 (önünde yer) ve kural 8 (yapı bozulmamış), ay ay + grafik PDF
   (varsayılan: hacmi en yüksek 200 coin; 'tüm' yazılırsa hepsi)
-  /durum          -> backtest ilerlemesi
+  /durum          -> backtest ilerlemesi + canlı tarama durumu
   /iptal          -> çalışan backtest'i durdurur
   /bildirim aç | kapat -> EMA20 temas bildirimleri
   /sinyal aç | kapat -> kurallara uyan setup'larda EMİR HAZIR bildirimleri
@@ -146,7 +146,9 @@ def _listen():
                 if text.lower().startswith("/backtest"):
                     start_backtest(text)
                 elif text.lower().startswith("/durum"):
-                    send_message(status_text())
+                    import live_setups
+                    sig = "açık" if config.SETUP_ALERTS else "KAPALI"
+                    send_message(f"{status_text()}\n\n{live_setups.status_text()}\nEmir bildirimleri: {sig}")
                 elif text.lower().startswith("/sinyal"):
                     low = text.lower()
                     if "kapa" in low:
