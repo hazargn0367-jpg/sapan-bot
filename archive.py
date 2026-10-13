@@ -39,7 +39,7 @@ def _download_many(urls):
             from concurrent.futures import ThreadPoolExecutor
             _pool = ThreadPoolExecutor(max_workers=POOL_SIZE)
     return list(_pool.map(_download, urls))
-stats = {"files": 0, "missing": 0, "api_ranges": 0, "skipped_recent": 0, "mb": 0.0}
+stats = {"files": 0, "missing": 0, "api_ranges": 0, "skipped_recent": 0, "skipped_lead": 0, "mb": 0.0}
 
 
 def _add(key, v=1):
@@ -199,14 +199,22 @@ def get_range(symbol, interval, start_ms, end_ms, api_max_wait=None, now_ms=None
             use(c, _ms(d), _ms(d + dt.timedelta(days=1)))
 
     # Arşivde olmayan kısımlar API'den (bugün dahil)
+    first_covered = min((x for x, _ in covered), default=None)
     for a, b in _gaps(start_ms, end_ms, covered):
         try:
+            # API engelliyse hiç deneme (engel uzamasın): hemen aşağıdaki karara düş
+            if exchanges.blocked_for() > 60:
+                raise exchanges.BinanceBlocked(exchanges.blocked_for())
             df = exchanges.get_klines_range(symbol, interval, a, b, max_wait=api_max_wait, limit=499)
         except exchanges.BinanceBlocked:
             if a >= today0 - DAY_MS:
                 _add("skipped_recent")  # sadece son 1-2 günün mumları eksik kalır (dünün dosyası geç yayınlanabilir)
                 continue
-            raise
+            if first_covered is None or b <= first_covered:
+                _add("skipped_lead")  # arşivde ilk veriden önceki kısım: coin o tarihte büyük ihtimalle listelenmemişti
+                continue
+            # Ortada boşluk: bu coin atlanır (eksik veriyle yanlış sonuç vermesin), backtest devam eder
+            raise RuntimeError(f"{symbol}: arşivde boşluk var ve Binance API engelli, coin atlandı")
         _add("api_ranges")
         if not df.empty:
             ts = df["timestamp"].values.astype(np.int64)
