@@ -34,18 +34,24 @@ def parse(text):
 
 
 def explain(text):
+    """Sadece metin (eski kullanım)."""
+    return inspect(text)[0]
+
+
+def inspect(text, chart_path="/tmp/incele.png"):
+    """(açıklama metni, grafik dosyası ya da None)"""
     parsed = parse(text)
     if not parsed:
-        return "Kullanım: /incele AXSUSDT 01.08.2026 02:00 (temas mumunun Türkiye saati)"
+        return "Kullanım: /incele AXSUSDT 01.08.2026 02:00 (temas mumunun Türkiye saati)", None
     sym, ts_tr = parsed
     t_ms = int(ts_tr.tz_convert("UTC").value // 10**6)
     df = get_klines_range(sym, "15m", t_ms - 600 * 900_000, t_ms + 40 * 900_000, yield_live=False)
     if df is None or df.empty:
-        return f"{sym} için veri alınamadı."
+        return f"{sym} için veri alınamadı.", None
     df = tr.add_atr(st.add_indicators(df.reset_index(drop=True)))
     hits = np.flatnonzero(df["timestamp"].values == t_ms)
     if len(hits) == 0:
-        return f"{sym} {ts_tr:%d.%m.%Y %H:%M} mumu veride yok (15dk'lık mum başlangıç saati olmalı)."
+        return f"{sym} {ts_tr:%d.%m.%Y %H:%M} mumu veride yok (15dk'lık mum başlangıç saati olmalı).", None
     i = int(hits[0])
     live_setups.apply_rules()
     tick = get_tick_sizes().get(sym, 0.0)
@@ -66,7 +72,7 @@ def explain(text):
         if key in d:
             lines.append(f"{ok(d[key])} {label}")
     if not side:
-        return "\n".join(lines + ["", "Trend yok, diğer kurallar kontrol edilmedi."])
+        return "\n".join(lines + ["", "Trend yok, diğer kurallar kontrol edilmedi."]), None
 
     long = side == "LONG"
     lines += ["", f"<b>Kurallar ({side})</b>"]
@@ -95,10 +101,25 @@ def explain(text):
         lines.append(f"{ok(sd['ok'])} Yapı {'sağlam' if sd['ok'] else 'BOZUK (önceki düzeltme kırılmış)'}")
 
     r = tr.simulate(df, i, side, tick)
-    lines += ["", f"<b>Canlı ayarla sonuç:</b> {r['status']}"]
+    try:
+        from backtest import STATUS_TR
+        status_tr = STATUS_TR.get(r["status"], r["status"])
+    except Exception:
+        status_tr = r["status"]
+    lines += ["", f"<b>Canlı ayarla sonuç:</b> {html.escape(status_tr)}"]
     if "entry" in r:
         lines.append(f"Onay {fmt(r['confirm'])}, giriş {p8(r['entry'])}, stop {p8(r['stop'])}, TP {p8(r['tp'])}")
     if "room_r" in r:
         lines.append(f"7) Önceki {peak[0]}ye mesafe: {r['room_r']:.2f}R")
     lines += ["", f"Grafikte farklı görüyorsan (ör. önceki düzeltmenin {pull} hangi mum olmalı) saatini yaz, tanımı ona göre düzeltelim."]
-    return "\n".join(lines)
+    path = None
+    try:
+        import charts  # matplotlib sadece burada yüklenir
+        title = f"{sym}  15m  {side}   temas {ts_tr:%d.%m.%Y %H:%M} TR   sonuç: {status_tr}"
+        if sd.get("q") is not None:
+            title += "   yapı: " + ("sağlam" if sd["ok"] else "BOZUK")
+        charts.draw_inspect(df, i, side, r, sd, title, chart_path)
+        path = chart_path
+    except Exception as e:
+        lines.append(f"(Grafik çizilemedi: {type(e).__name__}: {e})")
+    return "\n".join(lines), path

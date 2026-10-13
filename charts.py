@@ -132,6 +132,100 @@ def draw(trade, path=None, pdf=None):
     plt.close(fig)
 
 
+def draw_inspect(df, i, side, r, sd, title, path):
+    """/incele grafiği: temas, onay, giriş/stop/TP ve kural 8'in kullandığı noktalar
+    (önceki salınım q, son tepe/dip p, önceki ve şimdiki düzeltmenin ucu)."""
+    long = side == "LONG"
+    first = min(k for k in (sd.get("q"), sd["p"], i - 40) if k is not None)
+    lo = max(0, first - 8)
+    hi = min(len(df), max(i + 12, r.get("exit_bar", 0) + 4))
+    ctx = df.iloc[lo:hi].reset_index(drop=True)
+    n = len(ctx)
+    fig, (ax, ax2) = plt.subplots(2, 1, figsize=(max(11, min(18, n / 9)), 6.8), sharex=True,
+                                  gridspec_kw={"height_ratios": [3.4, 1]})
+    fig.patch.set_facecolor(BG)
+    for a in (ax, ax2):
+        a.set_facecolor(BG)
+        a.grid(color=GRID, linewidth=0.6)
+        a.tick_params(colors=TXT, labelsize=8)
+        for s in a.spines.values():
+            s.set_color(GRID)
+        a.yaxis.tick_right()
+    for k, c in ctx.iterrows():
+        col = UP if c["Close"] >= c["Open"] else DOWN
+        ax.vlines(k, c["Low"], c["High"], color=col, linewidth=0.8)
+        b0, b1 = sorted((c["Open"], c["Close"]))
+        ax.add_patch(Rectangle((k - 0.32, b0), 0.64, max(b1 - b0, 1e-12), color=col))
+    for name, color in EMA_COLORS.items():
+        ax.plot(range(n), ctx[name], color=color, linewidth=1.1, label=name)
+
+    y_lo, y_hi = ctx["Low"].min(), ctx["High"].max()
+    if "entry" in r:
+        y_lo, y_hi = min(y_lo, r["stop"], r["tp"]), max(y_hi, r["stop"], r["tp"])
+    rng = y_hi - y_lo
+    ax.set_ylim(y_lo - rng * 0.1, y_hi + rng * 0.1)
+    pad = rng * 0.05
+
+    used = {}
+
+    def mark(bar, text, color, below):
+        b = bar - lo
+        if not 0 <= b < n:
+            return
+        c = ctx.iloc[b]
+        y0 = c["Low"] if below else c["High"]
+        k = used.get((b, below), 0)  # aynı mumda ikinci etiket üst üste binmesin
+        used[(b, below)] = k + 1
+        off = pad * (1 + 0.9 * k)
+        ax.annotate(text, (b, y0), (b, y0 - off if below else y0 + off), color=color, fontsize=8,
+                    ha="center", va="top" if below else "bottom", fontweight="bold",
+                    arrowprops=dict(arrowstyle="-", color=color, lw=0.8))
+
+    # Kural 8 noktaları
+    peak_word = "tepe" if long else "dip"
+    pull_word = "dibi" if long else "tepesi"
+    mark(sd["p"], f"p: son {peak_word}", "#ffffff", below=not long)
+    if sd.get("q") is not None:
+        mark(sd["q"], f"q: önceki salınım {peak_word}", "#90caf9", below=not long)
+        y = sd["prior"]
+        ax.hlines(y, sd["prior_idx"] - lo, n - 1, color="#ff9800", linewidth=1.0, linestyles="--")
+        ax.text(n - 0.5, y, f"önceki düzeltme {pull_word} {y:.8g}", color="#ff9800", fontsize=7.5, va="center")
+        mark(sd["prior_idx"], "önceki düzeltme", "#ff9800", below=long)
+        mark(sd["cur_idx"], "şimdiki düzeltme", "#ffeb3b" if sd["ok"] else DOWN, below=long)
+
+    mark(i, "Temas", "#ffeb3b", below=long)
+    if "confirm" in r:
+        mark(r["confirm"], "Onay", "#ce93d8", below=not long)
+    if "entry" in r:
+        e0 = r.get("entry_bar", r["confirm"] + 1) - lo
+        e1 = r.get("exit_bar", r["confirm"] + 3) - lo + 0.5
+        for y, col, lbl in ((r["entry"], TXT, "Giriş"), (r["stop"], DOWN, "Stop"), (r["tp"], UP, "TP")):
+            ax.hlines(y, e0 - 0.5, e1, color=col, linewidth=0.9, linestyles="--")
+            ax.text(e1 + 0.2, y, f"{lbl} {y:.8g}", color=col, fontsize=7.5, va="center")
+        if "exit_bar" in r:
+            col = {"win": UP, "be": "#9e9e9e"}.get(r["status"], DOWN)
+            ax.plot(r["exit_bar"] - lo, r["exit"], marker="X", markersize=9, color=col,
+                    markeredgecolor="white", markeredgewidth=0.6)
+
+    ax2.plot(range(n), ctx["Stoch_K"], color="#2962ff", linewidth=1.1)
+    for lvl in (30, 70):
+        ax2.axhline(lvl, color=TXT, linewidth=0.6, linestyle="--", alpha=0.6)
+    ax2.axvline(i - lo, color="#ffeb3b", linewidth=0.7, alpha=0.6)
+    ax2.set_ylim(0, 100)
+    ax2.text(0.005, 0.85, "Stoch 5 3", transform=ax2.transAxes, color=TXT, fontsize=7.5)
+    times = pd.to_datetime(ctx["timestamp"], unit="ms", utc=True).dt.tz_convert(TZ)
+    step = max(1, n // 10)
+    ticks = list(range(0, n, step))
+    ax2.set_xticks(ticks)
+    ax2.set_xticklabels([times[t].strftime("%d.%m %H:%M") for t in ticks])
+    ax.set_xlim(-1, n + max(8, n * 0.12))
+    ax.set_title(title, color=TXT, fontsize=10.5, loc="left")
+    ax.legend(loc="upper left", fontsize=7, facecolor=BG, edgecolor=GRID, labelcolor=TXT)
+    fig.tight_layout()
+    fig.savefig(path, dpi=110, facecolor=BG)
+    plt.close(fig)
+
+
 def _index_pages(trades, pdf, per_page=26):
     """PDF'in başına numaralı işlem listesi."""
     rows = []

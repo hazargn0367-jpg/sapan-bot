@@ -19,7 +19,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 yapı -> kural 7 (önünde yer) ve kural 8 (yapı bozulmamış), ay ay + grafik PDF
   (varsayılan: hacmi en yüksek 200 coin; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi + canlı tarama durumu
-  /incele AXSUSDT 01.08.2026 02:00 -> bir işlemin tüm kurallardaki değerlendirmesi (TR saati)
+  /incele AXSUSDT 01.08.2026 02:00 -> bir işlemin tüm kurallardaki değerlendirmesi + grafik (TR saati)
   /iptal          -> çalışan backtest'i durdurur
   /bildirim aç | kapat -> EMA20 temas bildirimleri
   /sinyal aç | kapat -> kurallara uyan setup'larda EMİR HAZIR bildirimleri
@@ -156,8 +156,13 @@ def _listen():
                 elif text.lower().startswith("/incele"):
                     def _run(t=text):
                         import inspect_trade
+                        from telegram import send_photo
                         try:
-                            send_message(inspect_trade.explain(t))
+                            msg, chart = inspect_trade.inspect(t)
+                            send_message(msg)
+                            if chart:
+                                send_photo(chart, "Kural 8 noktaları: p = son tepe/dip, q = önceki salınım, "
+                                                  "turuncu çizgi = önceki düzeltmenin ucu")
                         except Exception as e:
                             send_message(f"⚠️ İnceleme hatası: {type(e).__name__}: {e}")
                     threading.Thread(target=_run, daemon=True).start()
