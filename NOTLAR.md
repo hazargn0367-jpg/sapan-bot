@@ -1,0 +1,67 @@
+# Sapan Bot – Proje Notları
+
+Son güncelleme: 13.10.2026 (ilk çalışma gecesi)
+
+## Sistem ne yapıyor
+- Render'da (Frankfurt, Background Worker) çalışan Python botu. Veri: Binance USDT-M vadeli.
+- **EMİR HAZIR bildirimleri** (`live_setups.py`): Her 15dk mum kapanışında hacmi en yüksek 500 coin taranır.
+  Aşağıdaki tüm kuralları geçen setup'ta onay mumu kapanınca Telegram'a giriş/stop/TP, pozisyon
+  büyüklüğü, grafik ve TradingView linki gider. Sonra giriş / iptal / TP / stop takip mesajları gelir.
+  İşlem açmaz; kullanıcı kendisi karar verip açar.
+- EMA20 temas bildirimleri varsayılan kapalı (`/bildirim aç`).
+- Backtest Telegram'dan çalışır (`/backtest ...`), sonuç + CSV + grafikler Telegram'a gelir.
+- Gizli bilgiler (Telegram token, chat id) Render Environment'ta, kodda yok.
+
+## Temel strateji (kullanıcının ilk kuralları – "Taban")
+- Trend: EMA20 > EMA50 > EMA100, aralarında en az %0.1 (SHORT tersi)
+- Son 150 mumun tepesi son 30 mum içinde, önceki zirveyi gövde kapanışıyla kırmış
+- Tepeden sonra EMA20'ye ilk temas, geri çekilmede en fazla 2 ters mum
+- Temas mumu: iğnesi EMA20'ye değer (%0.03 tolerans), EMA20'nin üstünde kapatır; Stoch(5,3) LONG < 30, SHORT > 70
+- Onay: sonraki 3 mum içinde temas mumunun tepesinin üstünde kapatan ilk mum; o ana kadar temas dibinin altına inilmez
+- Giriş: onay tepesi + 1 tık; Stop: onay dibi − 1 tık; TP: 1:2
+- ATR(14, RMA): giriş-stop ≤ 1.5 ATR
+- Giriş emri 2 mum geçerli; girişten önce onay dibinin altına inilirse iptal
+- Mum içi belirsizlikte temkinli: aynı mumda stop+TP → stop
+
+## Grafik incelemesinden eklenen kurallar (canlı bildirimde hepsi açık)
+1. Onay mumunda ters iğne (LONG'da üst) gövdeden uzun olmayacak (`WICK_MAX_BODY=1.0`)
+2. Trend teyidi: trend başladıktan ve fiyat EMA20'den ayrıldıktan sonra, tepeden önce en az bir EMA20 teması (`REQUIRE_PRIOR_TOUCH`)
+3. Stop payı: stop onay mumunun ucundan 0.3 ATR öteye (`STOP_BUFFER_ATR=0.3`)
+4. Temiz tepe/dip: son tepe/dip seviyesine (±0.3 ATR) 3+ mum dokunmuşsa girme (`CLEAN_PIVOT_MAX=3`)
+5. Temas mumu fitil mumu: EMA20'ye doğru iğne ≥ gövde (`TOUCH_WICK_MIN=1.0`)
+6. Tepe/dip mumunun o yöndeki iğnesi ≤ 2 gövde (`PIVOT_WICK_MAX=2.0`)
+- Portföy: aynı 15dk mumda 5+ coin aynı yönde temas verirse hiçbirine girme ("toplu sinyal", korelasyon/BTC hareketi)
+
+## Test sonuçları (1R = 25$, komisyon dahil: taker %0.05, maker %0.02)
+Hacmi en yüksek 200 coin, 15dk, 1:2:
+
+| Ayar | 14.08–13.09 | 13.09–13.10 | Toplam |
+|---|---|---|---|
+| Taban | -52.5R | +8.9R | -43.6R |
+| 1-4 + toplu | -10.5R | -14.1R | -24.6R |
+| + fitil temas (5) | -3.6R | -14.4R | -18.1R |
+| 1-6 + toplu | -4.8R | -10.9R | -15.6R |
+
+Önemli bulgular:
+- **Hiçbir ayar iki ayda birden kârlı değil.** Kurallar kötü ayda zararı azaltıyor ama iyi ayda kârı da azaltıyor (daha az işlem).
+- Komisyon büyük etken: ortalama stop ~%0.7 → işlem başı ~0.12R komisyon.
+- 1:2.5 / 1:3 ve başabaş stop genelde kötüleştirdi. BTC yön filtresi işe yaramadı. Toplu sinyal filtresi en iyi koruma.
+- Saat ve stop-mesafesi filtreleri bir ayda iyi, diğerinde kötü çıktı (aşırı uyum) → kullanılmıyor.
+- TradingView kullanıcıda farklı saat diliminde; bot TR ve UTC saatini birlikte yazar.
+- Bot, kullanıcının NEARUSDT 10.10 örnek işlemini (14:00 TR, giriş 5.273, stop 5.235) birebir buldu.
+
+## Çalışma kuralları
+- Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
+- Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.
+- Denenecek: 1 saatlik zaman dilimi (stoplar geniş → komisyon payı küçük).
+
+## Telegram komutları
+- `/sinyal aç|kapat` – EMİR HAZIR bildirimleri
+- `/bildirim aç|kapat` – EMA20 temas bildirimleri
+- `/backtest [gün] [TP] [başabaş] [önceki] [hepsi|yeni|koruma|son|son2] [filtresiz] [tüm]`
+- `/durum`, `/iptal`
+
+## Dosyalar
+- `strategy.py` temas kuralları · `trade_rules.py` onay/giriş/çıkış + 1-6 kurallar
+- `live_setups.py` canlı EMİR HAZIR · `backtest.py` testler ve karşılaştırma setleri
+- `exchanges.py` Binance · `telegram.py` · `charts.py` · `commands.py` · `bot.py` ana döngü
