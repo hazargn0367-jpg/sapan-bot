@@ -46,10 +46,11 @@ from telegram import send_message
 log = logging.getLogger("bot")
 HERE = os.path.dirname(os.path.abspath(__file__))
 _bt_proc = None
+_bt_cmd = ""   # çalışan / son backtest'in komutu (/durum'da gösterilir)
 
 
 def start_backtest(text):
-    global _bt_proc
+    global _bt_proc, _bt_cmd
     if _bt_proc is not None and _bt_proc.poll() is None:
         send_message("⏳ Backtest zaten çalışıyor, bitince sonuçlar gelecek.")
         return
@@ -101,6 +102,7 @@ def start_backtest(text):
         args += ["--top", "0"]
     if "atr" in low:
         args += ["--atr-min", "0.875"]
+    _bt_cmd = text.strip()
     log_file = open(os.path.join(HERE, "backtest.log"), "w")
     _bt_proc = subprocess.Popen(
         [sys.executable, "-u", "backtest.py", "--days", str(days)] + args,
@@ -125,7 +127,7 @@ def status_text():
     except OSError:
         pass
     if running:
-        return "⏳ Backtest çalışıyor" + (f": {progress}" if progress else ", veri çekiliyor...")
+        return (f"⏳ Backtest çalışıyor ({_bt_cmd})" + (f": {progress}" if progress else ", veri çekiliyor..."))
     if _bt_proc is not None:
         if _bt_proc.returncode == -15:
             return "🛑 Son backtest durduruldu (/iptal ya da bellek sınırı)."
