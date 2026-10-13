@@ -97,6 +97,11 @@ def start_backtest(text):
     log.info("Backtest başlatıldı (%d gün)", days)
 
 
+def backtest_proc():
+    """Çalışan (ya da son) backtest süreci; bellek takibi kullanır."""
+    return _bt_proc
+
+
 def status_text():
     running = _bt_proc is not None and _bt_proc.poll() is None
     progress = ""
@@ -110,6 +115,8 @@ def status_text():
     if running:
         return "⏳ Backtest çalışıyor" + (f": {progress}" if progress else ", veri çekiliyor...")
     if _bt_proc is not None:
+        if _bt_proc.returncode == -15:
+            return "🛑 Son backtest durduruldu (/iptal ya da bellek sınırı)."
         if _bt_proc.returncode not in (0, None):
             try:
                 with open(os.path.join(HERE, "backtest.log"), encoding="utf-8", errors="ignore") as f:
@@ -156,8 +163,10 @@ def _listen():
                     threading.Thread(target=_run, daemon=True).start()
                 elif text.lower().startswith("/durum"):
                     import live_setups
+                    import memwatch
                     sig = "açık" if config.SETUP_ALERTS else "KAPALI"
-                    send_message(f"{status_text()}\n\n{live_setups.status_text()}\nEmir bildirimleri: {sig}")
+                    send_message(f"{status_text()}\n\n{live_setups.status_text()}\nEmir bildirimleri: {sig}"
+                                 f"\n\n{memwatch.status_line()}")
                 elif text.lower().startswith("/sinyal"):
                     low = text.lower()
                     if "kapa" in low:

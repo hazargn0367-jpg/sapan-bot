@@ -182,7 +182,12 @@ def send_setup(symbol, side, r, df):
         }
         path = f"{CHART_DIR}/{symbol}_{int(ts[r['touch']])}.png"
         charts.draw(trade, path=path)
-        if send_photo(path, caption):
+        sent = send_photo(path, caption)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        if sent:
             return
     except Exception as e:
         log.error("%s grafik çizilemedi: %s", symbol, e)

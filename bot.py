@@ -21,12 +21,15 @@ if os.environ.get("MALLOC_ARENA_MAX") != "2":
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
 import logging
+import shutil
 import threading
 import time
 
+import commands
 import config
 from commands import start_listener
 import live_setups
+import memwatch
 from exchanges import get_symbols as fetch_symbols, get_klines
 from strategy import check_signal
 from telegram import format_signal, send_message
@@ -99,14 +102,18 @@ def setup_loop():
 
 def main():
     log.info("Keskin Nişancı Trend & Kırılım Botu Devrede...")
+    shutil.rmtree("/tmp/bt_cache", ignore_errors=True)  # eski sürümün veri önbelleği
+    prev = memwatch.previous_run_note()
     durum = "açık" if config.TOUCH_ALERTS else "kapalı"
     setup = "açık" if config.SETUP_ALERTS else "kapalı"
     send_message(f"✅ Bot başladı\n"
                  f"📋 Emir bildirimleri: {setup} (hacmi en yüksek {live_setups.UNIVERSE} coin, 15dk)\n"
                  f"Kurallar: {live_setups.rules_summary()}\n"
                  f"🔔 Temas bildirimleri: {durum}\n"
-                 "Komutlar: /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal  /incele")
+                 + (f"🧠 {prev}\n" if prev else "")
+                 + "Komutlar: /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal  /incele")
     start_listener()
+    memwatch.start(commands.backtest_proc, send_message)
     threading.Thread(target=setup_loop, daemon=True).start()
     while True:
         if config.TOUCH_ALERTS:

@@ -23,7 +23,7 @@ Bitince Telegram'a özet mesaj ve tüm setup'ların listesi (CSV) gelir.
 import argparse
 import logging
 import os
-import pickle
+import shutil
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import gc
@@ -101,28 +101,14 @@ def period(days, ago):
 
 
 def clean_cache():
-    """Eski saatlere ait önbellek dosyalarını sil (disk ve sayfa önbelleği şişmesin)."""
-    try:
-        keep = time.strftime('%Y%m%d%H')
-        for f in os.listdir(CACHE_DIR):
-            if not f.endswith(f"_{keep}.pkl"):
-                os.remove(os.path.join(CACHE_DIR, f))
-    except OSError:
-        pass
+    """Eski sürümlerin /tmp'ye yazdığı veri önbelleğini sil (/tmp bellekte tutuluyorsa RAM yer)."""
+    shutil.rmtree(CACHE_DIR, ignore_errors=True)
 
 
 def load_15m(symbol, days, ago=0):
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    path = os.path.join(CACHE_DIR, f"{symbol}_{days}_{ago}_{time.strftime('%Y%m%d%H')}.pkl")
-    if os.path.exists(path):
-        with open(path, "rb") as f:
-            return pickle.load(f)
     start_ms, end_ms = period(days, ago)
     start_ms -= WARMUP * 15 * 60 * 1000
-    df = get_klines_range(symbol, "15m", start_ms, end_ms)
-    with open(path, "wb") as f:
-        pickle.dump(df, f)
-    return df
+    return get_klines_range(symbol, "15m", start_ms, end_ms)
 
 
 def to_30m(df15):

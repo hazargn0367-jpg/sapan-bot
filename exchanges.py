@@ -6,6 +6,7 @@ import logging
 import threading
 import time
 
+import numpy as np
 import pandas as pd
 import requests
 
@@ -112,8 +113,9 @@ def _throttle(res):
 
 
 def get_klines_range(symbol, interval, start_ms, end_ms, yield_live=True):
-    """Geçmiş mum verisi (sadece kapanmış mumlar), sayfa sayfa çeker."""
-    rows = []
+    """Geçmiş mum verisi (sadece kapanmış mumlar), sayfa sayfa çeker.
+    Her sayfa hemen sayı dizisine çevrilir (ham JSON listeleri coin başına ~8MB tutuyordu)."""
+    parts = []
     cursor = start_ms
     while cursor < end_ms:
         for attempt in range(3):
@@ -136,19 +138,24 @@ def get_klines_range(symbol, interval, start_ms, end_ms, yield_live=True):
         batch = res.json()
         if not batch:
             break
-        rows.extend(batch)
+        n_batch = len(batch)
         cursor = int(batch[-1][0]) + 1
-        if len(batch) < 1000:
+        parts.append((np.array([k[0] for k in batch], dtype=np.int64),
+                      np.array([k[6] for k in batch], dtype=np.int64),
+                      np.array([k[1:5] for k in batch], dtype=np.float64)))
+        del batch, res
+        if n_batch < 1000:
             break
 
-    now_ms = int(time.time() * 1000)
-    rows = [k for k in rows if int(k[6]) < now_ms]  # açık mumu at
+    if not parts:
+        return pd.DataFrame({"timestamp": np.array([], dtype=np.int64), "Open": [], "High": [], "Low": [], "Close": []})
+    ts = np.concatenate([p[0] for p in parts])
+    close_time = np.concatenate([p[1] for p in parts])
+    ohlc = np.vstack([p[2] for p in parts])
+    keep = close_time < int(time.time() * 1000)  # açık mumu at
     return pd.DataFrame({
-        "timestamp": [int(k[0]) for k in rows],
-        "Open": [float(k[1]) for k in rows],
-        "High": [float(k[2]) for k in rows],
-        "Low": [float(k[3]) for k in rows],
-        "Close": [float(k[4]) for k in rows],
+        "timestamp": ts[keep], "Open": ohlc[keep, 0], "High": ohlc[keep, 1],
+        "Low": ohlc[keep, 2], "Close": ohlc[keep, 3],
     }).drop_duplicates("timestamp").reset_index(drop=True)
 
 
