@@ -22,6 +22,7 @@ if os.environ.get("MALLOC_ARENA_MAX") != "2":
 
 import logging
 import shutil
+import signal
 import threading
 import time
 
@@ -100,8 +101,21 @@ def setup_loop():
         time.sleep(5)
 
 
+def _on_sigterm(signum, frame):
+    """Render yeni sürümü açınca eskisini SIGTERM ile kapatır. Eski bot o arada bir backtest
+    başlatmışsa (komut eski bota düşmüşse) backtest de ölür: kullanıcıya haber ver."""
+    proc = commands.backtest_proc()
+    if proc is not None and proc.poll() is None:
+        proc.terminate()
+        send_message("⚠️ Bot güncellendi, bu sırada çalışan backtest yarıda kaldı. "
+                     "Yeni bot açıldıktan 1-2 dk sonra tekrar başlat (/durum ile kontrol et).")
+    log.info("SIGTERM alındı, bot kapanıyor")
+    sys.exit(0)
+
+
 def main():
     log.info("Keskin Nişancı Trend & Kırılım Botu Devrede...")
+    signal.signal(signal.SIGTERM, _on_sigterm)
     shutil.rmtree("/tmp/bt_cache", ignore_errors=True)  # eski sürümün veri önbelleği
     prev = memwatch.previous_run_note()
     durum = "açık" if config.TOUCH_ALERTS else "kapalı"
