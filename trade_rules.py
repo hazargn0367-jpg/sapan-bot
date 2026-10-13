@@ -7,7 +7,8 @@ LONG (SHORT tam tersi):
     O ana kadar (onay mumu dahil) hiçbir mum temas mumunun dibinin altına inmez.
  3. Giriş: onay mumunun tepesi + 1 tık   |   Stop: onay mumunun dibi - 1 tık
  4. ATR(14, RMA) filtresi: giriş-stop mesafesi <= 1.5 x ATR (onay mumundaki ATR)
-    Ayrıca giriş-stop mesafesi en az fiyatın %0.3'ü olmalı
+    Giriş-stop mesafesi fiyatın %0.5'i ile %3'ü arasında olmalı (filtresiz: en az %0.3)
+ 4b. Temas mumu 00:00-08:00 UTC arasındaysa işlem yok (filtreli modda)
  5. Giriş emri onay mumundan sonraki 2 mum geçerli. Girişten önce fiyat onay
     mumunun dibinin altına inerse iptal.
  6. TP: riskin 2 katı (1:2)
@@ -25,7 +26,13 @@ CONFIRM_WINDOW = 3     # temastan sonra onay için beklenecek mum
 ENTRY_WINDOW = 2       # onaydan sonra girişin gerçekleşmesi için beklenecek mum
 ATR_PERIOD = 14
 ATR_MAX_MULT = 1.5     # giriş-stop mesafesi en fazla bu kadar ATR
-MIN_RISK_PCT = 0.3     # giriş-stop mesafesi en az fiyatın %0.3'ü (dar stopta komisyon kârı yer)
+BASE_MIN_RISK_PCT = 0.3  # filtresiz modda en dar stop (%)
+
+# ---- Ek filtreler (30 günlük analizden; FILTERS=False ile kapatılır) ----
+FILTERS = True
+MIN_RISK_PCT = 0.5       # stop mesafesi en az %0.5 (daha darında komisyon riskin %15-22'si)
+MAX_RISK_PCT = 3.0       # stop mesafesi en fazla %3 (daha genişi aşırı oynak/pump coinler)
+SESSION_START_UTC = 8    # temas mumu 00:00-08:00 UTC (03:00-11:00 TR) arasındaysa işlem yok
 RR = 2.0               # hedef: riskin kaç katı
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
@@ -51,7 +58,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
-    status: no_close | cancel_touch | no_confirm | atr | min_risk | cancel_confirm |
+    status: session | no_close | cancel_touch | no_confirm | atr | min_risk | max_risk | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
     H = df["High"].values
@@ -61,6 +68,12 @@ def simulate(df, i, side, tick):
     n = len(df)
     long = side == "LONG"
     res = {"side": side, "touch": i}
+
+    if FILTERS and "timestamp" in df.columns:
+        hour_utc = (int(df["timestamp"].values[i]) // 3_600_000) % 24
+        if hour_utc < SESSION_START_UTC:
+            res["status"] = "session"
+            return res
 
     if not touch_closes_right_side(df, i, side):
         res["status"] = "no_close"
@@ -93,8 +106,12 @@ def simulate(df, i, side, tick):
     if risk > ATR_MAX_MULT * A[conf]:
         res["status"] = "atr"
         return res
-    if 100 * risk / entry < MIN_RISK_PCT:
+    risk_pct = 100 * risk / entry
+    if risk_pct < (MIN_RISK_PCT if FILTERS else BASE_MIN_RISK_PCT):
         res["status"] = "min_risk"
+        return res
+    if FILTERS and risk_pct > MAX_RISK_PCT:
+        res["status"] = "max_risk"
         return res
 
     # --- Giriş ---
