@@ -172,9 +172,10 @@ def scan_symbol(symbol, keep_df=False, lookback=None):
     tick = _state["ticks"].get(symbol, 0.0)
     ts = df["timestamp"].values
     touches, ready, recovered = [], [], []
+    arr = st.arrays(df)
     # Onay temastan sonraki 3 mum içinde gelir: son 4 mumdaki temaslara bak
     for i in range(max(0, n - 1 - (lookback or tr.CONFIRM_WINDOW)), n):
-        sig = st.evaluate_at(df, i)
+        sig = st.evaluate_at(df, i, arr)
         if not sig:
             continue
         touches.append((int(ts[i]), sig["side"]))

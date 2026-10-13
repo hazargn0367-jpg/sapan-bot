@@ -29,7 +29,7 @@ DAY_MS = 86_400_000
 
 _lock = threading.Lock()
 _pool = None  # arşiv indirmeleri için ortak iş parçacığı havuzu (ağ beklemesi: aynı anda çok dosya)
-POOL_SIZE = 12
+POOL_SIZE = 32
 
 
 def _download_many(urls):

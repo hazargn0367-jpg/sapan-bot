@@ -120,9 +120,14 @@ def candle_parts(o, h, l, c):
     return abs(c - o), h - max(o, c), min(o, c) - l
 
 
+def _ohlc(df, i):
+    """i. mumun (açılış, yüksek, düşük, kapanış) değerleri (tabloyu kopyalamadan)."""
+    return df["Open"].values[i], df["High"].values[i], df["Low"].values[i], df["Close"].values[i]
+
+
 def touch_is_wick_candle(df, i, side):
     """Kural 5: EMA20'ye iğneyle değen, gövdesi küçük temas mumu."""
-    body, up, down = candle_parts(*df[["Open", "High", "Low", "Close"]].values[i])
+    body, up, down = candle_parts(*_ohlc(df, i))
     wick = down if side == "LONG" else up
     return wick >= TOUCH_WICK_MIN * body and wick > 0
 
@@ -133,7 +138,7 @@ def pivot_wick_ok(df, i, side):
     H, L = df["High"].values, df["Low"].values
     start = max(0, i - st.LOOKBACK)
     pivot = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
-    body, up, down = candle_parts(*df[["Open", "High", "Low", "Close"]].values[pivot])
+    body, up, down = candle_parts(*_ohlc(df, pivot))
     wick = up if long else down
     return wick <= PIVOT_WICK_MAX * body
 
@@ -211,7 +216,7 @@ def support_details(df, i, side, n=None, need=None, wick_body=None, wick_atr=Non
 
 def touch_tail(df, i, side):
     """Kural 10 ölçüleri: (ters iğne, EMA tarafı iğne, gövde, ATR)."""
-    body, up, down = candle_parts(*df[["Open", "High", "Low", "Close"]].values[i])
+    body, up, down = candle_parts(*_ohlc(df, i))
     long = side == "LONG"
     return (up if long else down), (down if long else up), body, float(df["ATR"].values[i])
 
@@ -226,8 +231,8 @@ def touch_tail_ok(df, i, side, max_mult=None, ref=None):
 
 
 def touch_closes_right_side(df, i, side):
-    c = df.iloc[i]
-    return c["Close"] > c["EMA20"] if side == "LONG" else c["Close"] < c["EMA20"]
+    c, e = df["Close"].values[i], df["EMA20"].values[i]
+    return c > e if side == "LONG" else c < e
 
 
 def simulate(df, i, side, tick):

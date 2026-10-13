@@ -46,8 +46,8 @@ log = logging.getLogger("bot")
 
 CACHE_DIR = "/tmp/bt_cache"
 WARMUP = 300  # ilk mumlarda EMA100 oturmadığı için atlanır
-FETCH_THREADS = 10  # aynı anda kaç coinin verisi çekilsin (arşiv dosyaları sınırsız; API kısmı ortak sınıra uyar)
-MAX_IN_FLIGHT = 12  # bellekte aynı anda en fazla kaç coinin ham verisi dursun
+FETCH_THREADS = 16  # aynı anda kaç coinin verisi çekilsin (arşiv dosyaları sınırsız; API kısmı ortak sınıra uyar)
+MAX_IN_FLIGHT = 20  # bellekte aynı anda en fazla kaç coinin ham verisi dursun
 BAN_WAIT = 600  # Binance IP engeli/sınırı en fazla bu kadar sn sürecekse beklenir, daha uzunsa backtest durur
 USE_ARCHIVE = True  # geçmiş veri Binance dosya arşivinden (API sınırı/engeli yok); --api ile kapatılır
 TZ = "Europe/Istanbul"
@@ -272,8 +272,9 @@ def candidate_bars(df):
 def find_signals(df):
     """Temas sinyalleri (işlem ayarlarından bağımsız, bir kez hesaplanır)."""
     out = []
+    arr = st.arrays(df)
     for i in candidate_bars(df):
-        sig = st.evaluate_at(df, i)
+        sig = st.evaluate_at(df, i, arr)
         if sig:
             out.append((int(i), sig["side"]))
     return out

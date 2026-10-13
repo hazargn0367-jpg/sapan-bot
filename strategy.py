@@ -45,90 +45,91 @@ def add_indicators(df):
     return df
 
 
-def _check_long(df, i):
+COLS = ("Open", "High", "Low", "Close", "EMA20", "EMA50", "EMA100", "Stoch_K", "timestamp")
+
+
+def arrays(df):
+    """Hız için sütunlar numpy dizisi olarak (kopya yok). Aynı tabloda çok mum incelenecekse bir kez hazırlanır."""
+    return {k: df[k].to_numpy() for k in COLS if k in df.columns}
+
+
+def _check_long(a, i):
+    H, L, O, C, E20 = a["High"], a["Low"], a["Open"], a["Close"], a["EMA20"]
     start = max(0, i - LOOKBACK)
-    peak_idx = df["High"].iloc[start:i].idxmax()
+    peak_idx = start + int(np.argmax(H[start:i]))
     if peak_idx < i - RECENT:
         return None
 
     past_end = peak_idx - PEAK_GAP
     if past_end <= start:
         return None
-    historical_peak = df["High"].iloc[start:past_end].max()
+    historical_peak = H[start:past_end].max()
 
     # Gövde kapanışlı zirve kırılımı
-    closes = df["Close"].iloc[max(0, peak_idx - 2): min(i, peak_idx + 3)]
-    if not (closes > historical_peak).any():
+    if not (C[max(0, peak_idx - 2): min(i, peak_idx + 3)] > historical_peak).any():
         return None
 
     after = peak_idx + 1
-    if i - 1 >= after:
-        seg = df.iloc[after:i]
-        if not (seg["Low"] > seg["EMA20"]).all():
-            return None
-
-    pullback = df.iloc[after: i + 1]
-    if (pullback["Close"] > pullback["Open"]).sum() > MAX_EXCEPTION_CANDLES:
+    if i - 1 >= after and not (L[after:i] > E20[after:i]).all():
         return None
 
-    c = df.iloc[i]
-    if c["Low"] <= c["EMA20"] * TOLERANCE_LONG and c["Stoch_K"] < STOCH_LONG_MAX:
+    if int((C[after:i + 1] > O[after:i + 1]).sum()) > MAX_EXCEPTION_CANDLES:
+        return None
+
+    if L[i] <= E20[i] * TOLERANCE_LONG and a["Stoch_K"][i] < STOCH_LONG_MAX:
         return {"side": "LONG", "pivot_idx": int(peak_idx)}
     return None
 
 
-def _check_short(df, i):
+def _check_short(a, i):
+    H, L, O, C, E20 = a["High"], a["Low"], a["Open"], a["Close"], a["EMA20"]
     start = max(0, i - LOOKBACK)
-    valley_idx = df["Low"].iloc[start:i].idxmin()
+    valley_idx = start + int(np.argmin(L[start:i]))
     if valley_idx < i - RECENT:
         return None
 
     past_end = valley_idx - PEAK_GAP
     if past_end <= start:
         return None
-    historical_valley = df["Low"].iloc[start:past_end].min()
+    historical_valley = L[start:past_end].min()
 
     # Gövde kapanışlı dip kırılımı
-    closes = df["Close"].iloc[max(0, valley_idx - 2): min(i, valley_idx + 3)]
-    if not (closes < historical_valley).any():
+    if not (C[max(0, valley_idx - 2): min(i, valley_idx + 3)] < historical_valley).any():
         return None
 
     after = valley_idx + 1
-    if i - 1 >= after:
-        seg = df.iloc[after:i]
-        if not (seg["High"] < seg["EMA20"]).all():
-            return None
-
-    pullback = df.iloc[after: i + 1]
-    if (pullback["Close"] < pullback["Open"]).sum() > MAX_EXCEPTION_CANDLES:
+    if i - 1 >= after and not (H[after:i] < E20[after:i]).all():
         return None
 
-    c = df.iloc[i]
-    if c["High"] >= c["EMA20"] * TOLERANCE_SHORT and c["Stoch_K"] > STOCH_SHORT_MIN:
+    if int((C[after:i + 1] < O[after:i + 1]).sum()) > MAX_EXCEPTION_CANDLES:
+        return None
+
+    if H[i] >= E20[i] * TOLERANCE_SHORT and a["Stoch_K"][i] > STOCH_SHORT_MIN:
         return {"side": "SHORT", "pivot_idx": int(valley_idx)}
     return None
 
 
-def evaluate_at(df, i):
+def evaluate_at(df, i, arr=None):
     """df: add_indicators() uygulanmış, index'i 0..n-1 olan tablo.
-    i: kontrol edilecek mumun sırası. Sinyal varsa dict, yoksa None."""
-    c = df.iloc[i]
-    ema20, ema50, ema100 = c["EMA20"], c["EMA50"], c["EMA100"]
+    i: kontrol edilecek mumun sırası. Sinyal varsa dict, yoksa None.
+    arr: arrays(df) (aynı tabloda çok mum incelenirken bir kez hazırlanıp verilir)."""
+    a = arr if arr is not None else arrays(df)
+    ema20, ema50, ema100 = a["EMA20"][i], a["EMA50"][i], a["EMA100"][i]
 
     uptrend = ema20 > ema50 * (1 + EMA_GAP) and ema50 > ema100 * (1 + EMA_GAP)
     downtrend = ema20 < ema50 * (1 - EMA_GAP) and ema50 < ema100 * (1 - EMA_GAP)
 
     if uptrend:
-        sig = _check_long(df, i)
+        sig = _check_long(a, i)
     elif downtrend:
-        sig = _check_short(df, i)
+        sig = _check_short(a, i)
     else:
         return None
 
     if sig:
-        sig["price"] = float(c["Close"])
-        sig["stoch"] = float(c["Stoch_K"])
-        sig["timestamp"] = c["timestamp"]
+        sig["price"] = float(a["Close"][i])
+        sig["stoch"] = float(a["Stoch_K"][i])
+        sig["timestamp"] = a["timestamp"][i] if "timestamp" in a else None
     return sig
 
 
