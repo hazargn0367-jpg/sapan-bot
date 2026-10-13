@@ -115,6 +115,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Arşiv Render'da çalışmıyor görünüyor (IP kullanımı ~2000): sebebi artık "Backtest başladı" mesajındaki "Veri:" satırında.
   Backtest API'de dakikada en fazla 1500 ağırlık kullanır (canlı 5dk taramasına pay).
 
+- 14.10 00:5x: canlı bildirimlerin takip listesi (_active) bellekteydi; yükleme/yeniden başlatmada kayboluyordu (OPN'in
+  TP/stop mesajı gelmedi). Düzeltme: yeniden başlayınca ilk taramada son 60 mumdaki bildirilmiş ve sürmekte olan setup'lar
+  (giriş bekleyen / işlemde) bulunur, toplu sinyal kontrolüyle takibe geri alınır ve "♻️" mesajıyla listelenir.
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.

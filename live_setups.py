@@ -33,6 +33,7 @@ log = logging.getLogger("bot")
 UNIVERSE = 500          # hacme göre ilk kaç coin taransın
 CLUSTER_MAX = 5         # aynı mumda bu kadar coin aynı yönde temas verirse girme (toplu hareket)
 SCAN_THREADS = 6
+RECOVER_BARS = 60   # yeniden başlarken son 60 mumdaki (5m'de 5 saat) bildirilmiş setup'lar takibe geri alınır
 LIVE_TF = config.LIVE_TF                 # canlı tarama zaman dilimi (varsayılan 5m)
 TF_MIN = config.tf_minutes(LIVE_TF)
 TF_SEC = TF_MIN * 60
@@ -127,18 +128,20 @@ def closed_candles(symbol):
     return prepare(df)
 
 
-def scan_symbol(symbol, keep_df=False):
+def scan_symbol(symbol, keep_df=False, lookback=None):
     """Son mumlardaki temasları ve tamamlanan onayları bulur.
-    Veri sadece onay adayı varsa ya da coin takipteyse geri döner (bellek)."""
+    Veri sadece onay adayı varsa ya da coin takipteyse geri döner (bellek).
+    lookback verilirse (bot yeniden başladığında) son lookback mumdaki, daha önce bildirilmiş olması gereken
+    ve hâlâ sürmekte olan (giriş bekleyen / işlemde) setup'lar da döner: (temas zamanı, yön, durum)."""
     df = closed_candles(symbol)
     if df is None:
-        return symbol, None, [], []
+        return symbol, None, [], [], []
     n = len(df)
     tick = _state["ticks"].get(symbol, 0.0)
     ts = df["timestamp"].values
-    touches, ready = [], []
+    touches, ready, recovered = [], [], []
     # Onay temastan sonraki 3 mum içinde gelir: son 4 mumdaki temaslara bak
-    for i in range(max(0, n - 1 - tr.CONFIRM_WINDOW), n):
+    for i in range(max(0, n - 1 - (lookback or tr.CONFIRM_WINDOW)), n):
         sig = st.evaluate_at(df, i)
         if not sig:
             continue
@@ -146,9 +149,11 @@ def scan_symbol(symbol, keep_df=False):
         r = tr.simulate(df, i, sig["side"], tick)
         if r["status"] == "pending" and r.get("confirm") == n - 1 and "entry" in r:
             ready.append((i, sig["side"], r))
+        elif lookback and "entry" in r and r["status"] in ("pending", "open") and r["confirm"] < n - 1:
+            recovered.append((int(ts[i]), sig["side"], r["status"]))
     if not ready and not keep_df:
-        return symbol, False, touches, ready   # False = veri alındı ama saklanmadı
-    return symbol, df, touches, ready
+        return symbol, False, touches, ready, recovered   # False = veri alındı ama saklanmadı
+    return symbol, df, touches, ready, recovered
 
 
 def setup_message(symbol, side, r, df):
@@ -245,12 +250,14 @@ def run_cycle():
     t0 = time.time()
     watch = {k[0] for k in _active}
     todo = list(dict.fromkeys(list(symbols) + sorted(watch)))
+    # Bot yeniden başladıysa ilk taramada son saatlerdeki bildirilmiş setup'lar takibe geri alınır
+    recover = None if _state.get("recovered") else RECOVER_BARS
     with ThreadPoolExecutor(max_workers=SCAN_THREADS) as ex:
-        results = list(ex.map(lambda s: _safe_scan(s, s in watch), todo))
+        results = list(ex.map(lambda s: _safe_scan(s, s in watch, recover), todo))
 
     counts = Counter()
-    candidates = []
-    for symbol, df, touches, ready in results:
+    candidates, rec_list = [], []
+    for symbol, df, touches, ready, recovered in results:
         if df is None:
             continue
         counts.update(touches)
@@ -258,6 +265,21 @@ def run_cycle():
             follow_up(symbol, df)
         for i, side, r in ready:
             candidates.append((symbol, side, r, df))
+        for touch_ts, side, status in recovered:
+            rec_list.append((symbol, touch_ts, side, status))
+    if recover:
+        _state["recovered"] = True
+        back = []
+        for symbol, touch_ts, side, status in rec_list:
+            if (symbol, touch_ts) in _active or counts[(touch_ts, side)] >= CLUSTER_MAX:
+                continue  # toplu sinyalde zaten bildirilmemişti
+            _active[(symbol, touch_ts)] = {"side": side, "status": status}
+            back.append(f"{'🟢' if side == 'LONG' else '🔴'} {html.escape(symbol)} (temas {fmt(touch_ts)}, "
+                        f"{'işlemde' if status == 'open' else 'giriş bekleniyor'})")
+        if back:
+            log.info("Yeniden başlatma: %d setup takibe geri alındı", len(back))
+            send_message("♻️ Bot yeniden başladı, önceki bildirimler takibe geri alındı "
+                         "(giriş / TP / stop mesajları gelmeye devam edecek):\n" + "\n".join(back))
 
     sent = 0
     cluster_skipped = 0
@@ -272,7 +294,7 @@ def run_cycle():
         send_setup(symbol, side, r, df)
         _active[(symbol, touch_ts)] = {"side": side, "status": "pending"}
         sent += 1
-    ok = sum(1 for _, df, _, _ in results if df is not None)
+    ok = sum(1 for r in results if r[1] is not None)
     _stats.update(cycles=_stats["cycles"] + 1, last_run=time.time(), scanned=len(todo), ok=ok,
                   touches=sum(counts.values()), ready=len(candidates), cluster=cluster_skipped,
                   sent=sent, secs=time.time() - t0, total_sent=_stats["total_sent"] + sent)
@@ -308,12 +330,12 @@ def status_text():
     return "\n".join(lines)
 
 
-def _safe_scan(symbol, keep_df=False):
+def _safe_scan(symbol, keep_df=False, lookback=None):
     try:
-        return scan_symbol(symbol, keep_df)
+        return scan_symbol(symbol, keep_df, lookback)
     except Exception as e:
         log.debug("%s taranamadı: %s", symbol, e)
-        return symbol, None, [], []
+        return symbol, None, [], [], []
 
 
 def maybe_run():
