@@ -120,7 +120,15 @@ def clean_cache():
     shutil.rmtree(CACHE_DIR, ignore_errors=True)
 
 
-KLINE_CACHE = "/tmp/kline_cache"  # coin başına 15dk verisi (diskte): sonraki testler sadece yeni mumları çeker
+def _data_dir():
+    """Render'da kalıcı disk takılıysa (/var/data) orası, yoksa /tmp (her yüklemede silinir)."""
+    for d in (os.environ.get("DATA_DIR", ""), "/var/data"):
+        if d and os.path.isdir(d) and os.access(d, os.W_OK):
+            return d
+    return "/tmp"
+
+
+KLINE_CACHE = os.path.join(_data_dir(), "kline_cache")  # coin başına mum verisi: sonraki testler sadece yeni mumları çeker
 BASE_TF = "15m"  # indirilen veri: 15m (30m bundan üretilir) ya da 5m
 BAR_MS = 15 * 60 * 1000
 
