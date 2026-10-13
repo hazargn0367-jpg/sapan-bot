@@ -53,8 +53,9 @@ def draw(trade, path=None, pdf=None):
         ax.plot(x, ctx[name], color=color, linewidth=1.1, label=name)
 
     # Pozisyon kutusu (TradingView'daki gibi)
-    e0 = rel["entry_bar"]
-    e1 = rel.get("exit_bar", len(ctx) - 1) + 0.5
+    # Henüz girilmemiş setup'ta kutu onaydan sonraki mumdan başlar, giriş süresi (2 mum) boyunca çizilir
+    e0 = rel.get("entry_bar", rel["confirm"] + 1)
+    e1 = rel.get("exit_bar", len(ctx) - 1 if "entry_bar" in rel else e0 + 1) + 0.5
     entry, stop, tp = trade["giris"], trade["stop"], trade["tp"]
     ax.add_patch(Rectangle((e0 - 0.5, min(entry, tp)), e1 - e0 + 0.5, abs(tp - entry),
                            color=UP, alpha=0.18))
@@ -104,12 +105,19 @@ def draw(trade, path=None, pdf=None):
     ax2.set_xticklabels([times[t].strftime("%d.%m %H:%M") for t in ticks])
     ax.set_xlim(-1, len(ctx) + 6)
 
-    res = {"win": "TP ✓", "be": "BAŞABAŞ"}.get(trade["durum"], "STOP ✗")
-    title = (f"{trade['coin']}  {trade['zaman_dilimi']}  {trade['yon']}   {res}   "
-             f"{trade['R_net']:+.2f}R ({trade['dolar']:+.0f}$)   temas: {trade['temas']} TR / {trade['temas_utc']} UTC")
+    closed = trade["durum"] in ("win", "loss", "be")
+    if closed:
+        res = {"win": "TP ✓", "be": "BAŞABAŞ"}.get(trade["durum"], "STOP ✗")
+        title = (f"{trade['coin']}  {trade['zaman_dilimi']}  {trade['yon']}   {res}   "
+                 f"{trade['R_net']:+.2f}R ({trade['dolar']:+.0f}$)   temas: {trade['temas']} TR / {trade['temas_utc']} UTC")
+        badge = {"win": ("✓ TP", UP), "be": ("BAŞABAŞ", "#9e9e9e")}.get(trade["durum"], ("✗ STOP", DOWN))
+        badge_txt = f"{badge[0]}  {trade['R_net']:+.2f}R"
+    else:
+        title = (f"{trade['coin']}  {trade['zaman_dilimi']}  {trade['yon']}   "
+                 f"temas: {trade['temas']} TR / {trade['temas_utc']} UTC")
+        badge_txt, badge = trade.get("etiket", "EMİR HAZIR"), (None, "#2962ff")
     ax.set_title(title, color=TXT, fontsize=10.5, loc="left")
-    badge = {"win": ("✓ TP", UP), "be": ("BAŞABAŞ", "#9e9e9e")}.get(trade["durum"], ("✗ STOP", DOWN))
-    ax.text(0.99, 0.97, f"{badge[0]}  {trade['R_net']:+.2f}R", transform=ax.transAxes, ha="right", va="top",
+    ax.text(0.99, 0.97, badge_txt, transform=ax.transAxes, ha="right", va="top",
             fontsize=15, fontweight="bold", color="white",
             bbox=dict(boxstyle="round,pad=0.35", facecolor=badge[1], edgecolor="none"))
     ax.legend(loc="upper left", fontsize=7, facecolor=BG, edgecolor=GRID, labelcolor=TXT)

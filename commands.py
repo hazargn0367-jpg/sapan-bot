@@ -16,6 +16,7 @@ Telegram komutları (bot arka planda dinler):
   /durum          -> backtest ilerlemesi
   /iptal          -> çalışan backtest'i durdurur
   /bildirim aç | kapat -> EMA20 temas bildirimleri
+  /sinyal aç | kapat -> kurallara uyan setup'larda EMİR HAZIR bildirimleri
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
 """
 
@@ -131,6 +132,14 @@ def _listen():
                     start_backtest(text)
                 elif text.lower().startswith("/durum"):
                     send_message(status_text())
+                elif text.lower().startswith("/sinyal"):
+                    low = text.lower()
+                    if "kapa" in low:
+                        config.SETUP_ALERTS = False
+                    elif "aç" in low or "ac" in low:
+                        config.SETUP_ALERTS = True
+                    send_message("📋 Emir bildirimleri " + ("açık" if config.SETUP_ALERTS else "kapalı")
+                                 + ". (Bot yeniden başlarsa açık başlar.)")
                 elif text.lower().startswith("/bildirim"):
                     low = text.lower()
                     if "kapa" in low:

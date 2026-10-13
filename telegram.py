@@ -60,6 +60,25 @@ def send_document(path, caption=""):
         return False
 
 
+def send_photo(path, caption=""):
+    """Tek fotoğraf + HTML açıklama."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        log.warning("Telegram ayarları eksik, fotoğraf gönderilmedi")
+        return False
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+    try:
+        with open(path, "rb") as f:
+            r = requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption[:1024],
+                                         "parse_mode": "HTML"}, files={"photo": f}, timeout=60)
+        if r.status_code != 200:
+            log.error("Telegram fotoğraf hatası %s: %s", r.status_code, r.text)
+            return False
+        return True
+    except (requests.RequestException, OSError) as e:
+        log.error("Fotoğraf gönderilemedi: %s", e)
+        return False
+
+
 def send_photos(paths, caption=""):
     """En fazla 10 fotoğrafı tek albüm olarak gönderir."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID or not paths:

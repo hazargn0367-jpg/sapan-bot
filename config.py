@@ -19,3 +19,6 @@ SYMBOL_REFRESH_SECONDS = int(os.environ.get("SYMBOL_REFRESH_SECONDS", "3600"))
 
 # EMA20 temas bildirimleri (Telegram'dan /bildirim aç | kapat ile değiştirilebilir)
 TOUCH_ALERTS = os.environ.get("TOUCH_ALERTS", "0") == "1"
+
+# Kurallara uyan setup'larda onay mumu kapanınca "EMİR HAZIR" bildirimi (/sinyal aç | kapat)
+SETUP_ALERTS = os.environ.get("SETUP_ALERTS", "1") == "1"

@@ -16,6 +16,7 @@ import time
 
 import config
 from commands import start_listener
+import live_setups
 from exchanges import get_symbols as fetch_symbols, get_klines
 from strategy import check_signal
 from telegram import format_signal, send_message
@@ -77,14 +78,19 @@ def scan():
 def main():
     log.info("Keskin Nişancı Trend & Kırılım Botu Devrede...")
     durum = "açık" if config.TOUCH_ALERTS else "kapalı"
-    send_message(f"✅ Bot başladı (temas bildirimleri {durum})\n"
-                 "Komutlar: /backtest  /durum  /iptal  /bildirim aç|kapat")
+    setup = "açık" if config.SETUP_ALERTS else "kapalı"
+    send_message(f"✅ Bot başladı\n"
+                 f"📋 Emir bildirimleri: {setup} (hacmi en yüksek {live_setups.UNIVERSE} coin, 15dk)\n"
+                 f"🔔 Temas bildirimleri: {durum}\n"
+                 "Komutlar: /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal")
     start_listener()
     while True:
         try:
             scan()
         except Exception as e:
             log.exception("Tarama hatası: %s", e)
+        if config.SETUP_ALERTS:
+            live_setups.maybe_run()
         time.sleep(config.SCAN_SLEEP)
 
 
