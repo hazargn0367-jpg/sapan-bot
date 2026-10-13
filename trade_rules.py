@@ -149,7 +149,7 @@ def last_swing_before(H, L, p, lo, long, k=SWING_K):
 def structure_details(df, i, side, mode="wick"):
     """Kural 8'in kullandığı noktalar (inceleme için de kullanılır).
     p: son tepe (LONG) / dip (SHORT), q: ondan hemen önceki salınım tepesi/dibi,
-    prior: q ile p arasındaki düzeltmenin ucu, cur: p'den sonraki düzeltmenin ucu (temasa kadar)."""
+    prior: q'dan SONRAKİ mumlarla p arasındaki düzeltmenin ucu, cur: p'den sonraki düzeltmenin ucu (temasa kadar)."""
     long = side == "LONG"
     H, L, C = df["High"].values, df["Low"].values, df["Close"].values
     start = max(0, i - st.LOOKBACK)
@@ -163,12 +163,13 @@ def structure_details(df, i, side, mode="wick"):
         return out
     src = (L if mode == "wick" else C) if long else (H if mode == "wick" else C)
     if long:
-        prior_idx = q + int(np.argmin(L[q:p]))
+        # Düzeltme tepe mumundan SONRA başlar: q mumunun kendi dibi yükselişe aittir
+        prior_idx = q + 1 + int(np.argmin(L[q + 1:p]))
         cur_idx = p + 1 + int(np.argmin(src[p + 1:i + 1]))
         out.update(prior_idx=prior_idx, prior=L[prior_idx], cur_idx=cur_idx, cur=src[cur_idx])
         out["ok"] = out["cur"] >= out["prior"]
     else:
-        prior_idx = q + int(np.argmax(H[q:p]))
+        prior_idx = q + 1 + int(np.argmax(H[q + 1:p]))
         cur_idx = p + 1 + int(np.argmax(src[p + 1:i + 1]))
         out.update(prior_idx=prior_idx, prior=H[prior_idx], cur_idx=cur_idx, cur=src[cur_idx])
         out["ok"] = out["cur"] <= out["prior"]

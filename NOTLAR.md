@@ -69,7 +69,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2:
   15dk kapanışından sonraki ilk 60 sn'de başlar ve kendi iş parçacığında çalışır; backtest bu 120 sn'de bekler;
   429/418'de tüm istekler birlikte bekler.
 
-- Kural 8 (salınım tabanlı) ikinci sürümde de NIL/AXS örneklerini yakalamadı → /incele ile kullanıcıyla nokta nokta eşleştirilecek.
+- Kural 8 ikinci sürümde de NIL/AXS'yi yakalamadı. /incele AXS gösterdi ki önceki düzeltmenin dibi olarak salınım tepesi
+  mumunun KENDİ dibi alınıyordu (0.837 = şimdiki dip). Düzeltme q'dan sonraki mumlardan başlatıldı (önceki düzeltme dibi 0.839 → bozuk).
 - %40'ın sebebi: ilk 7 günlük test iyi haftalara denk geldi (taban haftalık kazanma %30-58 arası değişiyor).
 
 ## Çalışma kuralları
