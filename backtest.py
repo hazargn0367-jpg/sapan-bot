@@ -59,6 +59,8 @@ STATUS_TR = {
     "wick": "Onay mumunun ters iğnesi uzun",
     "no_prior_touch": "Trend teyidi yok (önceden EMA20 teması yok)",
     "dirty_pivot": "Son tepe/dip temiz değil (destek/direnç oluşmuş)",
+    "touch_body": "Temas mumu fitil mumu değil (gövdeyle değmiş)",
+    "pivot_wick": "Tepe/dip mumunun iğnesi çok uzun",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
     "skip_open": "Açık işlem sınırı dolu (portföy koruması)",
@@ -327,6 +329,10 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
         msg.append(f"  ↳ Onay mumunda uzun iğne: {c('wick')}")
     if tr.CLEAN_PIVOT_MAX > 0:
         msg.append(f"  ↳ Tepe/dip temiz değil: {c('dirty_pivot')}")
+    if tr.TOUCH_WICK_MIN > 0:
+        msg.append(f"  ↳ Temas mumu fitil değil: {c('touch_body')}")
+    if tr.PIVOT_WICK_MAX > 0:
+        msg.append(f"  ↳ Tepe/dip iğnesi uzun: {c('pivot_wick')}")
     min_pct = tr.MIN_RISK_PCT if tr.FILTERS else tr.BASE_MIN_RISK_PCT
     if tr.FILTERS:
         msg.append(f"  ↳ Asya seansı (00-08 UTC): {c('session')}")
@@ -367,7 +373,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
 
 # Her ayar: varsayılanların üzerine yazılan değerler. "ad" raporda görünür.
 PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
-              "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR"]
+              "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR",
+              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -424,7 +431,18 @@ COMPARE_SETS["son"] = [
     C("1-4 + BTC + en fazla 3 (1:2.5)", **_NEW3, **_CLEAN, RR=2.5, btc=True, max_open=3),
     C("1-4 + toplu + BTC + en fazla 3 (1:2.5)", **_NEW3, **_CLEAN, RR=2.5, cluster_max=5, btc=True, max_open=3),
 ]
-CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6}  # grafikleri çizilecek ayar (listedeki sırası)
+_R14 = dict(**_NEW3, **_CLEAN)
+COMPARE_SETS["son2"] = [
+    C("Taban", FILTERS=False),
+    C("1-4 + toplu (önceki en iyi)", **_R14, cluster_max=5),
+    C("+ fitil temas (5)", **_R14, cluster_max=5, TOUCH_WICK_MIN=1.0),
+    C("+ tepe iğnesi ≤ 2 gövde (6)", **_R14, cluster_max=5, PIVOT_WICK_MAX=2.0),
+    C("+ tepe iğnesi ≤ 1.5 gövde (6)", **_R14, cluster_max=5, PIVOT_WICK_MAX=1.5),
+    C("1-6 + toplu", **_R14, cluster_max=5, TOUCH_WICK_MIN=1.0, PIVOT_WICK_MAX=2.0),
+    C("1-6 + toplu + en fazla 3", **_R14, cluster_max=5, TOUCH_WICK_MIN=1.0, PIVOT_WICK_MAX=2.0, max_open=3),
+    C("1-6 + toplu + en fazla 3 (1:2.5)", **_R14, cluster_max=5, TOUCH_WICK_MIN=1.0, PIVOT_WICK_MAX=2.0, max_open=3, RR=2.5),
+]
+CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

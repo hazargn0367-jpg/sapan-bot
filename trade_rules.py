@@ -45,6 +45,8 @@ STOP_BUFFER_ATR = 0.0        # stop onay mumunun ucundan bu kadar ATR daha uzağ
 CLEAN_PIVOT_MAX = 0          # >0: son tepe/dip seviyesine bu kadar veya daha fazla mum dokunduysa (destek/direnç) işlem yok
 CLEAN_PIVOT_ATR = 0.3        # "seviyeye dokundu" sayılma mesafesi (ATR)
 CLEAN_PIVOT_BEFORE = 5       # tepeden/dipten kaç mum öncesinden itibaren sayılsın
+TOUCH_WICK_MIN = 0.0         # >0: temas mumunun EMA20'ye doğru iğnesi en az gövdenin bu katı olmalı (fitil mum)
+PIVOT_WICK_MAX = 0.0         # >0: tepe (LONG) / dip (SHORT) mumunun o yöndeki iğnesi gövdenin bu katından uzunsa işlem yok
 RR = 2.0               # hedef: riskin kaç katı
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
@@ -104,6 +106,29 @@ def pivot_touches(df, i, side):
     return int((L[lo:i] <= L[pivot] + tol).sum())
 
 
+def candle_parts(o, h, l, c):
+    """(gövde, üst iğne, alt iğne)"""
+    return abs(c - o), h - max(o, c), min(o, c) - l
+
+
+def touch_is_wick_candle(df, i, side):
+    """Kural 5: EMA20'ye iğneyle değen, gövdesi küçük temas mumu."""
+    body, up, down = candle_parts(*df[["Open", "High", "Low", "Close"]].values[i])
+    wick = down if side == "LONG" else up
+    return wick >= TOUCH_WICK_MIN * body and wick > 0
+
+
+def pivot_wick_ok(df, i, side):
+    """Kural 6: son tepe (LONG) / dip (SHORT) mumunda o yöne çok uzun iğne olmamalı."""
+    long = side == "LONG"
+    H, L = df["High"].values, df["Low"].values
+    start = max(0, i - st.LOOKBACK)
+    pivot = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    body, up, down = candle_parts(*df[["Open", "High", "Low", "Close"]].values[pivot])
+    wick = up if long else down
+    return wick <= PIVOT_WICK_MAX * body
+
+
 def touch_closes_right_side(df, i, side):
     c = df.iloc[i]
     return c["Close"] > c["EMA20"] if side == "LONG" else c["Close"] < c["EMA20"]
@@ -111,7 +136,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
-    status: session | no_close | no_prior_touch | dirty_pivot | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | no_close | touch_body | no_prior_touch | dirty_pivot | pivot_wick | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -133,11 +158,17 @@ def simulate(df, i, side, tick):
         res["status"] = "no_close"
         return res
 
+    if TOUCH_WICK_MIN > 0 and not touch_is_wick_candle(df, i, side):
+        res["status"] = "touch_body"
+        return res
     if REQUIRE_PRIOR_TOUCH and not prior_touch_ok(df, i, side):
         res["status"] = "no_prior_touch"
         return res
     if CLEAN_PIVOT_MAX > 0 and pivot_touches(df, i, side) >= CLEAN_PIVOT_MAX:
         res["status"] = "dirty_pivot"
+        return res
+    if PIVOT_WICK_MAX > 0 and not pivot_wick_ok(df, i, side):
+        res["status"] = "pivot_wick"
         return res
 
     # --- Onay ---
