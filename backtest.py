@@ -510,7 +510,7 @@ def cfg_name(cfg):
 
 # Kullanıcının grafikten gösterdiği örnek işlemler (TR saati): hangi ayarda ne olduğu raporda gösterilir
 CHECK_TRADES = [
-    ("NILUSDT", "31.07.2026 23:30", "girmezdim (yapı)"),
+    ("NILUSDT", "31.07.2026 23:30", "kural 8 örneği değil: alçalan tepe korunmuş"),
     ("AXSUSDT", "01.08.2026 02:00", "girmezdim (yapı)"),
     ("ADAUSDT", "01.08.2026 13:30", "iyi işlem"),
 ]
