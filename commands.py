@@ -18,7 +18,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 dip -> canlı ayar + önceki tepe/dibe mesafe (0.5/1/1.5/2.2R), ay ay
   /backtest 90 yapı -> kural 7 (önünde yer) ve kural 8 (yapı bozulmamış), ay ay + grafik PDF
   /backtest 90 destek -> kural 9 (dip/tepeden sonra iğneli mumlar = destek/direnç), ay ay + grafik PDF
-  (varsayılan: hacmi en yüksek 200 coin; 'tüm' yazılırsa hepsi)
+  (varsayılan: hacmi en yüksek 500 coin, canlı bildirimlerle aynı; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi + canlı tarama durumu
   /incele AXSUSDT 01.08.2026 02:00 -> bir işlemin tüm kurallardaki değerlendirmesi + grafik (TR saati)
   /iptal          -> çalışan backtest'i durdurur

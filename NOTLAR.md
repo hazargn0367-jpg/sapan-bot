@@ -43,7 +43,7 @@ Son güncelleme: 13.10.2026 (ilk çalışma gecesi)
   6 kuralla birlikte iki ayda test edilecek: `/backtest 30 saat` ve `/backtest 30 saat önceki`
 
 ## Test sonuçları (1R = 25$, komisyon dahil: taker %0.05, maker %0.02)
-Hacmi en yüksek 200 coin, 15dk, 1:2:
+Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 
 | Ayar | 14.08–13.09 | 13.09–13.10 | Toplam |
 |---|---|---|---|
