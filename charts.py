@@ -106,7 +106,7 @@ def draw(trade, path=None, pdf=None):
 
     res = "TP ✓" if trade["durum"] == "win" else "STOP ✗"
     title = (f"{trade['coin']}  {trade['zaman_dilimi']}  {trade['yon']}   {res}   "
-             f"{trade['R_net']:+.2f}R ({trade['dolar']:+.0f}$)   temas: {trade['temas']}")
+             f"{trade['R_net']:+.2f}R ({trade['dolar']:+.0f}$)   temas: {trade['temas']} TR / {trade['temas_utc']} UTC")
     ax.set_title(title, color=TXT, fontsize=10.5, loc="left")
     ax.legend(loc="upper left", fontsize=7, facecolor=BG, edgecolor=GRID, labelcolor=TXT)
     fig.tight_layout()

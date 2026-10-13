@@ -45,6 +45,7 @@ STATUS_TR = {
     "cancel_touch": "Onaydan önce temas mumunun ucu kırıldı",
     "no_confirm": "3 mumda onay gelmedi",
     "atr": "Stop mesafesi 1.5 ATR'den büyük",
+    "min_risk": "Stop mesafesi %0.3'ten küçük",
     "cancel_confirm": "Girişten önce onay mumunun ucu kırıldı",
     "no_entry": "2 mumda girişe gelmedi",
     "win": "TP",
@@ -102,6 +103,10 @@ def fmt_time(ts_ms):
     return pd.Timestamp(ts_ms, unit="ms", tz="UTC").tz_convert(TZ).strftime("%d.%m.%Y %H:%M")
 
 
+def fmt_utc(ts_ms):
+    return pd.Timestamp(ts_ms, unit="ms", tz="UTC").strftime("%H:%M")
+
+
 # ---------------------------------------------------------------- test
 def candidate_bars(df):
     """Hızlı ön eleme: sadece trend + temas + stoch tutan mumlar incelenir
@@ -128,7 +133,7 @@ def run_df(df, symbol, tf, tick):
         r = tr.simulate(df, i, sig["side"], tick)
         row = {
             "coin": symbol, "zaman_dilimi": tf, "yon": sig["side"],
-            "temas": fmt_time(ts[i]), "durum": r["status"],
+            "temas": fmt_time(ts[i]), "temas_utc": fmt_utc(ts[i]), "durum": r["status"],
             "sonuc": STATUS_TR[r["status"]],
         }
         if "confirm" in r:
@@ -150,24 +155,30 @@ def run_df(df, symbol, tf, tick):
 
 
 def explain_example(df, symbol, tf, tick, when):
-    t = pd.Timestamp(when, tz=TZ).tz_convert("UTC")
-    ms = int(t.value // 10**6)
-    hits = np.flatnonzero(df["timestamp"].values == ms)
-    if len(hits) == 0:
-        return f"• {symbol} {tf} {when}: bu tarih veride yok"
-    i = int(hits[0])
-    d = st.diagnose(df, i)
-    lines = [f"• <b>{symbol} {tf} {when}</b>"]
-    for key, label in COND_TR:
-        if key in d:
-            lines.append(f"   {'✅' if d[key] else '❌'} {label}")
-    if all(d.get(k, False) for k, _ in COND_TR):
-        r = tr.simulate(df, i, d["side"], tick)
-        lines.append(f"   → {d['side']}: {STATUS_TR[r['status']]}")
-        if "confirm" in r:
-            lines.append(f"   Onay {fmt_time(df['timestamp'].iloc[r['confirm']])}, "
-                         f"giriş {r['entry']:g}, stop {r['stop']:g}, TP {r['tp']:g}")
-    return "\n".join(lines)
+    """Örnek saati hem Türkiye saati hem UTC olarak dener
+    (TradingView kriptoda varsayılan olarak UTC gösterir)."""
+    out = []
+    for tz_name, tz in (("UTC", "UTC"), ("TR saati", TZ)):
+        ms = int(pd.Timestamp(when, tz=tz).tz_convert("UTC").value // 10**6)
+        hits = np.flatnonzero(df["timestamp"].values == ms)
+        if len(hits) == 0:
+            out.append(f"• {symbol} {tf} {when} ({tz_name}): bu tarih veride yok")
+            continue
+        i = int(hits[0])
+        d = st.diagnose(df, i)
+        ok = [k for k, _ in COND_TR if d.get(k, False)]
+        lines = [f"• <b>{symbol} {tf} {when} ({tz_name})</b>"]
+        if len(ok) == len(COND_TR):
+            r = tr.simulate(df, i, d["side"], tick)
+            lines.append(f"   ✅ Tüm temas şartları tuttu → {d['side']}: {STATUS_TR[r['status']]}")
+            if "confirm" in r:
+                lines.append(f"   Onay {fmt_time(df['timestamp'].iloc[r['confirm']])}, "
+                             f"giriş {r['entry']:g}, stop {r['stop']:g}, TP {r['tp']:g}")
+        else:
+            failed = [label for k, label in COND_TR if k in d and not d[k]]
+            lines.append("   ❌ " + ", ".join(failed))
+        out.append("\n".join(lines))
+    return "\n".join(out)
 
 
 # ---------------------------------------------------------------- rapor
@@ -217,6 +228,7 @@ def build_report(df_all, days, n_coins, minutes, examples_txt):
     msg.append(f"  ↳ Onaydan önce iptal: {c('cancel_touch')}")
     msg.append(f"  ↳ 3 mumda onay yok: {c('no_confirm')}")
     msg.append(f"  ↳ ATR filtresine takıldı: {c('atr')}")
+    msg.append(f"  ↳ Stop %{tr.MIN_RISK_PCT:g}'ten dar: {c('min_risk')}")
     msg.append(f"  ↳ Girişten önce iptal: {c('cancel_confirm')}")
     msg.append(f"  ↳ 2 mumda girişe gelmedi: {c('no_entry')}")
     msg.append(f"İşleme girildi: {c('win', 'loss', 'open')} (açık: {c('open')})")

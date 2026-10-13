@@ -7,6 +7,7 @@ LONG (SHORT tam tersi):
     O ana kadar (onay mumu dahil) hiçbir mum temas mumunun dibinin altına inmez.
  3. Giriş: onay mumunun tepesi + 1 tık   |   Stop: onay mumunun dibi - 1 tık
  4. ATR(14, RMA) filtresi: giriş-stop mesafesi <= 1.5 x ATR (onay mumundaki ATR)
+    Ayrıca giriş-stop mesafesi en az fiyatın %0.3'ü olmalı
  5. Giriş emri onay mumundan sonraki 2 mum geçerli. Girişten önce fiyat onay
     mumunun dibinin altına inerse iptal.
  6. TP: riskin 2 katı (1:2)
@@ -23,6 +24,7 @@ CONFIRM_WINDOW = 3     # temastan sonra onay için beklenecek mum
 ENTRY_WINDOW = 2       # onaydan sonra girişin gerçekleşmesi için beklenecek mum
 ATR_PERIOD = 14
 ATR_MAX_MULT = 1.5     # giriş-stop mesafesi en fazla bu kadar ATR
+MIN_RISK_PCT = 0.3     # giriş-stop mesafesi en az fiyatın %0.3'ü (dar stopta komisyon kârı yer)
 RR = 2.0               # hedef: riskin kaç katı
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
 FEE_TAKER = 0.0005     # Binance vadeli piyasa emri komisyonu (%0.05)
@@ -47,7 +49,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
-    status: no_close | cancel_touch | no_confirm | atr | cancel_confirm |
+    status: no_close | cancel_touch | no_confirm | atr | min_risk | cancel_confirm |
             no_entry | win | loss | open | pending"""
     O = df["Open"].values
     H = df["High"].values
@@ -88,6 +90,9 @@ def simulate(df, i, side, tick):
 
     if risk > ATR_MAX_MULT * A[conf]:
         res["status"] = "atr"
+        return res
+    if 100 * risk / entry < MIN_RISK_PCT:
+        res["status"] = "min_risk"
         return res
 
     # --- Giriş ---
