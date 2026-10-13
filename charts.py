@@ -272,13 +272,24 @@ def make_pdf(trades, path):
             draw(t, pdf=pdf)
 
 
-def make_samples(trades, folder, n_each=5):
-    """Fotoğraf olarak gönderilecek örnekler: en son 5 TP ve 5 stop."""
-    wins = [t for t in trades if t["durum"] == "win"][-n_each:]
-    losses = [t for t in trades if t["durum"] != "win"][-n_each:]
-    paths = []
-    for k, t in enumerate(wins + losses):
-        p = f"{folder}/islem_{k + 1}.png"
-        draw(t, path=p)
-        paths.append(p)
-    return paths
+def make_samples(trades, folder, n_each=15):
+    """Fotoğraf olarak gönderilecek örnekler: dönem boyunca eşit aralıklı n_each TP ve n_each stop/başabaş.
+    (TP grafikleri, stop grafikleri) yol listeleri döner."""
+    import numpy as np
+
+    def spread(items):
+        if len(items) <= n_each:
+            return items
+        idx = np.linspace(0, len(items) - 1, n_each).round().astype(int)
+        return [items[k] for k in idx]
+
+    out = []
+    for kind, group in (("tp", [t for t in trades if t["durum"] == "win"]),
+                        ("stop", [t for t in trades if t["durum"] != "win"])):
+        paths = []
+        for k, t in enumerate(spread(group)):
+            p = f"{folder}/{kind}_{k + 1}.png"
+            draw(dict(t, _no=k + 1), path=p)  # başlıkta numara ve ay: "#3 [2. ay]"
+            paths.append(p)
+        out.append(paths)
+    return out[0], out[1]

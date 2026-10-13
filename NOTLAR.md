@@ -120,7 +120,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - `/sinyal aç|kapat` – EMİR HAZIR bildirimleri
 - `/bildirim aç|kapat` – EMA20 temas bildirimleri
 - `/backtest [gün] [TP] [başabaş] [önceki] [hepsi|yeni|koruma|son|son2|saat|tp] [filtresiz] [tüm]`
-- `/backtest 90 canlı` – canlı ayarın aynısı, ay ay sonuç, tüm işlemlerin numaralı listesi + grafikleri (PDF)
+- `/backtest 90 canlı` – canlı ayarın aynısı, ay ay sonuç; grafik: dönem boyunca eşit aralıklı 15 TP + 15 stop (PDF kaldırıldı, bellek)
 - `/durum`, `/iptal`
 - `/incele COIN gg.aa.yyyy SS:DD` – bir işlemin tüm kurallardaki değerlendirmesi + grafik (p, q, önceki düzeltme çizgisi,
   kural 9 iğneli mumlar mavi üçgen)

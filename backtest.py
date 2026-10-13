@@ -594,6 +594,21 @@ def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
     return "\n".join(msg)
 
 
+def send_samples(recs, name, n_each=15):
+    """3 aya yayılmış 15 TP ve 15 stop grafiği, 10'arlı albümler halinde (PDF yok: bellek)."""
+    folder = "/tmp/bt_charts"
+    shutil.rmtree(folder, ignore_errors=True)
+    os.makedirs(folder, exist_ok=True)
+    wins, losses = charts.make_samples(recs, folder, n_each)
+    label = f" ({name})" if name else ""
+    for kind, paths in (("TP", wins), ("STOP", losses)):
+        for k in range(0, len(paths), 10):
+            part = paths[k:k + 10]
+            send_photos(part, f"{kind} örnekleri{label}: {k + 1}-{k + len(part)} / {len(paths)} "
+                              f"(dönem boyunca eşit aralıklı)")
+    shutil.rmtree(folder, ignore_errors=True)
+
+
 # ---------------------------------------------------------------- ana
 def main():
     ap = argparse.ArgumentParser()
@@ -763,20 +778,13 @@ def main():
         chart_name = configs[chart_idx]["ad"]
         d = frames_all[chart_name]
         if not d.empty:
-            recs = d[d["durum"].isin(["win", "loss", "be"])].sort_values("_exit_ts").to_dict("records")
+            recs = d[d["durum"].isin(["win", "loss", "be"])].sort_values("_touch_ts").to_dict("records")
             if recs:
+                for rec in recs:
+                    rec["_ay"] = month_label(rec["_touch_ts"], p0)
                 try:
                     apply_cfg(configs[chart_idx])
-                    folder = "/tmp/bt_charts"
-                    os.makedirs(folder, exist_ok=True)
-                    send_photos(charts.make_samples(recs, folder),
-                                f"Örnek işlemler ({chart_name}): son 5 TP ve son 5 stop/başabaş")
-                    recs.sort(key=lambda r: r["_touch_ts"])
-                    for rec in recs:
-                        rec["_ay"] = month_label(rec["_touch_ts"], p0)
-                    pdf_path = f"grafikler_{time.strftime('%Y%m%d_%H%M')}.pdf"
-                    charts.make_pdf(recs[-400:], pdf_path)
-                    send_document(pdf_path, f"'{chart_name}' ayarının tüm işlemleri: numaralı liste + grafikler")
+                    send_samples(recs, chart_name)
                 except Exception as e:
                     log.exception("Grafikler oluşturulamadı: %s", e)
         return
@@ -802,16 +810,7 @@ def main():
             rec["_ay"] = month_label(rec["_touch_ts"], p0)
         if recs:
             try:
-                folder = "/tmp/bt_charts"
-                os.makedirs(folder, exist_ok=True)
-                send_photos(charts.make_samples(recs, folder),
-                            "Örnek işlemler: son 5 TP ve son 5 stop")
-                pdf_recs = recs[-400:]
-                pdf_path = f"backtest_grafikler_{time.strftime('%Y%m%d_%H%M')}.pdf"
-                charts.make_pdf(pdf_recs, pdf_path)
-                note = "" if len(recs) <= 400 else f" (son 400 / toplam {len(recs)})"
-                send_document(pdf_path, f"Tüm işlemlerin grafikleri{note}: ilk sayfalarda numaralı liste, "
-                                        f"sonra her sayfada bir işlem")
+                send_samples(recs, "")
             except Exception as e:
                 log.exception("Grafikler oluşturulamadı: %s", e)
                 send_message(f"⚠️ Grafikler oluşturulamadı: {e}")
