@@ -9,6 +9,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 30 filtresiz -> ek filtreler kapalı
   /backtest 30 atr -> stop en az 0.875 ATR
   /backtest 30 yeni önceki -> grafik incelemesinden gelen kuralları karşılaştır
+  /backtest 30 koruma önceki -> açık işlem sınırı, toplu sinyal ve BTC filtresi karşılaştırması
   (varsayılan: hacmi en yüksek 200 coin; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi
   /iptal          -> çalışan backtest'i durdurur
@@ -52,7 +53,9 @@ def start_backtest(text):
     low = text.lower()
     if "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
-    if "yeni" in low:
+    if "koruma" in low:
+        args += ["--compare", "koruma"]
+    elif "yeni" in low:
         args += ["--compare", "yeni"]
     elif any(w in low for w in ("hepsi", "karşılaştır", "karsilastir")):
         args += ["--compare", "hepsi"]

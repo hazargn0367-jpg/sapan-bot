@@ -12,7 +12,8 @@ Seçenekler:
     --rr 2.5                       TP = riskin kaç katı (varsayılan 2)
     --be 1                         1R kârda stop girişe (varsayılan kapalı)
     --ago 30                       dönemi 30 gün geriye kaydır (önceki ay)
-    --compare [hepsi|yeni]         ayar setini tek seferde karşılaştır
+    --compare [hepsi|yeni|koruma]  ayar setini tek seferde karşılaştır
+    --max-open 3 --cluster 5 --btc portföy korumaları
     --no-filters                   ek filtreleri kapat (seans, stop %0.5-3)
     --atr-min 0.875                stop en az 0.875 ATR olsun
 
@@ -57,6 +58,9 @@ STATUS_TR = {
     "atr_min": "Stop mesafesi ATR alt sınırının altında",
     "wick": "Onay mumunun ters iğnesi uzun",
     "no_prior_touch": "Trend teyidi yok (önceden EMA20 teması yok)",
+    "skip_btc": "BTC ters yönde (portföy koruması)",
+    "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
+    "skip_open": "Açık işlem sınırı dolu (portföy koruması)",
     "min_risk": "Stop mesafesi çok dar",
     "max_risk": "Stop mesafesi %3'ten geniş",
     "session": "Temas 00-08 UTC (Asya seansı)",
@@ -164,13 +168,15 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True):
         row = {
             "coin": symbol, "zaman_dilimi": tf, "yon": side,
             "temas": fmt_time(ts[i]), "temas_utc": fmt_utc(ts[i]), "durum": r["status"],
+            "_touch_ts": int(ts[i]),
             "sonuc": STATUS_TR[r["status"]],
         }
         if "entry" in r:
             row.update(onay=fmt_time(ts[r["confirm"]]), giris=r["entry"], stop=r["stop"],
                        tp=r["tp"], atr=r["atr"], risk_atr=r["risk"] / r["atr"])
         if "entry_bar" in r:
-            row.update(giris_zamani=fmt_time(ts[r["entry_bar"]]), dolum=r["fill"],
+            row.update(giris_zamani=fmt_time(ts[r["entry_bar"]]), _entry_ts=int(ts[r["entry_bar"]]),
+                       dolum=r["fill"],
                        risk_yuzde=100 * r["risk"] / r["fill"])
             if r["status"] in ("win", "loss", "be"):
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
@@ -211,6 +217,55 @@ def explain_example(df, symbol, tf, tick, when):
             lines.append("   ❌ " + ", ".join(failed))
         out.append("\n".join(lines))
     return "\n".join(out)
+
+
+# ---------------------------------------------------------------- portföy korumaları
+def btc_trend_map(df):
+    """BTC'nin her 15dk mumu için yönü: +1 (EMA20 > EMA50), -1 (altında)."""
+    return dict(zip(df["timestamp"].astype("int64"), np.where(df["EMA20"] > df["EMA50"], 1, -1)))
+
+
+def apply_portfolio(rows, max_open=0, cluster_max=0, btc=False, btc_map=None):
+    """Coinler arası kurallar. Elenen işlemlerin durumu skip_* olur.
+    Sıra: BTC yönü -> toplu sinyal -> aynı anda açık işlem sınırı."""
+    if not (max_open or cluster_max or btc):
+        return rows
+    from collections import Counter
+    import heapq
+    counts = Counter((r["_touch_ts"], r["yon"]) for r in rows)
+    traded = ("win", "loss", "be", "open")
+
+    def skip(r, status):
+        r = dict(r)
+        r["durum"], r["sonuc"] = status, STATUS_TR[status]
+        for k in ("R_brut", "R_net", "dolar"):
+            r.pop(k, None)
+        return r
+
+    out = []
+    for r in rows:
+        if r["durum"] in traded:
+            if btc and btc_map:
+                d = btc_map.get(r["_touch_ts"])
+                if d is not None and d != (1 if r["yon"] == "LONG" else -1):
+                    r = skip(r, "skip_btc")
+            if r["durum"] in traded and cluster_max and counts[(r["_touch_ts"], r["yon"])] >= cluster_max:
+                r = skip(r, "skip_cluster")
+        out.append(r)
+
+    if max_open:
+        order = sorted((i for i, r in enumerate(out) if r["durum"] in traded),
+                       key=lambda i: out[i]["_entry_ts"])
+        open_exits = []
+        for i in order:
+            r = out[i]
+            while open_exits and open_exits[0] <= r["_entry_ts"]:
+                heapq.heappop(open_exits)
+            if len(open_exits) >= max_open:
+                out[i] = skip(r, "skip_open")
+                continue
+            heapq.heappush(open_exits, r.get("_exit_ts", 2**62))
+    return out
 
 
 # ---------------------------------------------------------------- rapor
@@ -277,6 +332,9 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
         msg.append(f"  ↳ Stop %{tr.MAX_RISK_PCT:g}'ten geniş: {c('max_risk')}")
     msg.append(f"  ↳ Girişten önce iptal: {c('cancel_confirm')}")
     msg.append(f"  ↳ 2 mumda girişe gelmedi: {c('no_entry')}")
+    if c("skip_btc", "skip_cluster", "skip_open"):
+        msg.append(f"  ↳ Portföy koruması: BTC {c('skip_btc')}, toplu sinyal {c('skip_cluster')}, "
+                   f"açık işlem sınırı {c('skip_open')}")
     msg.append(f"İşleme girildi: {c('win', 'loss', 'be', 'open')} (açık: {c('open')})")
     msg.append("")
     if s:
@@ -335,7 +393,19 @@ COMPARE_SETS = {
         C("Hepsi: iğne≤0.5, trend, pay 0.2", FILTERS=False, WICK_MAX_BODY=0.5, REQUIRE_PRIOR_TOUCH=True, STOP_BUFFER_ATR=0.2),
     ],
 }
-CHART_CFG = {"hepsi": 0, "yeni": 6}  # grafikleri çizilecek ayar (listedeki sırası)
+_NEW = dict(FILTERS=False, WICK_MAX_BODY=1.0, REQUIRE_PRIOR_TOUCH=True, STOP_BUFFER_ATR=0.2)
+COMPARE_SETS["koruma"] = [
+    C("Taban", FILTERS=False),
+    C("Taban + en fazla 3 açık", FILTERS=False, max_open=3),
+    C("Taban + en fazla 5 açık", FILTERS=False, max_open=5),
+    C("Taban + toplu sinyal (5+) yok", FILTERS=False, cluster_max=5),
+    C("Taban + BTC yönü", FILTERS=False, btc=True),
+    C("Taban + BTC + en fazla 3", FILTERS=False, btc=True, max_open=3),
+    C("Yeni kurallar", **_NEW),
+    C("Yeni kurallar + BTC + en fazla 3", **_NEW, btc=True, max_open=3),
+    C("Yeni + toplu + BTC + en fazla 3", **_NEW, cluster_max=5, btc=True, max_open=3),
+]
+CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -385,6 +455,9 @@ def main():
     ap.add_argument("--prior-touch", action="store_true", help="trend teyidi: önceden EMA20 teması")
     ap.add_argument("--stop-buf", type=float, default=0.0, help="stop payı (ATR)")
     ap.add_argument("--top", type=int, default=200, help="hacme göre ilk kaç coin (0 = hepsi)")
+    ap.add_argument("--max-open", type=int, default=0, help="aynı anda en fazla açık işlem (0 = sınırsız)")
+    ap.add_argument("--cluster", type=int, default=0, help="aynı mumda bu kadar sinyal varsa girme (0 = kapalı)")
+    ap.add_argument("--btc", action="store_true", help="BTC yön filtresi")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
     if args.compare:
@@ -393,7 +466,8 @@ def main():
     else:
         configs = [C("tekli", RR=args.rr, BE_TRIGGER=args.be, FILTERS=not args.no_filters,
                      MIN_ATR_MULT=args.atr_min, WICK_MAX_BODY=args.wick,
-                     REQUIRE_PRIOR_TOUCH=args.prior_touch, STOP_BUFFER_ATR=args.stop_buf)]
+                     REQUIRE_PRIOR_TOUCH=args.prior_touch, STOP_BUFFER_ATR=args.stop_buf,
+                     max_open=args.max_open, cluster_max=args.cluster, btc=args.btc)]
         chart_idx = 0
     apply_cfg(configs[0])
     p0, p1 = period(args.days, args.ago)
@@ -429,6 +503,7 @@ def main():
             return None
 
     results = {cfg["ad"]: [] for cfg in configs}
+    btc_map = None
     examples_txt = []
     with ThreadPoolExecutor(max_workers=FETCH_THREADS) as ex:
         futures = {ex.submit(fetch, sym): sym for sym in symbols}
@@ -443,6 +518,8 @@ def main():
                 tick = ticks.get(symbol, 0.0)
                 for tf in tfs:
                     df = prepare(frames[tf])
+                    if symbol == "BTCUSDT" and tf == "15m":
+                        btc_map = btc_trend_map(df)
                     signals = find_signals(df)
                     for ci, cfg in enumerate(configs):
                         apply_cfg(cfg)
@@ -459,6 +536,14 @@ def main():
                 log.info("%d/%d coin bitti (%.1f dk, kalan ~%.1f dk)", n, len(symbols),
                          el / 60, el / n * (len(symbols) - n) / 60)
 
+    if btc_map is None and any(cfg.get("btc") for cfg in configs):
+        try:
+            btc_map = btc_trend_map(prepare(load_15m("BTCUSDT", args.days, args.ago)))
+        except Exception as e:
+            log.error("BTC verisi alınamadı, BTC filtresi uygulanmayacak: %s", e)
+    for cfg in configs:
+        results[cfg["ad"]] = apply_portfolio(results[cfg["ad"]], cfg.get("max_open", 0),
+                                             cfg.get("cluster_max", 0), cfg.get("btc", False), btc_map)
     minutes = (time.time() - t0) / 60
     if args.compare:
         frames_all = {cfg: pd.DataFrame(rows) for cfg, rows in results.items()}
