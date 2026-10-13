@@ -47,6 +47,7 @@ CLEAN_PIVOT_ATR = 0.3        # "seviyeye dokundu" sayılma mesafesi (ATR)
 CLEAN_PIVOT_BEFORE = 5       # tepeden/dipten kaç mum öncesinden itibaren sayılsın
 TOUCH_WICK_MIN = 0.0         # >0: temas mumunun EMA20'ye doğru iğnesi en az gövdenin bu katı olmalı (fitil mum)
 PIVOT_WICK_MAX = 0.0         # >0: tepe (LONG) / dip (SHORT) mumunun o yöndeki iğnesi gövdenin bu katından uzunsa işlem yok
+QUIET_UTC = (0, 0)           # (başlangıç, bitiş) UTC saat: temas bu aralıktaysa işlem yok. (0, 4) = 03:00-07:00 TR
 RR = 2.0               # hedef: riskin kaç katı
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
@@ -136,7 +137,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
-    status: session | no_close | touch_body | no_prior_touch | dirty_pivot | pivot_wick | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | quiet | no_close | touch_body | no_prior_touch | dirty_pivot | pivot_wick | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -152,6 +153,12 @@ def simulate(df, i, side, tick):
         hour_utc = (int(df["timestamp"].values[i]) // 3_600_000) % 24
         if hour_utc < SESSION_START_UTC:
             res["status"] = "session"
+            return res
+
+    if QUIET_UTC[0] < QUIET_UTC[1] and "timestamp" in df.columns:
+        hour_utc = (int(df["timestamp"].values[i]) // 3_600_000) % 24
+        if QUIET_UTC[0] <= hour_utc < QUIET_UTC[1]:
+            res["status"] = "quiet"
             return res
 
     if not touch_closes_right_side(df, i, side):

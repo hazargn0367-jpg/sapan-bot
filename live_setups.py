@@ -7,7 +7,8 @@ geçen bir setup'ta onay mumu kapanır kapanmaz "EMİR HAZIR" bildirimi gönderi
 Sonra o setup'ı takip edip giriş / iptal / TP / stop olduğunda haber verir.
 İşlem açmaz; kararı kullanıcı verir.
 
-Kurallar backtest'teki "1-6 + toplu" ayarıyla aynıdır (trade_rules.py + strategy.py).
+Kurallar backtest'teki "1-6 + toplu" ayarıyla aynıdır (trade_rules.py + strategy.py);
+ek olarak 03:00-07:00 (TR) arası temaslar dikkate alınmaz.
 """
 
 import html
@@ -43,6 +44,7 @@ LIVE_RULES = dict(
     CLEAN_PIVOT_MAX=3, CLEAN_PIVOT_ATR=0.3,  # 4: temiz tepe/dip
     TOUCH_WICK_MIN=1.0,         # 5: fitil temas mumu
     PIVOT_WICK_MAX=2.0,         # 6: tepe/dip iğnesi uzun değil
+    QUIET_UTC=(0, 4),           # 03:00-07:00 TR arası temaslar dikkate alınmaz
 )
 
 FINAL = ("win", "loss", "be", "cancel_confirm", "no_entry")

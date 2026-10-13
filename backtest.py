@@ -60,6 +60,7 @@ STATUS_TR = {
     "no_prior_touch": "Trend teyidi yok (önceden EMA20 teması yok)",
     "dirty_pivot": "Son tepe/dip temiz değil (destek/direnç oluşmuş)",
     "touch_body": "Temas mumu fitil mumu değil (gövdeyle değmiş)",
+    "quiet": "Temas 03:00-07:00 TR arasında",
     "pivot_wick": "Tepe/dip mumunun iğnesi çok uzun",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
@@ -329,6 +330,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
         msg.append(f"  ↳ Onay mumunda uzun iğne: {c('wick')}")
     if tr.CLEAN_PIVOT_MAX > 0:
         msg.append(f"  ↳ Tepe/dip temiz değil: {c('dirty_pivot')}")
+    if tr.QUIET_UTC[0] < tr.QUIET_UTC[1]:
+        msg.append(f"  ↳ Sessiz saatler (TR {tr.QUIET_UTC[0] + 3:02d}:00-{tr.QUIET_UTC[1] + 3:02d}:00): {c('quiet')}")
     if tr.TOUCH_WICK_MIN > 0:
         msg.append(f"  ↳ Temas mumu fitil değil: {c('touch_body')}")
     if tr.PIVOT_WICK_MAX > 0:
@@ -374,7 +377,7 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
 # Her ayar: varsayılanların üzerine yazılan değerler. "ad" raporda görünür.
 PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR",
-              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX"]
+              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -442,7 +445,14 @@ COMPARE_SETS["son2"] = [
     C("1-6 + toplu + en fazla 3", **_R14, cluster_max=5, TOUCH_WICK_MIN=1.0, PIVOT_WICK_MAX=2.0, max_open=3),
     C("1-6 + toplu + en fazla 3 (1:2.5)", **_R14, cluster_max=5, TOUCH_WICK_MIN=1.0, PIVOT_WICK_MAX=2.0, max_open=3, RR=2.5),
 ]
-CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6}  # grafikleri çizilecek ayar (listedeki sırası)
+_R16 = dict(**_R14, TOUCH_WICK_MIN=1.0, PIVOT_WICK_MAX=2.0)
+COMPARE_SETS["saat"] = [
+    C("Taban", FILTERS=False),
+    C("Taban + 03-07 TR yok", FILTERS=False, QUIET_UTC=(0, 4)),
+    C("1-6 + toplu", **_R16, cluster_max=5),
+    C("1-6 + toplu + 03-07 TR yok (canlıdaki)", **_R16, cluster_max=5, QUIET_UTC=(0, 4)),
+]
+CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
