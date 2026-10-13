@@ -96,7 +96,7 @@ def main():
                  f"📋 Emir bildirimleri: {setup} (hacmi en yüksek {live_setups.UNIVERSE} coin, 15dk)\n"
                  f"Kurallar: {live_setups.rules_summary()}\n"
                  f"🔔 Temas bildirimleri: {durum}\n"
-                 "Komutlar: /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal")
+                 "Komutlar: /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal  /incele")
     start_listener()
     threading.Thread(target=setup_loop, daemon=True).start()
     while True:

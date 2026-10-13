@@ -1,0 +1,104 @@
+"""
+/incele komutu: bir işlemin (coin + temas saati) bütün kurallarda nasıl değerlendirildiğini
+rakamlarla açıklar. Kural tanımlarını kullanıcının grafikte gördüğüyle eşleştirmek için.
+
+Örnek: /incele AXSUSDT 01.08.2026 02:00   (Türkiye saati)
+"""
+
+import html
+import re
+import time
+
+import numpy as np
+import pandas as pd
+
+import live_setups
+import strategy as st
+import trade_rules as tr
+from exchanges import get_klines_range, get_tick_sizes
+
+TZ = "Europe/Istanbul"
+
+
+def parse(text):
+    m = re.search(r"([A-Za-z0-9]+)\s+(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s+(\d{1,2}):(\d{2})", text)
+    if not m:
+        return None
+    sym, d, mo, y, h, mi = m.groups()
+    sym = sym.upper()
+    if not sym.endswith("USDT"):
+        sym += "USDT"
+    year = int(y) if y else pd.Timestamp.now(tz=TZ).year
+    ts = pd.Timestamp(year=year, month=int(mo), day=int(d), hour=int(h), minute=int(mi), tz=TZ)
+    return sym, ts
+
+
+def explain(text):
+    parsed = parse(text)
+    if not parsed:
+        return "Kullanım: /incele AXSUSDT 01.08.2026 02:00 (temas mumunun Türkiye saati)"
+    sym, ts_tr = parsed
+    t_ms = int(ts_tr.tz_convert("UTC").value // 10**6)
+    df = get_klines_range(sym, "15m", t_ms - 600 * 900_000, t_ms + 40 * 900_000, yield_live=False)
+    if df is None or df.empty:
+        return f"{sym} için veri alınamadı."
+    df = tr.add_atr(st.add_indicators(df.reset_index(drop=True)))
+    hits = np.flatnonzero(df["timestamp"].values == t_ms)
+    if len(hits) == 0:
+        return f"{sym} {ts_tr:%d.%m.%Y %H:%M} mumu veride yok (15dk'lık mum başlangıç saati olmalı)."
+    i = int(hits[0])
+    live_setups.apply_rules()
+    tick = get_tick_sizes().get(sym, 0.0)
+    H, L, C, O = (df[c].values for c in ("High", "Low", "Close", "Open"))
+    fmt = lambda k: pd.Timestamp(int(df["timestamp"].values[k]), unit="ms", tz="UTC").tz_convert(TZ).strftime("%d.%m %H:%M")
+    p8 = lambda x: f"{x:.8g}"
+    ok = lambda b: "✅" if b else "❌"
+
+    d = st.diagnose(df, i)
+    side = d.get("side")
+    lines = [f"🔍 <b>{html.escape(sym)} {ts_tr:%d.%m.%Y %H:%M} TR</b>",
+             f"Temas mumu: A {p8(O[i])} Y {p8(H[i])} D {p8(L[i])} K {p8(C[i])} | EMA20 {p8(df['EMA20'].values[i])} | Stoch {df['Stoch_K'].values[i]:.1f}",
+             "", "<b>Temel şartlar</b>"]
+    for key, label in [("trend", "Net trend"), ("pivot_recent", "Tepe/dip son 30 mumda"),
+                       ("body_break", "Gövde kapanışlı kırılım"), ("first_touch", "EMA20'ye ilk temas"),
+                       ("clean_pullback", "En fazla 2 ters mum"), ("touch", "İğne EMA20'ye değdi"),
+                       ("stoch", "Stoch şartı")]:
+        if key in d:
+            lines.append(f"{ok(d[key])} {label}")
+    if not side:
+        return "\n".join(lines + ["", "Trend yok, diğer kurallar kontrol edilmedi."])
+
+    long = side == "LONG"
+    lines += ["", f"<b>Kurallar ({side})</b>"]
+    lines.append(f"{ok(tr.touch_closes_right_side(df, i, side))} Temas mumu EMA20'nin doğru tarafında kapattı")
+    body = abs(C[i] - O[i]); wick = (min(O[i], C[i]) - L[i]) if long else (H[i] - max(O[i], C[i]))
+    lines.append(f"{ok(wick >= body and wick > 0)} 5) Fitil temas: iğne {p8(wick)} / gövde {p8(body)}")
+    lines.append(f"{ok(tr.prior_touch_ok(df, i, side))} 2) Trend teyidi (önceden EMA20 teması)")
+    n_touch = tr.pivot_touches(df, i, side)
+    lines.append(f"{ok(n_touch < 3)} 4) Temiz tepe/dip: seviyeye {n_touch} mum dokunmuş (3+ ise kötü)")
+    lines.append(f"{ok(tr.pivot_wick_ok(df, i, side) if tr.PIVOT_WICK_MAX else True)} 6) Tepe/dip mumunun iğnesi ≤ 2 gövde")
+    hour_utc = (int(df["timestamp"].values[i]) // 3_600_000) % 24
+    lines.append(f"{ok(not (0 <= hour_utc < 4))} 03:00-07:00 TR dışında")
+
+    sd = tr.structure_details(df, i, side, "wick")
+    # (yalın, -si hali, düzeltme ucunun -i hali)
+    peak = ("tepe", "tepesi") if long else ("dip", "dibi")
+    pull = "dibi" if long else "tepesi"
+    lines += ["", "<b>8) Yapı (önceki düzeltme)</b>",
+              f"Son {peak[0]} (p): {fmt(sd['p'])} → {p8(H[sd['p']] if long else L[sd['p']])}"]
+    if sd["q"] is None:
+        lines.append(f"Önceki salınım {peak[1]} bulunamadı → kural uygulanmadı")
+    else:
+        lines.append(f"Önceki salınım {peak[1]} (q): {fmt(sd['q'])} → {p8(H[sd['q']] if long else L[sd['q']])}")
+        lines.append(f"Önceki düzeltmenin {pull}: {fmt(sd['prior_idx'])} → {p8(sd['prior'])}")
+        lines.append(f"Şimdiki düzeltmenin {pull}: {fmt(sd['cur_idx'])} → {p8(sd['cur'])}")
+        lines.append(f"{ok(sd['ok'])} Yapı {'sağlam' if sd['ok'] else 'BOZUK (önceki düzeltme kırılmış)'}")
+
+    r = tr.simulate(df, i, side, tick)
+    lines += ["", f"<b>Canlı ayarla sonuç:</b> {r['status']}"]
+    if "entry" in r:
+        lines.append(f"Onay {fmt(r['confirm'])}, giriş {p8(r['entry'])}, stop {p8(r['stop'])}, TP {p8(r['tp'])}")
+    if "room_r" in r:
+        lines.append(f"7) Önceki {peak[0]}ye mesafe: {r['room_r']:.2f}R")
+    lines += ["", f"Grafikte farklı görüyorsan (ör. önceki düzeltmenin {pull} hangi mum olmalı) saatini yaz, tanımı ona göre düzeltelim."]
+    return "\n".join(lines)

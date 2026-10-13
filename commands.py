@@ -19,6 +19,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 yapı -> kural 7 (önünde yer) ve kural 8 (yapı bozulmamış), ay ay + grafik PDF
   (varsayılan: hacmi en yüksek 200 coin; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi + canlı tarama durumu
+  /incele AXSUSDT 01.08.2026 02:00 -> bir işlemin tüm kurallardaki değerlendirmesi (TR saati)
   /iptal          -> çalışan backtest'i durdurur
   /bildirim aç | kapat -> EMA20 temas bildirimleri
   /sinyal aç | kapat -> kurallara uyan setup'larda EMİR HAZIR bildirimleri
@@ -145,6 +146,14 @@ def _listen():
                 text = (msg.get("text") or "").strip()
                 if text.lower().startswith("/backtest"):
                     start_backtest(text)
+                elif text.lower().startswith("/incele"):
+                    def _run(t=text):
+                        import inspect_trade
+                        try:
+                            send_message(inspect_trade.explain(t))
+                        except Exception as e:
+                            send_message(f"⚠️ İnceleme hatası: {type(e).__name__}: {e}")
+                    threading.Thread(target=_run, daemon=True).start()
                 elif text.lower().startswith("/durum"):
                     import live_setups
                     sig = "açık" if config.SETUP_ALERTS else "KAPALI"

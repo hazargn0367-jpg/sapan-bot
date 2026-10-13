@@ -146,26 +146,38 @@ def last_swing_before(H, L, p, lo, long, k=SWING_K):
     return None
 
 
-def structure_ok(df, i, side, mode="wick"):
-    """Kural 8: yükselen dip (LONG) / alçalan tepe (SHORT) yapısı bozulmamış olmalı.
-    LONG: son tepeden (p) hemen önceki salınım tepesi (q) ile p arasındaki düzeltmenin dibi = önceki dip.
-    Son tepeden sonraki düzeltme (temasa kadar) bu dibin altına inmişse yapı bozulmuştur. SHORT tersi."""
+def structure_details(df, i, side, mode="wick"):
+    """Kural 8'in kullandığı noktalar (inceleme için de kullanılır).
+    p: son tepe (LONG) / dip (SHORT), q: ondan hemen önceki salınım tepesi/dibi,
+    prior: q ile p arasındaki düzeltmenin ucu, cur: p'den sonraki düzeltmenin ucu (temasa kadar)."""
     long = side == "LONG"
     H, L, C = df["High"].values, df["Low"].values, df["Close"].values
     start = max(0, i - st.LOOKBACK)
     p = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    out = {"p": p, "q": None, "ok": True}
     if p + 1 > i:
-        return True
+        return out
     q = last_swing_before(H, L, p, start, long)
+    out["q"] = q
     if q is None:
-        return True
+        return out
+    src = (L if mode == "wick" else C) if long else (H if mode == "wick" else C)
     if long:
-        prior = L[q:p].min()
-        cur = (L if mode == "wick" else C)[p + 1:i + 1].min()
-        return cur >= prior
-    prior = H[q:p].max()
-    cur = (H if mode == "wick" else C)[p + 1:i + 1].max()
-    return cur <= prior
+        prior_idx = q + int(np.argmin(L[q:p]))
+        cur_idx = p + 1 + int(np.argmin(src[p + 1:i + 1]))
+        out.update(prior_idx=prior_idx, prior=L[prior_idx], cur_idx=cur_idx, cur=src[cur_idx])
+        out["ok"] = out["cur"] >= out["prior"]
+    else:
+        prior_idx = q + int(np.argmax(H[q:p]))
+        cur_idx = p + 1 + int(np.argmax(src[p + 1:i + 1]))
+        out.update(prior_idx=prior_idx, prior=H[prior_idx], cur_idx=cur_idx, cur=src[cur_idx])
+        out["ok"] = out["cur"] <= out["prior"]
+    return out
+
+
+def structure_ok(df, i, side, mode="wick"):
+    """Kural 8: yükselen dip (LONG) / alçalan tepe (SHORT) yapısı bozulmamış olmalı."""
+    return structure_details(df, i, side, mode)["ok"]
 
 
 def touch_closes_right_side(df, i, side):

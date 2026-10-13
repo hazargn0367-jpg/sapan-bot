@@ -69,6 +69,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2:
   15dk kapanışından sonraki ilk 60 sn'de başlar ve kendi iş parçacığında çalışır; backtest bu 120 sn'de bekler;
   429/418'de tüm istekler birlikte bekler.
 
+- Kural 8 (salınım tabanlı) ikinci sürümde de NIL/AXS örneklerini yakalamadı → /incele ile kullanıcıyla nokta nokta eşleştirilecek.
+- %40'ın sebebi: ilk 7 günlük test iyi haftalara denk geldi (taban haftalık kazanma %30-58 arası değişiyor).
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.
@@ -83,6 +86,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2:
 - `/backtest [gün] [TP] [başabaş] [önceki] [hepsi|yeni|koruma|son|son2|saat|tp] [filtresiz] [tüm]`
 - `/backtest 90 canlı` – canlı ayarın aynısı, ay ay sonuç, tüm işlemlerin numaralı listesi + grafikleri (PDF)
 - `/durum`, `/iptal`
+- `/incele COIN gg.aa.yyyy SS:DD` – bir işlemin tüm kurallardaki değerlendirmesi, kural 8'in kullandığı tepe/dip noktaları
 
 ## Dosyalar
 - `strategy.py` temas kuralları · `trade_rules.py` onay/giriş/çıkış + 1-6 kurallar

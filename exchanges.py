@@ -111,13 +111,13 @@ def _throttle(res):
                 log.info("İstek sınırına yaklaşıldı (%d), %d sn bekleniyor", used, int(until - time.time()))
 
 
-def get_klines_range(symbol, interval, start_ms, end_ms):
+def get_klines_range(symbol, interval, start_ms, end_ms, yield_live=True):
     """Geçmiş mum verisi (sadece kapanmış mumlar), sayfa sayfa çeker."""
     rows = []
     cursor = start_ms
     while cursor < end_ms:
         for attempt in range(3):
-            _wait_if_paused()
+            _wait_if_paused() if yield_live else _wait_pause()
             res = _thread_session().get(
                 f"{BASE_URL}/fapi/v1/klines",
                 params={"symbol": symbol, "interval": interval,
