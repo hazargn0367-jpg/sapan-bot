@@ -526,14 +526,14 @@ def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
         t = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
         scored.append((name, stats(t)))
     best = max((x for x in scored if x[1]), key=lambda x: x[1]["net"], default=None)
-    for name, s in scored:
+    for no, (name, s) in enumerate(scored, 1):
         star = " ⭐" if best and name == best[0] else ""
         if not s:
-            msg.append(f"<b>{name}</b>: işlem yok")
+            msg.append(f"<b>{no}) {name}</b>: işlem yok")
             continue
         bep = f", {s['be']} başabaş" if s["be"] > 0 else ""
-        msg.append(f"<b>{name}</b>{star}")
-        msg.append(f"  {s['n']} işlem, %{s['wr']:.0f} TP{bep}")
+        msg.append(f"<b>{no}) {name}</b>{star}")
+        msg.append(f"  {s['n']} işlem, %{s['wr']:.0f} TP{bep}, işlem başı {s['avg']:+.2f}R")
         msg.append(f"  <b>{s['net']:+.1f}R ({usd(s['net'])})</b>, düşüş {s['dd']:.1f}R, "
                    f"en uzun stop serisi {s['streak']}")
         if p0 is not None and days > 30:
@@ -548,15 +548,15 @@ def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
     checks = []
     for coin, when, note in CHECK_TRADES:
         cells = []
-        for name, d in results.items():
+        for no, (name, d) in enumerate(results.items(), 1):
             if d.empty:
                 continue
             hit = d[(d["coin"] == coin) & (d["temas"] == when)]
             if not hit.empty:
                 st_ = hit["durum"].iloc[0]
-                cells.append(f"{name.split(':')[0]}: {SHORT_STATUS.get(st_, 'elendi')}")
+                cells.append(f"{no}) {SHORT_STATUS.get(st_, 'elendi')}")
         if cells:
-            checks.append(f"• {coin} {when[:-5]}{when[-5:]} ({note})\n   " + " | ".join(cells))
+            checks.append(f"• {coin} {when} ({note})\n   " + "  ".join(cells))
     if checks:
         msg += ["", "<b>Senin örneklerin</b>"] + checks
     return "\n".join(msg)
