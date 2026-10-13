@@ -11,6 +11,7 @@ Seçenekler:
     --rr 2.5                       TP = riskin kaç katı (varsayılan 2)
     --be 1                         1R kârda stop girişe (varsayılan kapalı)
     --ago 30                       dönemi 30 gün geriye kaydır (önceki ay)
+    --compare                      6 TP/başabaş ayarını tek seferde karşılaştır
 
 Bitince Telegram'a özet mesaj ve tüm setup'ların listesi (CSV) gelir.
 """
@@ -20,6 +21,7 @@ import logging
 import os
 import pickle
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 import pandas as pd
@@ -35,6 +37,7 @@ log = logging.getLogger("bot")
 
 CACHE_DIR = "/tmp/bt_cache"
 WARMUP = 300  # ilk mumlarda EMA100 oturmadığı için atlanır
+FETCH_THREADS = 4  # aynı anda kaç coinin verisi çekilsin
 TZ = "Europe/Istanbul"
 
 # Senin fotoğraflarla anlattığın örnekler (Türkiye saati, temas mumu)
@@ -130,19 +133,28 @@ def candidate_bars(df):
     return idx[idx >= WARMUP]
 
 
-def run_df(df, symbol, tf, tick):
+def find_signals(df):
+    """Temas sinyalleri (işlem ayarlarından bağımsız, bir kez hesaplanır)."""
+    out = []
+    for i in candidate_bars(df):
+        sig = st.evaluate_at(df, i)
+        if sig:
+            out.append((int(i), sig["side"]))
+    return out
+
+
+def run_df(df, symbol, tf, tick, signals=None, with_ctx=True):
+    if signals is None:
+        signals = find_signals(df)
     rows = []
     next_free = 0
     ts = df["timestamp"].values
-    for i in candidate_bars(df):
+    for i, side in signals:
         if i < next_free:
             continue
-        sig = st.evaluate_at(df, i)
-        if not sig:
-            continue
-        r = tr.simulate(df, i, sig["side"], tick)
+        r = tr.simulate(df, i, side, tick)
         row = {
-            "coin": symbol, "zaman_dilimi": tf, "yon": sig["side"],
+            "coin": symbol, "zaman_dilimi": tf, "yon": side,
             "temas": fmt_time(ts[i]), "temas_utc": fmt_utc(ts[i]), "durum": r["status"],
             "sonuc": STATUS_TR[r["status"]],
         }
@@ -156,7 +168,9 @@ def run_df(df, symbol, tf, tick):
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
                            R_brut=round(r["r_gross"], 3), R_net=round(r["r_net"], 3),
                            dolar=round(r["r_net"] * tr.RISK_USD, 2),
-                           _exit_ts=int(ts[r["exit_bar"]]), _ctx=charts.context(df, r))
+                           _exit_ts=int(ts[r["exit_bar"]]))
+                if with_ctx:
+                    row["_ctx"] = charts.context(df, r)
                 next_free = r["exit_bar"] + 1
             else:
                 next_free = len(df)
@@ -270,6 +284,34 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt):
     return "\n".join(msg)
 
 
+COMPARE_CONFIGS = [(2.0, 0.0), (2.0, 1.0), (2.5, 0.0), (2.5, 1.0), (3.0, 0.0), (3.0, 1.0)]
+
+
+def cfg_name(rr, be):
+    return f"1:{rr:g}" + (f" + başabaş {be:g}R" if be > 0 else "")
+
+
+def build_compare(results, period_txt, n_coins, minutes):
+    msg = ["📊 <b>KARŞILAŞTIRMA</b>", f"{period_txt}, {n_coins} coin ({minutes:.0f} dk sürdü)",
+           f"1R = {tr.RISK_USD:g}$, komisyon dahil", ""]
+    scored = []
+    for (rr, be), df_all in results.items():
+        t = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
+        scored.append(((rr, be), stats(t)))
+    best = max((x for x in scored if x[1]), key=lambda x: x[1]["net"], default=None)
+    for (rr, be), s in scored:
+        star = " ⭐" if best and (rr, be) == best[0] else ""
+        if not s:
+            msg.append(f"<b>{cfg_name(rr, be)}</b>: işlem yok")
+            continue
+        bep = f", {s['be']} başabaş" if be > 0 else ""
+        msg.append(f"<b>{cfg_name(rr, be)}</b>{star}")
+        msg.append(f"  {s['n']} işlem, %{s['wr']:.0f} TP{bep}")
+        msg.append(f"  <b>{s['net']:+.1f}R ({usd(s['net'])})</b>, düşüş {s['dd']:.1f}R, "
+                   f"en uzun stop serisi {s['streak']}")
+    return "\n".join(msg)
+
+
 # ---------------------------------------------------------------- ana
 def main():
     ap = argparse.ArgumentParser()
@@ -279,10 +321,12 @@ def main():
     ap.add_argument("--rr", type=float, default=tr.RR)
     ap.add_argument("--be", type=float, default=0.0, help="başabaş tetik (R), 0 = kapalı")
     ap.add_argument("--ago", type=int, default=0, help="dönemi kaç gün geriye kaydır (önceki ay için = days)")
+    ap.add_argument("--compare", action="store_true", help="tüm TP/başabaş ayarlarını karşılaştır")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
     tr.RR = args.rr
     tr.BE_TRIGGER = args.be
+    configs = COMPARE_CONFIGS if args.compare else [(args.rr, args.be)]
     p0, p1 = period(args.days, args.ago)
     period_txt = (f"{pd.Timestamp(p0, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} – "
                   f"{pd.Timestamp(p1, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} ({args.days} gün)")
@@ -291,33 +335,72 @@ def main():
     ticks = get_tick_sizes()
     symbols = ([s.strip().upper() for s in args.symbols.split(",") if s.strip()]
                or get_symbols())
-    log.info("Backtest başlıyor: %d coin, %d gün, %s", len(symbols), args.days, tfs)
-    send_message(f"⏳ Backtest başladı: {len(symbols)} coin, {period_txt}, TP 1:{tr.RR:g}"
-                 f"{f', başabaş +{tr.BE_TRIGGER:g}R' if tr.BE_TRIGGER > 0 else ''}. "
+    log.info("Backtest başlıyor: %d coin, %d gün, %s, %d ayar", len(symbols), args.days, tfs, len(configs))
+    what = ("6 farklı TP/başabaş ayarı karşılaştırılacak" if args.compare else
+            f"TP 1:{tr.RR:g}" + (f", başabaş +{tr.BE_TRIGGER:g}R" if tr.BE_TRIGGER > 0 else ""))
+    send_message(f"⏳ Backtest başladı: {len(symbols)} coin, {period_txt}, {what}. "
                  f"Bitince sonuçlar buraya gelecek.")
 
-    rows, examples_txt = [], []
-    for n, symbol in enumerate(symbols, 1):
+    def fetch(symbol):
         try:
-            df15 = load_15m(symbol, args.days, args.ago)
-            if len(df15) < WARMUP + 50:
-                continue
-            frames = {"15m": df15, "30m": to_30m(df15)}
-            for tf in tfs:
-                df = prepare(frames[tf])
-                rows += run_df(df, symbol, tf, ticks.get(symbol, 0.0))
-                for ex_sym, ex_tf, ex_when in EXAMPLES:
-                    if ex_sym == symbol and ex_tf == tf:
-                        examples_txt.append(explain_example(df, symbol, tf, ticks.get(symbol, 0.0), ex_when))
+            return load_15m(symbol, args.days, args.ago)
         except Exception as e:
-            log.error("%s atlandı: %s", symbol, e)
-        if n % 25 == 0:
-            el = time.time() - t0
-            log.info("%d/%d coin bitti (%.1f dk, kalan ~%.1f dk)", n, len(symbols),
-                     el / 60, el / n * (len(symbols) - n) / 60)
+            log.error("%s verisi alınamadı: %s", symbol, e)
+            return None
 
+    results = {cfg: [] for cfg in configs}
+    examples_txt = []
+    with ThreadPoolExecutor(max_workers=FETCH_THREADS) as ex:
+        futures = {ex.submit(fetch, sym): sym for sym in symbols}
+        for n, fut in enumerate(as_completed(futures), 1):
+            symbol = futures[fut]
+            df15 = fut.result()
+            futures[fut] = None
+            try:
+                if df15 is None or len(df15) < WARMUP + 50:
+                    continue
+                frames = {"15m": df15, "30m": to_30m(df15)}
+                tick = ticks.get(symbol, 0.0)
+                for tf in tfs:
+                    df = prepare(frames[tf])
+                    signals = find_signals(df)
+                    for rr, be in configs:
+                        tr.RR, tr.BE_TRIGGER = rr, be
+                        results[(rr, be)] += run_df(df, symbol, tf, tick, signals,
+                                                    with_ctx=not args.compare)
+                    if not args.compare:
+                        for ex_sym, ex_tf, ex_when in EXAMPLES:
+                            if ex_sym == symbol and ex_tf == tf:
+                                examples_txt.append(explain_example(df, symbol, tf, tick, ex_when))
+            except Exception as e:
+                log.error("%s atlandı: %s", symbol, e)
+            if n % 25 == 0:
+                el = time.time() - t0
+                log.info("%d/%d coin bitti (%.1f dk, kalan ~%.1f dk)", n, len(symbols),
+                         el / 60, el / n * (len(symbols) - n) / 60)
+
+    minutes = (time.time() - t0) / 60
+    if args.compare:
+        frames_all = {cfg: pd.DataFrame(rows) for cfg, rows in results.items()}
+        report = build_compare(frames_all, period_txt, len(symbols), minutes)
+        log.info("\n%s", report)
+        send_message(report)
+        parts = []
+        for (rr, be), d in frames_all.items():
+            if not d.empty:
+                parts.append(d.assign(ayar=cfg_name(rr, be)))
+        if parts:
+            out = pd.concat(parts)
+            path = f"karsilastirma_{time.strftime('%Y%m%d_%H%M')}.csv"
+            out.drop(columns=[c for c in out.columns if c.startswith("_")]).to_csv(
+                path, index=False, sep=";", decimal=",", encoding="utf-8-sig")
+            send_document(path, "Tüm ayarların işlemleri ('ayar' sütununa göre filtrele)")
+        return
+
+    tr.RR, tr.BE_TRIGGER = configs[0]
+    rows = results[configs[0]]
     df_all = pd.DataFrame(rows)
-    report = build_report(df_all, period_txt, len(symbols), (time.time() - t0) / 60, examples_txt)
+    report = build_report(df_all, period_txt, len(symbols), minutes, examples_txt)
     log.info("\n%s", report)
     send_message(report)
 

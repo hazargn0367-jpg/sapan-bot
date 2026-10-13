@@ -5,6 +5,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 30 2.5 -> 30 gün, TP = riskin 2.5 katı
   /backtest 30 2.5 1 -> + 1R kârda stop girişe (başabaş)
   /backtest 30 önceki -> bir önceki 30 günlük dönem
+  /backtest 30 hepsi -> 6 TP/başabaş ayarını tek seferde karşılaştır
   /durum          -> backtest ilerlemesi
   /iptal          -> çalışan backtest'i durdurur
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
@@ -47,6 +48,8 @@ def start_backtest(text):
     low = text.lower()
     if "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
+    if any(w in low for w in ("hepsi", "karşılaştır", "karsilastir")):
+        args += ["--compare"]
     log_file = open(os.path.join(HERE, "backtest.log"), "w")
     _bt_proc = subprocess.Popen(
         [sys.executable, "-u", "backtest.py", "--days", str(days)] + args,

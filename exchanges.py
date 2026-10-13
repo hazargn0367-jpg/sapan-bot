@@ -3,6 +3,7 @@ Binance vadeli (USDT-M perpetual) veri çekme.
 """
 
 import logging
+import threading
 import time
 
 import pandas as pd
@@ -45,14 +46,37 @@ def get_tick_sizes():
     return ticks
 
 
+# Backtest birden fazla iş parçacığıyla veri çeker: her birine ayrı bağlantı,
+# hepsi için ortak bir "dur" zamanı (Binance dakikalık ağırlık sınırı 2400).
+WEIGHT_SOFT_LIMIT = 1700
+_local = threading.local()
+_pause_lock = threading.Lock()
+_pause_until = 0.0
+
+
+def _thread_session():
+    if not hasattr(_local, "session"):
+        _local.session = requests.Session()
+    return _local.session
+
+
+def _wait_if_paused():
+    delay = _pause_until - time.time()
+    if delay > 0:
+        time.sleep(delay)
+
+
 def _throttle(res):
-    """Binance dakikalık istek ağırlığı sınırına (2400) yaklaşınca yavaşla.
-    Canlı bot da aynı sınırı kullandığı için pay bırakılır."""
+    """Binance dakikalık istek ağırlığı sınırına yaklaşınca tüm iş parçacıklarını
+    bir sonraki dakikaya kadar bekletir. Canlı bot da aynı sınırı kullandığı için pay bırakılır."""
+    global _pause_until
     used = int(res.headers.get("X-MBX-USED-WEIGHT-1M", "0") or 0)
-    if used > 1500:
-        wait = 61 - time.gmtime().tm_sec
-        log.info("İstek sınırına yaklaşıldı (%d), %d sn bekleniyor", used, wait)
-        time.sleep(wait)
+    if used > WEIGHT_SOFT_LIMIT:
+        with _pause_lock:
+            until = time.time() + (61 - time.gmtime().tm_sec)
+            if until > _pause_until:
+                _pause_until = until
+                log.info("İstek sınırına yaklaşıldı (%d), %d sn bekleniyor", used, int(until - time.time()))
 
 
 def get_klines_range(symbol, interval, start_ms, end_ms):
@@ -61,7 +85,8 @@ def get_klines_range(symbol, interval, start_ms, end_ms):
     cursor = start_ms
     while cursor < end_ms:
         for attempt in range(3):
-            res = _session.get(
+            _wait_if_paused()
+            res = _thread_session().get(
                 f"{BASE_URL}/fapi/v1/klines",
                 params={"symbol": symbol, "interval": interval,
                         "startTime": cursor, "endTime": end_ms, "limit": 1000},
