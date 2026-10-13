@@ -34,6 +34,16 @@ def get_symbols():
         return []
 
 
+def get_top_symbols(n):
+    """24 saatlik USDT hacmine göre en büyük n vadeli coin (sadece işlemdekiler)."""
+    tradable = set(get_symbols())
+    res = _session.get(f"{BASE_URL}/fapi/v1/ticker/24hr", timeout=15)
+    res.raise_for_status()
+    rows = [r for r in res.json() if r.get("symbol") in tradable]
+    rows.sort(key=lambda r: float(r.get("quoteVolume") or 0), reverse=True)
+    return [r["symbol"] for r in rows[:n]]
+
+
 def get_tick_sizes():
     """Her coinin en küçük fiyat adımı ("1 tık"), örn. {"BTCUSDT": 0.1}."""
     res = _session.get(f"{BASE_URL}/fapi/v1/exchangeInfo", timeout=10)
@@ -48,7 +58,7 @@ def get_tick_sizes():
 
 # Backtest birden fazla iş parçacığıyla veri çeker: her birine ayrı bağlantı,
 # hepsi için ortak bir "dur" zamanı (Binance dakikalık ağırlık sınırı 2400).
-WEIGHT_SOFT_LIMIT = 1700
+WEIGHT_SOFT_LIMIT = 2000
 _local = threading.local()
 _pause_lock = threading.Lock()
 _pause_until = 0.0

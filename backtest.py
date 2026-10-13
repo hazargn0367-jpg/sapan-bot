@@ -8,6 +8,7 @@ Seçenekler:
     --days 7                       kaç günlük veri (varsayılan 7)
     --symbols NEARUSDT,QNTUSDT     sadece bu coinler (varsayılan: hepsi)
     --tf 15m,30m                   zaman dilimleri (varsayılan: 15m)
+    --top 200                      hacme göre ilk 200 coin (0 = hepsi)
     --rr 2.5                       TP = riskin kaç katı (varsayılan 2)
     --be 1                         1R kârda stop girişe (varsayılan kapalı)
     --ago 30                       dönemi 30 gün geriye kaydır (önceki ay)
@@ -31,7 +32,7 @@ import pandas as pd
 import charts
 import strategy as st
 import trade_rules as tr
-from exchanges import get_klines_range, get_symbols, get_tick_sizes
+from exchanges import get_klines_range, get_symbols, get_tick_sizes, get_top_symbols
 from telegram import send_document, send_message, send_photos
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -39,7 +40,7 @@ log = logging.getLogger("bot")
 
 CACHE_DIR = "/tmp/bt_cache"
 WARMUP = 300  # ilk mumlarda EMA100 oturmadığı için atlanır
-FETCH_THREADS = 4  # aynı anda kaç coinin verisi çekilsin
+FETCH_THREADS = 6  # aynı anda kaç coinin verisi çekilsin
 TZ = "Europe/Istanbul"
 
 # Senin fotoğraflarla anlattığın örnekler (Türkiye saati, temas mumu)
@@ -383,6 +384,7 @@ def main():
     ap.add_argument("--wick", type=float, default=0.0, help="onay iğnesi en fazla kaç gövde (0 = kapalı)")
     ap.add_argument("--prior-touch", action="store_true", help="trend teyidi: önceden EMA20 teması")
     ap.add_argument("--stop-buf", type=float, default=0.0, help="stop payı (ATR)")
+    ap.add_argument("--top", type=int, default=200, help="hacme göre ilk kaç coin (0 = hepsi)")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
     if args.compare:
@@ -409,12 +411,14 @@ def main():
             time.sleep(10)
     if not ticks:
         raise RuntimeError("Binance'ten coin bilgileri alınamadı (3 deneme)")
-    symbols = ([s.strip().upper() for s in args.symbols.split(",") if s.strip()]
-               or get_symbols())
+    symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+    if not symbols:
+        symbols = get_top_symbols(args.top) if args.top > 0 else get_symbols()
     log.info("Backtest başlıyor: %d coin, %d gün, %s, %d ayar", len(symbols), args.days, tfs, len(configs))
     what = (f"{len(configs)} farklı ayar karşılaştırılacak" if args.compare else
             f"TP 1:{tr.RR:g}" + (f", başabaş {tr.BE_TRIGGER:g}R" if tr.BE_TRIGGER > 0 else ""))
-    send_message(f"⏳ Backtest başladı: {len(symbols)} coin, {period_txt}, {what}. "
+    universe = f"hacmi en yüksek {len(symbols)} coin" if args.top > 0 and not args.symbols else f"{len(symbols)} coin"
+    send_message(f"⏳ Backtest başladı: {universe}, {period_txt}, {what}. "
                  f"Bitince sonuçlar buraya gelecek.")
 
     def fetch(symbol):

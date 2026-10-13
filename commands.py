@@ -9,6 +9,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 30 filtresiz -> ek filtreler kapalı
   /backtest 30 atr -> stop en az 0.875 ATR
   /backtest 30 yeni önceki -> grafik incelemesinden gelen kuralları karşılaştır
+  (varsayılan: hacmi en yüksek 200 coin; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi
   /iptal          -> çalışan backtest'i durdurur
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
@@ -57,6 +58,8 @@ def start_backtest(text):
         args += ["--compare", "hepsi"]
     if "filtresiz" in low:
         args += ["--no-filters"]
+    if "tüm" in low or "tum" in low:
+        args += ["--top", "0"]
     if "atr" in low:
         args += ["--atr-min", "0.875"]
     log_file = open(os.path.join(HERE, "backtest.log"), "w")
