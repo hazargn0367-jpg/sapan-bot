@@ -84,9 +84,9 @@ def draw(trade, path=None, pdf=None):
     mark(rel["touch"], "Temas", "#ffeb3b", below=long)
     mark(rel["confirm"], "Onay", "#ce93d8", below=not long)
     if "exit_bar" in rel:
-        won = trade["durum"] == "win"
+        col = {"win": UP, "be": "#9e9e9e"}.get(trade["durum"], DOWN)
         ax.plot(rel["exit_bar"], trade["cikis"], marker="X", markersize=9,
-                color=UP if won else DOWN, markeredgecolor="white", markeredgewidth=0.6)
+                color=col, markeredgecolor="white", markeredgewidth=0.6)
 
     # Stoch
     ax2.plot(x, ctx["Stoch_K"], color="#2962ff", linewidth=1.1)
@@ -104,7 +104,7 @@ def draw(trade, path=None, pdf=None):
     ax2.set_xticklabels([times[t].strftime("%d.%m %H:%M") for t in ticks])
     ax.set_xlim(-1, len(ctx) + 6)
 
-    res = "TP ✓" if trade["durum"] == "win" else "STOP ✗"
+    res = {"win": "TP ✓", "be": "BAŞABAŞ"}.get(trade["durum"], "STOP ✗")
     title = (f"{trade['coin']}  {trade['zaman_dilimi']}  {trade['yon']}   {res}   "
              f"{trade['R_net']:+.2f}R ({trade['dolar']:+.0f}$)   temas: {trade['temas']} TR / {trade['temas_utc']} UTC")
     ax.set_title(title, color=TXT, fontsize=10.5, loc="left")
@@ -127,7 +127,7 @@ def make_pdf(trades, path):
 def make_samples(trades, folder, n_each=5):
     """Fotoğraf olarak gönderilecek örnekler: en son 5 TP ve 5 stop."""
     wins = [t for t in trades if t["durum"] == "win"][-n_each:]
-    losses = [t for t in trades if t["durum"] == "loss"][-n_each:]
+    losses = [t for t in trades if t["durum"] != "win"][-n_each:]
     paths = []
     for k, t in enumerate(wins + losses):
         p = f"{folder}/islem_{k + 1}.png"

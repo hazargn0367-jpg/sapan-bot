@@ -51,6 +51,7 @@ STATUS_TR = {
     "no_entry": "2 mumda girişe gelmedi",
     "win": "TP",
     "loss": "Stop",
+    "be": "Başabaş (girişte stop)",
     "open": "Açık (veri bitti)",
     "pending": "Beklemede (veri bitti)",
 }
@@ -143,7 +144,7 @@ def run_df(df, symbol, tf, tick):
         if "entry_bar" in r:
             row.update(giris_zamani=fmt_time(ts[r["entry_bar"]]), dolum=r["fill"],
                        risk_yuzde=100 * r["risk"] / r["fill"])
-            if r["status"] in ("win", "loss"):
+            if r["status"] in ("win", "loss", "be"):
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
                            R_brut=round(r["r_gross"], 3), R_net=round(r["r_net"], 3),
                            dolar=round(r["r_net"] * tr.RISK_USD, 2),
@@ -190,11 +191,12 @@ def stats(trades):
     eq = t["R_net"].cumsum()
     dd = (eq - eq.cummax()).min()
     streak = best = 0
-    for won in (t["durum"] == "win"):
-        streak = 0 if won else streak + 1
+    for lost in (t["durum"] == "loss"):
+        streak = streak + 1 if lost else 0
         best = max(best, streak)
     return {
         "n": len(t), "wins": int((t["durum"] == "win").sum()),
+        "be": int((t["durum"] == "be").sum()),
         "wr": 100 * (t["durum"] == "win").mean(),
         "gross": t["R_brut"].sum(), "net": t["R_net"].sum(),
         "avg": t["R_net"].mean(), "dd": dd, "streak": best,
@@ -214,14 +216,15 @@ def line(label, s):
 
 
 def build_report(df_all, days, n_coins, minutes, examples_txt):
-    trades = df_all[df_all["durum"].isin(["win", "loss"])] if not df_all.empty else df_all
+    trades = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
     s = stats(trades)
     funnel = df_all["durum"].value_counts() if not df_all.empty else pd.Series(dtype=int)
 
     def c(*keys):
         return int(sum(funnel.get(k, 0) for k in keys))
 
-    msg = [f"📊 <b>BACKTEST SONUCU (TP 1:{tr.RR:g})</b>",
+    be_txt = f", başabaş +{tr.BE_TRIGGER:g}R" if tr.BE_TRIGGER > 0 else ""
+    msg = [f"📊 <b>BACKTEST SONUCU (TP 1:{tr.RR:g}{be_txt})</b>",
            f"Son {days} gün, {n_coins} coin ({minutes:.0f} dk sürdü)", ""]
     msg.append("<b>Huni</b>")
     msg.append(f"Temas sinyali: {len(df_all)}")
@@ -232,12 +235,13 @@ def build_report(df_all, days, n_coins, minutes, examples_txt):
     msg.append(f"  ↳ Stop %{tr.MIN_RISK_PCT:g}'ten dar: {c('min_risk')}")
     msg.append(f"  ↳ Girişten önce iptal: {c('cancel_confirm')}")
     msg.append(f"  ↳ 2 mumda girişe gelmedi: {c('no_entry')}")
-    msg.append(f"İşleme girildi: {c('win', 'loss', 'open')} (açık: {c('open')})")
+    msg.append(f"İşleme girildi: {c('win', 'loss', 'be', 'open')} (açık: {c('open')})")
     msg.append("")
     if s:
         be = 100 / (1 + tr.RR)
         msg.append("<b>Sonuç</b>")
-        msg.append(f"İşlem: {s['n']} | TP: {s['wins']} | Stop: {s['n'] - s['wins']}")
+        bep = f" | Başabaş: {s['be']}" if tr.BE_TRIGGER > 0 else ""
+        msg.append(f"İşlem: {s['n']} | TP: {s['wins']} | Stop: {s['n'] - s['wins'] - s['be']}{bep}")
         msg.append(f"Kazanma oranı: %{s['wr']:.1f} (1:{tr.RR:g} için başabaş ~%{be:.0f})")
         msg.append(f"1R = {tr.RISK_USD:g}$")
         msg.append(f"Toplam (komisyonsuz): {s['gross']:+.1f}R ({usd(s['gross'])})")
@@ -265,16 +269,19 @@ def main():
     ap.add_argument("--symbols", default="")
     ap.add_argument("--tf", default="15m")
     ap.add_argument("--rr", type=float, default=tr.RR)
+    ap.add_argument("--be", type=float, default=0.0, help="başabaş tetik (R), 0 = kapalı")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
     tr.RR = args.rr
+    tr.BE_TRIGGER = args.be
 
     t0 = time.time()
     ticks = get_tick_sizes()
     symbols = ([s.strip().upper() for s in args.symbols.split(",") if s.strip()]
                or get_symbols())
     log.info("Backtest başlıyor: %d coin, %d gün, %s", len(symbols), args.days, tfs)
-    send_message(f"⏳ Backtest başladı: {len(symbols)} coin, son {args.days} gün, TP 1:{tr.RR:g}. "
+    send_message(f"⏳ Backtest başladı: {len(symbols)} coin, son {args.days} gün, TP 1:{tr.RR:g}"
+                 f"{f', başabaş +{tr.BE_TRIGGER:g}R' if tr.BE_TRIGGER > 0 else ''}. "
                  f"Bitince sonuçlar buraya gelecek.")
 
     rows, examples_txt = [], []
@@ -308,7 +315,7 @@ def main():
             path, index=False, sep=";", decimal=",", encoding="utf-8-sig")
         send_document(path, "Tüm setup'lar ve işlemler (Excel/Sheets ile açılır)")
 
-        trades = df_all[df_all["durum"].isin(["win", "loss"])].sort_values("_exit_ts")
+        trades = df_all[df_all["durum"].isin(["win", "loss", "be"])].sort_values("_exit_ts")
         recs = trades.to_dict("records")
         if recs:
             try:

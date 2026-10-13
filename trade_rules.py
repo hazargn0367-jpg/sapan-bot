@@ -11,6 +11,7 @@ LONG (SHORT tam tersi):
  5. Giriş emri onay mumundan sonraki 2 mum geçerli. Girişten önce fiyat onay
     mumunun dibinin altına inerse iptal.
  6. TP: riskin 2 katı (1:2)
+ 7. (İsteğe bağlı) Başabaş: +1R'ye gelince stop giriş seviyesine çekilir
 
 Mum içinde hangi hareketin önce olduğu bilinmediği durumlarda TEMKİNLİ davranılır:
  - Aynı mum hem onay dibinin altına inip hem girişe değerse -> işlem yok
@@ -26,6 +27,7 @@ ATR_PERIOD = 14
 ATR_MAX_MULT = 1.5     # giriş-stop mesafesi en fazla bu kadar ATR
 MIN_RISK_PCT = 0.3     # giriş-stop mesafesi en az fiyatın %0.3'ü (dar stopta komisyon kârı yer)
 RR = 2.0               # hedef: riskin kaç katı
+BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
 FEE_TAKER = 0.0005     # Binance vadeli piyasa emri komisyonu (%0.05)
 FEE_MAKER = 0.0002     # Binance vadeli limit emri komisyonu (%0.02)
@@ -50,7 +52,7 @@ def touch_closes_right_side(df, i, side):
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
     status: no_close | cancel_touch | no_confirm | atr | min_risk | cancel_confirm |
-            no_entry | win | loss | open | pending"""
+            no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
     H = df["High"].values
     L = df["Low"].values
@@ -115,25 +117,36 @@ def simulate(df, i, side, tick):
     res.update(entry_bar=k_in, fill=fill)
 
     # --- Çıkış ---
-    def close_trade(bar, price, won):
-        res.update(exit_bar=bar, exit=price, status="win" if won else "loss")
+    def close_trade(bar, price, status):
+        res.update(exit_bar=bar, exit=price, status=status)
         gross = (price - fill) / risk if long else (fill - price) / risk
-        fees = (fill * FEE_TAKER + price * (FEE_MAKER if won else FEE_TAKER)) / risk
+        fees = (fill * FEE_TAKER + price * (FEE_MAKER if status == "win" else FEE_TAKER)) / risk
         res.update(r_gross=gross, r_net=gross - fees)
         return res
 
+    # Başabaş: fiyat +BE_TRIGGER R'ye gelince stop girişe çekilir (sonraki mumdan itibaren)
+    be_level = (fill + BE_TRIGGER * risk) if long else (fill - BE_TRIGGER * risk)
+    cur_stop, be_on = stop, False
+
+    def reached_be(bar):
+        return BE_TRIGGER > 0 and ((H[bar] >= be_level) if long else (L[bar] <= be_level))
+
     # Giriş mumunda TP (stop bu mumda olamaz: olsaydı giriş iptal edilirdi)
     if (H[k_in] >= tp) if long else (L[k_in] <= tp):
-        return close_trade(k_in, tp, True)
+        return close_trade(k_in, tp, "win")
+    if reached_be(k_in):
+        cur_stop, be_on = fill, True
 
     for m in range(k_in + 1, n):
-        hit_stop = (L[m] <= stop) if long else (H[m] >= stop)
+        hit_stop = (L[m] <= cur_stop) if long else (H[m] >= cur_stop)
         hit_tp = (H[m] >= tp) if long else (L[m] <= tp)
         if hit_stop:
-            price = min(stop, O[m]) if long else max(stop, O[m])
-            return close_trade(m, price, False)
+            price = min(cur_stop, O[m]) if long else max(cur_stop, O[m])
+            return close_trade(m, price, "be" if be_on else "loss")
         if hit_tp:
-            return close_trade(m, tp, True)
+            return close_trade(m, tp, "win")
+        if not be_on and reached_be(m):
+            cur_stop, be_on = fill, True
 
     res["status"] = "open"
     return res
