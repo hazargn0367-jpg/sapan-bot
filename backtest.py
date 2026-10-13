@@ -63,6 +63,7 @@ STATUS_TR = {
     "touch_body": "Temas mumu fitil mumu değil (gövdeyle değmiş)",
     "quiet": "Temas 03:00-07:00 TR arasında",
     "no_room": "Giriş önceki tepe/dibe çok yakın (önünde yer yok)",
+    "structure_break": "Düzeltme önceki düzeltmeyi kırmış (yapı bozuk)",
     "pivot_wick": "Tepe/dip mumunun iğnesi çok uzun",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
@@ -343,6 +344,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
         msg.append(f"  ↳ Sessiz saatler (TR {tr.QUIET_UTC[0] + 3:02d}:00-{tr.QUIET_UTC[1] + 3:02d}:00): {c('quiet')}")
     if tr.TOUCH_WICK_MIN > 0:
         msg.append(f"  ↳ Temas mumu fitil değil: {c('touch_body')}")
+    if tr.STRUCTURE_BREAK:
+        msg.append(f"  ↳ Yapı bozuk (önceki düzeltme kırılmış): {c('structure_break')}")
     if tr.ROOM_MIN_R > 0:
         msg.append(f"  ↳ Önceki tepe/dibe {tr.ROOM_MIN_R:g}R'den yakın: {c('no_room')}")
     if tr.PIVOT_WICK_MAX > 0:
@@ -395,7 +398,7 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
 # Her ayar: varsayılanların üzerine yazılan değerler. "ad" raporda görünür.
 PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR",
-              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R"]
+              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R", "STRUCTURE_BREAK"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -485,7 +488,15 @@ COMPARE_SETS["dip"] = [
     C("+ önünde en az 1.5R yer", **_LIVE_NOW, ROOM_MIN_R=1.5),
     C("+ önünde TP kadar yer (2.2R)", **_LIVE_NOW, ROOM_MIN_R=2.2),
 ]
-CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2}  # grafikleri çizilecek ayar (listedeki sırası)
+COMPARE_SETS["yapi"] = [
+    C("Canlı ayar (1:2.2)", **_LIVE_NOW),
+    C("+ 7: önünde 1R yer", **_LIVE_NOW, ROOM_MIN_R=1.0),
+    C("+ 8: yapı bozulmamış (iğne)", **_LIVE_NOW, STRUCTURE_BREAK="wick"),
+    C("+ 8: yapı bozulmamış (kapanış)", **_LIVE_NOW, STRUCTURE_BREAK="close"),
+    C("+ 7 (0.5R) + 8 (iğne)", **_LIVE_NOW, ROOM_MIN_R=0.5, STRUCTURE_BREAK="wick"),
+    C("+ 7 (1R) + 8 (iğne)", **_LIVE_NOW, ROOM_MIN_R=1.0, STRUCTURE_BREAK="wick"),
+]
+CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 5}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -665,6 +676,12 @@ def main():
                     os.makedirs(folder, exist_ok=True)
                     send_photos(charts.make_samples(recs, folder),
                                 f"Örnek işlemler ({chart_name}): son 5 TP ve son 5 stop/başabaş")
+                    recs.sort(key=lambda r: r["_touch_ts"])
+                    for rec in recs:
+                        rec["_ay"] = month_label(rec["_touch_ts"], p0)
+                    pdf_path = f"grafikler_{time.strftime('%Y%m%d_%H%M')}.pdf"
+                    charts.make_pdf(recs[-400:], pdf_path)
+                    send_document(pdf_path, f"'{chart_name}' ayarının tüm işlemleri: numaralı liste + grafikler")
                 except Exception as e:
                     log.exception("Grafikler oluşturulamadı: %s", e)
         return

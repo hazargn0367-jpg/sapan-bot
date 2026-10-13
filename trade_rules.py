@@ -49,6 +49,7 @@ TOUCH_WICK_MIN = 0.0         # >0: temas mumunun EMA20'ye doğru iğnesi en az g
 PIVOT_WICK_MAX = 0.0         # >0: tepe (LONG) / dip (SHORT) mumunun o yöndeki iğnesi gövdenin bu katından uzunsa işlem yok
 QUIET_UTC = (0, 0)           # (başlangıç, bitiş) UTC saat: temas bu aralıktaysa işlem yok. (0, 4) = 03:00-07:00 TR
 ROOM_MIN_R = 0.0             # >0: giriş ile önceki tepe (LONG) / dip (SHORT) arası en az bu kadar R olmalı (önünde yer)
+STRUCTURE_BREAK = ""         # "wick" / "close": şu anki düzeltme önceki düzeltmenin dibini (LONG) / tepesini (SHORT) kırdıysa işlem yok
 RR = 2.0               # hedef: riskin kaç katı
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
@@ -131,6 +132,28 @@ def pivot_wick_ok(df, i, side):
     return wick <= PIVOT_WICK_MAX * body
 
 
+def structure_ok(df, i, side, mode="wick"):
+    """Kural 8: yükselen dip (LONG) / alçalan tepe (SHORT) yapısı bozulmamış olmalı.
+    LONG: önceki tepe (q) ile son tepe (p) arasındaki düzeltmenin dibi = önceki dip.
+    Son tepeden sonraki düzeltme (temasa kadar) bu dibin altına inmişse yapı bozulmuştur."""
+    long = side == "LONG"
+    H, L, C = df["High"].values, df["Low"].values, df["Close"].values
+    start = max(0, i - st.LOOKBACK)
+    p = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    past_end = p - st.PEAK_GAP
+    if past_end <= start or p + 1 > i:
+        return True
+    if long:
+        q = start + int(np.argmax(H[start:past_end]))
+        prior = L[q:p].min()
+        cur = (L if mode == "wick" else C)[p + 1:i + 1].min()
+        return cur >= prior
+    q = start + int(np.argmin(L[start:past_end]))
+    prior = H[q:p].max()
+    cur = (H if mode == "wick" else C)[p + 1:i + 1].max()
+    return cur <= prior
+
+
 def touch_closes_right_side(df, i, side):
     c = df.iloc[i]
     return c["Close"] > c["EMA20"] if side == "LONG" else c["Close"] < c["EMA20"]
@@ -138,7 +161,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
-    status: session | quiet | no_close | touch_body | no_prior_touch | dirty_pivot | pivot_wick | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | quiet | no_close | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -171,6 +194,9 @@ def simulate(df, i, side, tick):
         return res
     if REQUIRE_PRIOR_TOUCH and not prior_touch_ok(df, i, side):
         res["status"] = "no_prior_touch"
+        return res
+    if STRUCTURE_BREAK and not structure_ok(df, i, side, STRUCTURE_BREAK):
+        res["status"] = "structure_break"
         return res
     if CLEAN_PIVOT_MAX > 0 and pivot_touches(df, i, side) >= CLEAN_PIVOT_MAX:
         res["status"] = "dirty_pivot"
