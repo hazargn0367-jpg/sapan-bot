@@ -2,6 +2,7 @@
 Telegram komutları (bot arka planda dinler):
   /backtest       -> son 30 günle backtest başlatır
   /backtest 60    -> son 60 günle backtest başlatır
+  /durum          -> backtest ilerlemesi
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
 """
 
@@ -39,6 +40,23 @@ def start_backtest(text):
     log.info("Backtest başlatıldı (%d gün)", days)
 
 
+def status_text():
+    running = _bt_proc is not None and _bt_proc.poll() is None
+    progress = ""
+    try:
+        with open(os.path.join(HERE, "backtest.log"), encoding="utf-8", errors="ignore") as f:
+            lines = [ln.strip() for ln in f if "coin bitti" in ln or "ERROR" in ln or "Traceback" in ln]
+        if lines:
+            progress = lines[-1].split(" INFO ")[-1].split(" ERROR ")[-1]
+    except OSError:
+        pass
+    if running:
+        return "⏳ Backtest çalışıyor" + (f": {progress}" if progress else ", veri çekiliyor...")
+    if _bt_proc is not None:
+        return "✅ Son backtest bitti." + (f"\nSon satır: {progress}" if progress else "")
+    return "Çalışan backtest yok. Başlatmak için: /backtest"
+
+
 def _listen():
     url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/getUpdates"
     offset = None
@@ -64,6 +82,8 @@ def _listen():
                 text = (msg.get("text") or "").strip()
                 if text.lower().startswith("/backtest"):
                     start_backtest(text)
+                elif text.lower().startswith("/durum"):
+                    send_message(status_text())
         except Exception as e:
             log.error("Komut dinleme hatası: %s", e)
             time.sleep(5)

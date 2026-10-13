@@ -90,7 +90,8 @@ def send_photos(paths, caption=""):
 
 def format_signal(symbol, tf_label, sig):
     s = html.escape(symbol)
-    tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol}.P"
+    tv_interval = {"1m": "1", "5m": "5", "15m": "15", "30m": "30", "1h": "60", "4h": "240"}.get(tf_label, "15")
+    tv_link = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol}.P&interval={tv_interval}"
     if sig["side"] == "LONG":
         head = "🟢 <b>NET TREND + GÖVDE KAPANIŞLI İLK TEMAS (LONG)!</b>"
         durum = "Kusursuz paralel trend, gövdeyle kırılan zirve ve EMA20'ye ilk temas!"

@@ -7,7 +7,7 @@ Render > Shell'de çalıştır:
 Seçenekler:
     --days 30                      kaç günlük veri (varsayılan 30)
     --symbols NEARUSDT,QNTUSDT     sadece bu coinler (varsayılan: hepsi)
-    --tf 15m,30m                   zaman dilimleri (varsayılan: 15m,30m)
+    --tf 15m,30m                   zaman dilimleri (varsayılan: 15m)
 
 Bitince Telegram'a özet mesaj ve tüm setup'ların listesi (CSV) gelir.
 """
@@ -250,7 +250,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--days", type=int, default=30)
     ap.add_argument("--symbols", default="")
-    ap.add_argument("--tf", default="15m,30m")
+    ap.add_argument("--tf", default="15m")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
 

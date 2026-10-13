@@ -74,7 +74,7 @@ def scan():
 
 def main():
     log.info("Keskin Nişancı Trend & Kırılım Botu Devrede...")
-    send_message("✅ Bot başladı\nBacktest için: /backtest")
+    send_message("✅ Bot başladı\nKomutlar: /backtest  /durum")
     start_listener()
     while True:
         try:

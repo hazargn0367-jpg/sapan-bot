@@ -9,7 +9,7 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 # (Telegram'da görünen ad, Binance API aralık adı)
-TIMEFRAMES = [("15m", "15m"), ("30m", "30m")]
+TIMEFRAMES = [("15m", "15m")]
 
 # Taramalar arası bekleme (saniye)
 SCAN_SLEEP = int(os.environ.get("SCAN_SLEEP", "15"))
