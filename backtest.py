@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 
 import charts
+import live_setups
 import strategy as st
 import trade_rules as tr
 from exchanges import get_klines_range, get_symbols, get_tick_sizes, get_top_symbols
@@ -61,6 +62,7 @@ STATUS_TR = {
     "dirty_pivot": "Son tepe/dip temiz değil (destek/direnç oluşmuş)",
     "touch_body": "Temas mumu fitil mumu değil (gövdeyle değmiş)",
     "quiet": "Temas 03:00-07:00 TR arasında",
+    "no_room": "Giriş önceki tepe/dibe çok yakın (önünde yer yok)",
     "pivot_wick": "Tepe/dip mumunun iğnesi çok uzun",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
@@ -341,6 +343,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
         msg.append(f"  ↳ Sessiz saatler (TR {tr.QUIET_UTC[0] + 3:02d}:00-{tr.QUIET_UTC[1] + 3:02d}:00): {c('quiet')}")
     if tr.TOUCH_WICK_MIN > 0:
         msg.append(f"  ↳ Temas mumu fitil değil: {c('touch_body')}")
+    if tr.ROOM_MIN_R > 0:
+        msg.append(f"  ↳ Önceki tepe/dibe {tr.ROOM_MIN_R:g}R'den yakın: {c('no_room')}")
     if tr.PIVOT_WICK_MAX > 0:
         msg.append(f"  ↳ Tepe/dip iğnesi uzun: {c('pivot_wick')}")
     min_pct = tr.MIN_RISK_PCT if tr.FILTERS else tr.BASE_MIN_RISK_PCT
@@ -391,7 +395,7 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
 # Her ayar: varsayılanların üzerine yazılan değerler. "ad" raporda görünür.
 PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR",
-              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC"]
+              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -473,7 +477,15 @@ COMPARE_SETS["tp"] = [
     C("Canlı kurallar 1:2.5", **_LIVE, RR=2.5),
     C("Canlı kurallar 1:1.5", **_LIVE, RR=1.5),
 ]
-CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1}  # grafikleri çizilecek ayar (listedeki sırası)
+_LIVE_NOW = dict(live_setups.LIVE_RULES, cluster_max=live_setups.CLUSTER_MAX)
+COMPARE_SETS["dip"] = [
+    C("Canlı ayar (1:2.2)", **_LIVE_NOW),
+    C("+ önünde en az 0.5R yer", **_LIVE_NOW, ROOM_MIN_R=0.5),
+    C("+ önünde en az 1R yer", **_LIVE_NOW, ROOM_MIN_R=1.0),
+    C("+ önünde en az 1.5R yer", **_LIVE_NOW, ROOM_MIN_R=1.5),
+    C("+ önünde TP kadar yer (2.2R)", **_LIVE_NOW, ROOM_MIN_R=2.2),
+]
+CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -485,7 +497,7 @@ def cfg_name(cfg):
     return cfg["ad"]
 
 
-def build_compare(results, period_txt, n_coins, minutes):
+def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
     msg = ["📊 <b>KARŞILAŞTIRMA</b>", f"{period_txt}, {n_coins} coin ({minutes:.0f} dk sürdü)",
            f"1R = {tr.RISK_USD:g}$, komisyon dahil", ""]
     scored = []
@@ -503,6 +515,15 @@ def build_compare(results, period_txt, n_coins, minutes):
         msg.append(f"  {s['n']} işlem, %{s['wr']:.0f} TP{bep}")
         msg.append(f"  <b>{s['net']:+.1f}R ({usd(s['net'])})</b>, düşüş {s['dd']:.1f}R, "
                    f"en uzun stop serisi {s['streak']}")
+        if p0 is not None and days > 30:
+            t = results[name]
+            t = t[t["durum"].isin(["win", "loss", "be"])]
+            months = t["_touch_ts"].apply(lambda x: month_label(x, p0))
+            parts = []
+            for m in range(1, (days + 29) // 30 + 1):
+                tm = t[months == m]
+                parts.append(f"{m}.ay {tm['R_net'].sum():+.1f}R ({len(tm)})")
+            msg.append("  " + " | ".join(parts))
     return "\n".join(msg)
 
 
@@ -623,7 +644,7 @@ def main():
     minutes = (time.time() - t0) / 60
     if args.compare:
         frames_all = {cfg: pd.DataFrame(rows) for cfg, rows in results.items()}
-        report = build_compare(frames_all, period_txt, len(symbols), minutes)
+        report = build_compare(frames_all, period_txt, len(symbols), minutes, p0=p0, days=args.days)
         log.info("\n%s", report)
         send_message(report)
         parts = [d.assign(ayar=name) for name, d in frames_all.items() if not d.empty]

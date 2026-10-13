@@ -48,6 +48,7 @@ CLEAN_PIVOT_BEFORE = 5       # tepeden/dipten kaç mum öncesinden itibaren say�
 TOUCH_WICK_MIN = 0.0         # >0: temas mumunun EMA20'ye doğru iğnesi en az gövdenin bu katı olmalı (fitil mum)
 PIVOT_WICK_MAX = 0.0         # >0: tepe (LONG) / dip (SHORT) mumunun o yöndeki iğnesi gövdenin bu katından uzunsa işlem yok
 QUIET_UTC = (0, 0)           # (başlangıç, bitiş) UTC saat: temas bu aralıktaysa işlem yok. (0, 4) = 03:00-07:00 TR
+ROOM_MIN_R = 0.0             # >0: giriş ile önceki tepe (LONG) / dip (SHORT) arası en az bu kadar R olmalı (önünde yer)
 RR = 2.0               # hedef: riskin kaç katı
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
@@ -138,7 +139,7 @@ def touch_closes_right_side(df, i, side):
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
     status: session | quiet | no_close | touch_body | no_prior_touch | dirty_pivot | pivot_wick | cancel_touch | no_confirm | wick | atr | atr_min |
-            min_risk | max_risk | cancel_confirm |
+            min_risk | max_risk | no_room | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
     H = df["High"].values
@@ -224,6 +225,15 @@ def simulate(df, i, side, tick):
     if FILTERS and risk_pct > MAX_RISK_PCT:
         res["status"] = "max_risk"
         return res
+    if ROOM_MIN_R > 0:
+        start = max(0, i - st.LOOKBACK)
+        level = H[start:i].max() if long else L[start:i].min()   # önceki tepe / dip
+        room = (level - entry) if long else (entry - level)
+        res["room_r"] = room / risk
+        # Giriş seviyeyi zaten geçtiyse (room < 0) önünde engel yok sayılır
+        if 0 <= room < ROOM_MIN_R * risk:
+            res["status"] = "no_room"
+            return res
 
     # --- Giriş ---
     k_in = None
