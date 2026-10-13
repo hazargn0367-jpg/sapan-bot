@@ -420,6 +420,9 @@ COMPARE_SETS["son"] = [
     C("1-4 + BTC + en fazla 3", **_NEW3, **_CLEAN, btc=True, max_open=3),
     C("1-4 + toplu sinyal yok", **_NEW3, **_CLEAN, cluster_max=5),
     C("1-4 + toplu + BTC + en fazla 3", **_NEW3, **_CLEAN, cluster_max=5, btc=True, max_open=3),
+    C("1-4 (1:2.5)", **_NEW3, **_CLEAN, RR=2.5),
+    C("1-4 + BTC + en fazla 3 (1:2.5)", **_NEW3, **_CLEAN, RR=2.5, btc=True, max_open=3),
+    C("1-4 + toplu + BTC + en fazla 3 (1:2.5)", **_NEW3, **_CLEAN, RR=2.5, cluster_max=5, btc=True, max_open=3),
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6}  # grafikleri çizilecek ayar (listedeki sırası)
 
