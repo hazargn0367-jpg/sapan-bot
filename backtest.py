@@ -330,7 +330,7 @@ def main():
     ap.add_argument("--days", type=int, default=7)
     ap.add_argument("--symbols", default="")
     ap.add_argument("--tf", default="15m")
-    ap.add_argument("--rr", type=float, default=tr.RR)
+    ap.add_argument("--rr", type=float, default=2.0)
     ap.add_argument("--be", type=float, default=0.0, help="başabaş tetik (R), 0 = kapalı")
     ap.add_argument("--ago", type=int, default=0, help="dönemi kaç gün geriye kaydır (önceki ay için = days)")
     ap.add_argument("--compare", action="store_true", help="tüm TP/başabaş ayarlarını karşılaştır")
