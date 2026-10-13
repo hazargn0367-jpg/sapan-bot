@@ -25,7 +25,8 @@ import logging
 import os
 import pickle
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+import gc
 
 import numpy as np
 import pandas as pd
@@ -43,6 +44,7 @@ log = logging.getLogger("bot")
 CACHE_DIR = "/tmp/bt_cache"
 WARMUP = 300  # ilk mumlarda EMA100 oturmadığı için atlanır
 FETCH_THREADS = 6  # aynı anda kaç coinin verisi çekilsin
+MAX_IN_FLIGHT = 12  # bellekte aynı anda en fazla kaç coinin ham verisi dursun
 TZ = "Europe/Istanbul"
 
 # Senin fotoğraflarla anlattığın örnekler (Türkiye saati, temas mumu)
@@ -96,6 +98,17 @@ def period(days, ago):
     """Test edilen dönemin başlangıç/bitiş zamanı (ms)."""
     end_ms = int(time.time() * 1000) - ago * 86400 * 1000
     return end_ms - days * 86400 * 1000, end_ms
+
+
+def clean_cache():
+    """Eski saatlere ait önbellek dosyalarını sil (disk ve sayfa önbelleği şişmesin)."""
+    try:
+        keep = time.strftime('%Y%m%d%H')
+        for f in os.listdir(CACHE_DIR):
+            if not f.endswith(f"_{keep}.pkl"):
+                os.remove(os.path.join(CACHE_DIR, f))
+    except OSError:
+        pass
 
 
 def load_15m(symbol, days, ago=0):
@@ -162,7 +175,10 @@ def find_signals(df):
     return out
 
 
-def run_df(df, symbol, tf, tick, signals=None, with_ctx=True):
+TRADED = ("win", "loss", "be", "open")
+
+
+def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False):
     if signals is None:
         signals = find_signals(df)
     rows = []
@@ -172,6 +188,8 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True):
         if i < next_free:
             continue
         r = tr.simulate(df, i, side, tick)
+        if trades_only and r["status"] not in TRADED:
+            continue
         row = {
             "coin": symbol, "zaman_dilimi": tf, "yon": side,
             "temas": fmt_time(ts[i]), "temas_utc": fmt_utc(ts[i]), "durum": r["status"],
@@ -607,6 +625,7 @@ def main():
                   f"{pd.Timestamp(p1, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} ({args.days} gün)")
 
     t0 = time.time()
+    clean_cache()
     ticks = {}
     for attempt in range(3):
         try:
@@ -637,36 +656,53 @@ def main():
     results = {cfg["ad"]: [] for cfg in configs}
     btc_map = None
     examples_txt = []
+    def process(n, symbol, df15):
+        nonlocal btc_map
+        try:
+            if df15 is None or len(df15) < WARMUP + 50:
+                return
+            tick = ticks.get(symbol, 0.0)
+            for tf in tfs:
+                df = prepare(df15 if tf == "15m" else to_30m(df15))
+                if symbol == "BTCUSDT" and tf == "15m":
+                    btc_map = btc_trend_map(df)
+                signals = find_signals(df)
+                for ci, cfg in enumerate(configs):
+                    apply_cfg(cfg)
+                    results[cfg["ad"]] += run_df(df, symbol, tf, tick, signals,
+                                                 with_ctx=(ci == chart_idx),
+                                                 trades_only=bool(args.compare))
+                if not args.compare:
+                    for ex_sym, ex_tf, ex_when in EXAMPLES:
+                        if ex_sym == symbol and ex_tf == tf:
+                            examples_txt.append(explain_example(df, symbol, tf, tick, ex_when))
+                del df
+        except Exception as e:
+            log.error("%s atlandı: %s", symbol, e)
+        if n % 25 == 0:
+            el = time.time() - t0
+            log.info("%d/%d coin bitti (%.1f dk, kalan ~%.1f dk)", n, len(symbols),
+                     el / 60, el / n * (len(symbols) - n) / 60)
+
+    # Aynı anda en fazla MAX_IN_FLIGHT coinin verisi bellekte: işlenen veri hemen bırakılır
     with ThreadPoolExecutor(max_workers=FETCH_THREADS) as ex:
-        futures = {ex.submit(fetch, sym): sym for sym in symbols}
-        for n, fut in enumerate(as_completed(futures), 1):
-            symbol = futures[fut]
-            df15 = fut.result()
-            futures[fut] = None
-            try:
-                if df15 is None or len(df15) < WARMUP + 50:
-                    continue
-                frames = {"15m": df15, "30m": to_30m(df15)}
-                tick = ticks.get(symbol, 0.0)
-                for tf in tfs:
-                    df = prepare(frames[tf])
-                    if symbol == "BTCUSDT" and tf == "15m":
-                        btc_map = btc_trend_map(df)
-                    signals = find_signals(df)
-                    for ci, cfg in enumerate(configs):
-                        apply_cfg(cfg)
-                        results[cfg["ad"]] += run_df(df, symbol, tf, tick, signals,
-                                                     with_ctx=(ci == chart_idx))
-                    if not args.compare:
-                        for ex_sym, ex_tf, ex_when in EXAMPLES:
-                            if ex_sym == symbol and ex_tf == tf:
-                                examples_txt.append(explain_example(df, symbol, tf, tick, ex_when))
-            except Exception as e:
-                log.error("%s atlandı: %s", symbol, e)
-            if n % 25 == 0:
-                el = time.time() - t0
-                log.info("%d/%d coin bitti (%.1f dk, kalan ~%.1f dk)", n, len(symbols),
-                         el / 60, el / n * (len(symbols) - n) / 60)
+        queue = list(symbols)
+        pending = {}
+        n = 0
+        while queue or pending:
+            while queue and len(pending) < MAX_IN_FLIGHT:
+                sym = queue.pop(0)
+                pending[ex.submit(fetch, sym)] = sym
+            done, _ = wait(list(pending), return_when=FIRST_COMPLETED)
+            for fut in done:
+                symbol = pending.pop(fut)
+                df15 = fut.result()
+                del fut
+                n += 1
+                process(n, symbol, df15)
+                del df15
+            del done
+            gc.collect(0)
 
     if btc_map is None and any(cfg.get("btc") for cfg in configs):
         try:

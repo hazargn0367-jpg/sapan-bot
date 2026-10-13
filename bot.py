@@ -11,6 +11,15 @@ Dosyalar:
   backtest.py  -> geçmiş veride strateji testi
 """
 
+import os
+import sys
+
+# Çok iş parçacıklı Python'da glibc bellek arenaları RAM'i şişirir; 2 ile sınırla.
+# Ayar süreç başlarken okunduğu için gerekirse bir kez kendini yeniden başlatır.
+if os.environ.get("MALLOC_ARENA_MAX") != "2":
+    os.environ["MALLOC_ARENA_MAX"] = "2"
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+
 import logging
 import threading
 import time

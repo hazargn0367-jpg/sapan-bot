@@ -21,7 +21,6 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 
-import charts
 import strategy as st
 import trade_rules as tr
 from exchanges import get_klines, get_tick_sizes, get_top_symbols
@@ -123,8 +122,9 @@ def closed_candles(symbol):
     return prepare(df)
 
 
-def scan_symbol(symbol):
-    """Son mumlardaki temasları ve tamamlanan onayları bulur."""
+def scan_symbol(symbol, keep_df=False):
+    """Son mumlardaki temasları ve tamamlanan onayları bulur.
+    Veri sadece onay adayı varsa ya da coin takipteyse geri döner (bellek)."""
     df = closed_candles(symbol)
     if df is None:
         return symbol, None, [], []
@@ -141,6 +141,8 @@ def scan_symbol(symbol):
         r = tr.simulate(df, i, sig["side"], tick)
         if r["status"] == "pending" and r.get("confirm") == n - 1 and "entry" in r:
             ready.append((i, sig["side"], r))
+    if not ready and not keep_df:
+        return symbol, False, touches, ready   # False = veri alındı ama saklanmadı
     return symbol, df, touches, ready
 
 
@@ -169,6 +171,7 @@ def setup_message(symbol, side, r, df):
 def send_setup(symbol, side, r, df):
     caption = setup_message(symbol, side, r, df)
     try:
+        import charts  # matplotlib sadece bildirim çizerken yüklenir (bellek)
         os.makedirs(CHART_DIR, exist_ok=True)
         ts = df["timestamp"].values
         trade = {
@@ -226,7 +229,7 @@ def run_cycle():
     watch = {k[0] for k in _active}
     todo = list(dict.fromkeys(list(symbols) + sorted(watch)))
     with ThreadPoolExecutor(max_workers=SCAN_THREADS) as ex:
-        results = list(ex.map(lambda s: _safe_scan(s), todo))
+        results = list(ex.map(lambda s: _safe_scan(s, s in watch), todo))
 
     counts = Counter()
     candidates = []
@@ -234,7 +237,7 @@ def run_cycle():
         if df is None:
             continue
         counts.update(touches)
-        if symbol in watch:
+        if symbol in watch and df is not False:
             follow_up(symbol, df)
         for i, side, r in ready:
             candidates.append((symbol, side, r, df))
@@ -288,9 +291,9 @@ def status_text():
     return "\n".join(lines)
 
 
-def _safe_scan(symbol):
+def _safe_scan(symbol, keep_df=False):
     try:
-        return scan_symbol(symbol)
+        return scan_symbol(symbol, keep_df)
     except Exception as e:
         log.debug("%s taranamadı: %s", symbol, e)
         return symbol, None, [], []
