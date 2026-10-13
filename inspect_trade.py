@@ -102,6 +102,9 @@ def inspect(text, chart_path="/tmp/incele.png"):
     n_touch = tr.pivot_touches(df, i, side)
     lines.append(f"{ok(n_touch < 3)} 4) Temiz tepe/dip: seviyeye {n_touch} mum dokunmuş (3+ ise kötü)")
     lines.append(f"{ok(tr.pivot_wick_ok(df, i, side) if tr.PIVOT_WICK_MAX else True)} 6) Tepe/dip mumunun iğnesi ≤ 2 gövde")
+    tail, ewick, tbody, tatr = tr.touch_tail(df, i, side)
+    lines.append(f"{ok(tail <= ewick)} 10) (testte) Ters iğne {p8(tail)} | EMA tarafı iğne {p8(ewick)} | "
+                 f"gövde {p8(tbody)} | {tail / tatr:.2f} ATR")
     hour_utc = (int(df["timestamp"].values[i]) // 3_600_000) % 24
     lines.append(f"{ok(not (0 <= hour_utc < 4))} 03:00-07:00 TR dışında")
 

@@ -73,6 +73,7 @@ STATUS_TR = {
     "structure_break": "Düzeltme önceki düzeltmeyi kırmış (yapı bozuk)",
     "pivot_wick": "Tepe/dip mumunun iğnesi çok uzun",
     "support": "Dip/tepeden sonra iğneli mumlar (destek/direnç oluşmuş)",
+    "touch_tail": "Temas mumunun ters iğnesi uzun (EMA20'den dönüş zayıf)",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
     "skip_open": "Açık işlem sınırı dolu (portföy koruması)",
@@ -121,14 +122,37 @@ def clean_cache():
 
 
 def _data_dir():
-    """Render'da kalıcı disk takılıysa (/var/data) orası, yoksa /tmp (her yüklemede silinir)."""
-    for d in (os.environ.get("DATA_DIR", ""), "/var/data"):
-        if d and os.path.isdir(d) and os.access(d, os.W_OK):
-            return d
-    return "/tmp"
+    import config
+    return config.data_dir()
 
 
-KLINE_CACHE = os.path.join(_data_dir(), "kline_cache")  # coin başına mum verisi: sonraki testler sadece yeni mumları çeker
+KLINE_CACHE = os.path.join(_data_dir(), "kline_cache")
+
+def _universe_path():
+    return os.path.join(_data_dir(), "universe.json")
+
+
+def _save_universe(symbols, ticks):
+    try:
+        import json
+        with open(_universe_path(), "w") as f:
+            json.dump({"t": time.time(), "symbols": symbols, "ticks": ticks}, f)
+    except (OSError, TypeError):
+        pass
+
+
+def _load_universe():
+    """Son başarılı coin listesi (son 3 gün içindeyse)."""
+    try:
+        import json
+        with open(_universe_path()) as f:
+            u = json.load(f)
+        if time.time() - u["t"] < 3 * 86400:
+            return u["symbols"], u["ticks"]
+    except (OSError, ValueError, KeyError):
+        pass
+    return None
+  # coin başına mum verisi: sonraki testler sadece yeni mumları çeker
 BASE_TF = "15m"  # indirilen veri: 15m (30m bundan üretilir) ya da 5m
 BAR_MS = 15 * 60 * 1000
 
@@ -506,7 +530,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
 PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR",
               "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R", "STRUCTURE_BREAK",
-              "SUPPORT_N", "SUPPORT_MIN", "SUPPORT_WICK_BODY", "SUPPORT_WICK_ATR"]
+              "SUPPORT_N", "SUPPORT_MIN", "SUPPORT_WICK_BODY", "SUPPORT_WICK_ATR",
+              "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -613,6 +638,14 @@ COMPARE_SETS["destek"] = [
     C("+ 7 (1R) + 8", **_LIVE_NOW, ROOM_MIN_R=1.0, STRUCTURE_BREAK="wick"),
     C("+ 7 (1R) + 8 + 9 (½ gövde)", **_LIVE_NOW, ROOM_MIN_R=1.0, STRUCTURE_BREAK="wick", **_S9),
 ]
+COMPARE_SETS["igne"] = [
+    C("Canlı ayar (1:2.2)", **_LIVE_NOW),
+    C("+ 10: ters iğne ≤ EMA tarafındaki iğne", **_LIVE_NOW, TOUCH_TAIL_MAX=1.0, TOUCH_TAIL_REF="wick"),
+    C("+ 10: ters iğne ≤ EMA iğnesinin yarısı", **_LIVE_NOW, TOUCH_TAIL_MAX=0.5, TOUCH_TAIL_REF="wick"),
+    C("+ 10: ters iğne ≤ 0.3 ATR", **_LIVE_NOW, TOUCH_TAIL_MAX=0.3, TOUCH_TAIL_REF="atr"),
+    C("+ 7: önünde en az 1R yer", **_LIVE_NOW, ROOM_MIN_R=1.0),
+    C("+ 7 (1R) + 10 (≤ EMA iğnesi)", **_LIVE_NOW, ROOM_MIN_R=1.0, TOUCH_TAIL_MAX=1.0, TOUCH_TAIL_REF="wick"),
+]
 _LIVE_NO_CLUSTER = dict(live_setups.LIVE_RULES)
 COMPARE_SETS["toplu"] = [
     C("Canlı ayar (aynı mumda 5+ coin varsa girme)", **_LIVE_NOW),
@@ -621,7 +654,7 @@ COMPARE_SETS["toplu"] = [
     C("Toplu sinyal filtresi kapalı", **_LIVE_NO_CLUSTER),
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
-             "destek": 2, "toplu": 3}  # grafikleri çizilecek ayar (listedeki sırası)
+             "destek": 2, "toplu": 3, "igne": 1}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -640,6 +673,7 @@ CHECK_TRADES = [
     ("ADAUSDT", "01.08.2026 13:30", "iyi işlem"),
 ]
 SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
+                "touch_tail": "elendi(ters iğne)",
                 "no_room": "elendi(yer)", "open": "açık"}
 
 
@@ -767,23 +801,38 @@ def main():
         USE_ARCHIVE = ok
         source = (f"Binance arşivi ({why})" if ok else f"Binance API, arşive ulaşılamadı: {why}")
     log.info("Veri kaynağı: %s", source)
-    ticks = {}
-    for attempt in range(3):
-        try:
-            ticks = get_tick_sizes(max_wait=BAN_WAIT)
-            break
-        except BinanceBlocked:
+    ticks, symbols = {}, [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+    try:
+        for attempt in range(3):
+            try:
+                ticks = get_tick_sizes(max_wait=60)
+                break
+            except BinanceBlocked:
+                raise
+            except Exception as e:
+                log.warning("Tık büyüklükleri alınamadı (%d. deneme): %s", attempt + 1, e)
+                time.sleep(10)
+        if not ticks:
+            raise RuntimeError("Binance'ten coin bilgileri alınamadı (3 deneme)")
+        if not symbols:
+            symbols = get_top_symbols(args.top, max_wait=60) if args.top > 0 else fetch_symbols(60)
+        _save_universe(symbols, ticks)
+    except BinanceBlocked as e:
+        # Binance API engelli: coin listesi önceki kayıttan ya da arşivden; bugünün mumları alınamaz
+        if not USE_ARCHIVE:
             raise
-        except Exception as e:
-            log.warning("Tık büyüklükleri alınamadı (%d. deneme): %s", attempt + 1, e)
-            time.sleep(10)
-    if not ticks:
-        raise RuntimeError("Binance'ten coin bilgileri alınamadı (3 deneme)")
-    symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+        uni = _load_universe()
+        if uni and (not args.top or len(uni[0]) >= args.top):
+            symbols = symbols or uni[0][:args.top or None]
+            ticks = uni[1]
+            how = "son kaydedilen coin listesi"
+        else:
+            symbols = symbols or archive.top_symbols(args.top)
+            how = "coin listesi arşivden (dünkü hacme göre), fiyat adımı yok"
+        source += f". Binance API engelli ({int(e.seconds // 60)} dk): {how}, bugünün mumları yok"
+        log.warning("Binance API engelli, %s", how)
     if not symbols:
-        symbols = get_top_symbols(args.top, max_wait=BAN_WAIT) if args.top > 0 else fetch_symbols(BAN_WAIT)
-    if not symbols:
-        raise RuntimeError("Binance coin listesi boş geldi")
+        raise RuntimeError("Coin listesi alınamadı")
     log.info("Backtest başlıyor: %d coin, %d gün, %s, %d ayar", len(symbols), args.days, tfs, len(configs))
     what = (f"{len(configs)} farklı ayar karşılaştırılacak" if args.compare else
             f"TP 1:{tr.RR:g}" + (f", başabaş {tr.BE_TRIGGER:g}R" if tr.BE_TRIGGER > 0 else ""))

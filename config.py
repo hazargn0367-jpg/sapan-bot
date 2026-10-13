@@ -14,6 +14,14 @@ TIMEFRAMES = [("15m", "15m")]
 LIVE_TF = os.environ.get("LIVE_TF", "5m")
 
 
+def data_dir():
+    """Render'da kalıcı disk takılıysa (/var/data) orası, yoksa /tmp (her yüklemede silinir)."""
+    for d in (os.environ.get("DATA_DIR", ""), "/var/data"):
+        if d and os.path.isdir(d) and os.access(d, os.W_OK):
+            return d
+    return "/tmp"
+
+
 def tf_minutes(tf):
     return int(tf[:-1]) * (60 if tf.endswith("h") else 1)
 

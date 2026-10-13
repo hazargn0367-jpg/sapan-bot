@@ -230,3 +230,58 @@ def summary():
     if s["skipped_recent"]:
         txt += f", {s['skipped_recent']} coinde son 1-2 günün mumları alınamadı (Binance engeli)"
     return txt
+
+
+# ---------------------------------------------------------------- coin listesi (Binance API engelliyken)
+S3_LIST = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision"
+
+
+def list_symbols():
+    """Arşivde günlük verisi olan bütün USDT vadeli coinler (S3 dizin listesi)."""
+    import re
+    syms, marker = [], ""
+    for _ in range(20):
+        params = {"delimiter": "/", "prefix": "data/futures/um/daily/klines/"}
+        if marker:
+            params["marker"] = marker
+        r = exchanges._thread_session().get(S3_LIST, params=params, timeout=30)
+        r.raise_for_status()
+        found = re.findall(r"<Prefix>data/futures/um/daily/klines/([A-Z0-9_]+)/</Prefix>", r.text)
+        syms += found
+        if "<IsTruncated>true</IsTruncated>" not in r.text or not found:
+            break
+        m = re.search(r"<NextMarker>([^<]+)</NextMarker>", r.text)
+        marker = m.group(1) if m else f"data/futures/um/daily/klines/{found[-1]}/"
+    return sorted({s for s in syms if s.endswith("USDT")})
+
+
+def _quote_volume(content):
+    """Günlük (1d) zip'teki USDT hacmi (8. sütun)."""
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        text = zf.read(zf.namelist()[0]).decode("utf-8", "ignore")
+    for line in text.splitlines():
+        p = line.split(",")
+        if len(p) > 7 and p[0].strip().isdigit():
+            return float(p[7])
+    return 0.0
+
+
+def top_symbols(n):
+    """Binance API engelliyken coin listesi: arşivdeki coinlerden dünkü (yoksa önceki gün) USDT hacmine göre ilk n.
+    Dün dosyası olmayan coinler (işlemden kalkmış) listeye girmez."""
+    syms = list_symbols()
+    now = _dt(time.time() * 1000)
+    for back in (1, 2):
+        day = (now - dt.timedelta(days=back)).replace(hour=0, minute=0, second=0, microsecond=0)
+        urls = [_daily_url(s, "1d", day) for s in syms]
+        vols = {}
+        for s, c in zip(syms, _download_many(urls)):
+            if c is not None:
+                try:
+                    vols[s] = _quote_volume(c)
+                except Exception:
+                    pass
+        if len(vols) >= 0.5 * len(syms):
+            break
+    ranked = sorted(vols, key=vols.get, reverse=True)
+    return ranked[:n] if n else ranked

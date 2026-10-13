@@ -50,6 +50,8 @@ PIVOT_WICK_MAX = 0.0         # >0: tepe (LONG) / dip (SHORT) mumunun o yöndeki 
 QUIET_UTC = (0, 0)           # (başlangıç, bitiş) UTC saat: temas bu aralıktaysa işlem yok. (0, 4) = 03:00-07:00 TR
 ROOM_MIN_R = 0.0             # >0: giriş ile önceki tepe (LONG) / dip (SHORT) arası en az bu kadar R olmalı (önünde yer)
 STRUCTURE_BREAK = ""         # "wick" / "close": şu anki düzeltme önceki düzeltmenin dibini (LONG) / tepesini (SHORT) kırdıysa işlem yok
+TOUCH_TAIL_MAX = 0.0         # >0: temas mumunun ters iğnesi (SHORT'ta alt, LONG'da üst) en fazla bu kadar TOUCH_TAIL_REF (kural 10)
+TOUCH_TAIL_REF = "wick"      # "wick": EMA20 tarafındaki iğne · "atr": ATR · "body": gövde
 SUPPORT_N = 0                # >0: son dipten (SHORT) / tepeden (LONG) sonraki bu kadar mum incelenir (kural 9)
 SUPPORT_MIN = 2              # bunların en az bu kadarı dibe (tepeye) doğru iğneliyse destek (direnç) oluşmuş: işlem yok
 SUPPORT_WICK_BODY = 1.0      # "iğneli" mum: dibe (tepeye) doğru iğne >= gövdenin bu katı
@@ -207,6 +209,22 @@ def support_details(df, i, side, n=None, need=None, wick_body=None, wick_atr=Non
     return {"p": p, "rows": rows, "count": count, "support": n > 0 and count >= need}
 
 
+def touch_tail(df, i, side):
+    """Kural 10 ölçüleri: (ters iğne, EMA tarafı iğne, gövde, ATR)."""
+    body, up, down = candle_parts(*df[["Open", "High", "Low", "Close"]].values[i])
+    long = side == "LONG"
+    return (up if long else down), (down if long else up), body, float(df["ATR"].values[i])
+
+
+def touch_tail_ok(df, i, side, max_mult=None, ref=None):
+    """Kural 10: temas mumu EMA20'den güçlü dönmeli; ters yöndeki iğne (SHORT'ta alt) uzun olmamalı."""
+    max_mult = TOUCH_TAIL_MAX if max_mult is None else max_mult
+    ref = TOUCH_TAIL_REF if ref is None else ref
+    tail, wick, body, atr = touch_tail(df, i, side)
+    base = {"wick": wick, "atr": atr, "body": body}[ref]
+    return tail <= max_mult * base
+
+
 def touch_closes_right_side(df, i, side):
     c = df.iloc[i]
     return c["Close"] > c["EMA20"] if side == "LONG" else c["Close"] < c["EMA20"]
@@ -214,7 +232,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick):
     """i: temas mumu. Sonucu sözlük olarak döner.
-    status: session | quiet | no_close | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | quiet | no_close | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -244,6 +262,9 @@ def simulate(df, i, side, tick):
 
     if TOUCH_WICK_MIN > 0 and not touch_is_wick_candle(df, i, side):
         res["status"] = "touch_body"
+        return res
+    if TOUCH_TAIL_MAX > 0 and not touch_tail_ok(df, i, side):
+        res["status"] = "touch_tail"
         return res
     if REQUIRE_PRIOR_TOUCH and not prior_touch_ok(df, i, side):
         res["status"] = "no_prior_touch"

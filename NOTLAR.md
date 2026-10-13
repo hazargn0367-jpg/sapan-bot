@@ -131,6 +131,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - Kullanıcı isteği: aynı anda en fazla 2 işlem (MAX_OPEN=2). Canlıda giriş bekleyen + açık ≥2 ise yeni EMİR HAZIR yok, "⏸" mesajı.
   Backtest canlı ayarında max_open=2 (dolmuş işlemler, girişten çıkışa).
 
+- Kural 10 (testte): temas mumunun ters iğnesi (SHORT'ta alt, LONG'da üst) uzun olmamalı (kullanıcı örneği 28.09 09:00 5m SHORT,
+  ayrıca giriş dibe çok yakındı = kural 7). `/backtest 30 iğne 5m`: ≤ EMA iğnesi / ≤ yarısı / ≤ 0.3 ATR / kural 7 (1R) / 7+10.
+- Binance API engelliyken backtest: coin listesi son kayıttan (universe.json) ya da arşivden (S3 listesi + dünkü 1d hacim),
+  fiyat adımı yoksa 0, bugünün mumları atlanır. Binance'e hiç istek gitmez.
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.

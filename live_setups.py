@@ -116,6 +116,12 @@ def refresh_universe():
             ticks = get_tick_sizes(max_wait=120)
             if syms:
                 _state.update(symbols=syms, ticks=ticks, symbols_time=time.time())
+                try:  # backtest Binance engelliyken bu listeyi kullanır
+                    import json
+                    with open(os.path.join(config.data_dir(), "universe.json"), "w") as f:
+                        json.dump({"t": time.time(), "symbols": syms, "ticks": ticks}, f)
+                except OSError:
+                    pass
                 for k in [k for k in _kcache if k not in set(syms)]:
                     _kcache.pop(k, None)
                 log.info("Setup taraması: %d coin", len(syms))
