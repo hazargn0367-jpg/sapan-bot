@@ -25,7 +25,7 @@ BASE_URL = "https://fapi.binance.com"
 KLINE_LIMIT = 499  # Binance'te 100-499 arası mum = 2 ağırlık (rate limit dostu)
 WEIGHT_LIMIT = 2400
 WEIGHT_SOFT_LIMIT = 2000  # buna yaklaşınca dakika dolana kadar beklenir (backtest bunu 1200'e indirir)
-BACKTEST_SOFT_LIMIT = 1200  # backtest en fazla bu kadar kullanır: canlı 5dk taraması (~1000) + backtest < 2400
+BACKTEST_SOFT_LIMIT = 1500  # backtest en fazla bu kadar kullanır: canlı 5dk taraması (~1000) + backtest < 2400
 PAUSE_FILE = "/tmp/binance_pause"
 import config  # noqa: E402
 

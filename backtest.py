@@ -100,6 +100,15 @@ COND_TR = [
 
 
 # ---------------------------------------------------------------- veri
+def _trim_memory():
+    """Python'un bıraktığı ama glibc'nin tuttuğu belleği işletim sistemine geri verir."""
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
+
+
 def period(days, ago):
     """Test edilen dönemin başlangıç/bitiş zamanı (ms)."""
     end_ms = int(time.time() * 1000) - ago * 86400 * 1000
@@ -111,12 +120,66 @@ def clean_cache():
     shutil.rmtree(CACHE_DIR, ignore_errors=True)
 
 
-def load_15m(symbol, days, ago=0):
-    start_ms, end_ms = period(days, ago)
-    start_ms -= WARMUP * 15 * 60 * 1000
+KLINE_CACHE = "/tmp/kline_cache"  # coin başına 15dk verisi (diskte): sonraki testler sadece yeni mumları çeker
+BAR_MS = 15 * 60 * 1000
+
+
+def _fetch_range(symbol, start_ms, end_ms):
     if USE_ARCHIVE:
         return archive.get_range(symbol, "15m", start_ms, end_ms, api_max_wait=BAN_WAIT)
     return get_klines_range(symbol, "15m", start_ms, end_ms, max_wait=BAN_WAIT)
+
+
+def _cache_path(symbol):
+    return os.path.join(KLINE_CACHE, f"{symbol}_15m.npz")
+
+
+def _to_arr(df):
+    if df is None or df.empty:
+        return np.empty((0, 5))
+    return df[["timestamp", "Open", "High", "Low", "Close"]].to_numpy(dtype=np.float64)
+
+
+def load_15m(symbol, days, ago=0):
+    """Önce diskteki veri; eksik kalan baş/son kısım Binance'ten çekilir ve kayda eklenir.
+    Kayıt her zaman kesintisizdir: span = çekilmiş aralık (coin o tarihte yoksa da çekilmiş sayılır)."""
+    start_ms, end_ms = period(days, ago)
+    start_ms -= WARMUP * BAR_MS
+    path = _cache_path(symbol)
+    arr = span = None
+    try:
+        with np.load(path) as z:
+            arr, span = z["data"], [int(z["span"][0]), int(z["span"][1])]
+    except (OSError, ValueError, KeyError):
+        pass
+    if arr is None:
+        arr, span, changed = _to_arr(_fetch_range(symbol, start_ms, end_ms)), [start_ms, end_ms], True
+    else:
+        changed = False
+        if start_ms < span[0]:  # baş kısım eksik: kayıt başına kadar çek (boşluk kalmasın)
+            head = _to_arr(_fetch_range(symbol, start_ms, span[0]))
+            arr = np.vstack([head[head[:, 0] < span[0]], arr])
+            span[0], changed = start_ms, True
+        if end_ms > span[1] + 2 * BAR_MS:  # yeni mumlar
+            last = int(arr[-1, 0]) if len(arr) else span[1]
+            tail = _to_arr(_fetch_range(symbol, last + 1, end_ms))
+            arr = np.vstack([arr, tail[tail[:, 0] > last]])
+            span[1], changed = end_ms, True
+    if changed:
+        _save_cache(path, arr, span)
+    sel = arr[(arr[:, 0] >= start_ms) & (arr[:, 0] < end_ms)]
+    return pd.DataFrame({"timestamp": sel[:, 0].astype(np.int64), "Open": sel[:, 1], "High": sel[:, 2],
+                         "Low": sel[:, 3], "Close": sel[:, 4]})
+
+
+def _save_cache(path, arr, span):
+    try:
+        os.makedirs(KLINE_CACHE, exist_ok=True)
+        tmp = f"{path}.{os.getpid()}.tmp.npz"
+        np.savez(tmp, data=arr, span=np.array(span, dtype=np.int64))
+        os.replace(tmp, path)
+    except OSError as e:
+        log.warning("Veri diske kaydedilemedi: %s", e)
 
 
 def archive_reachable():
@@ -180,7 +243,9 @@ def find_signals(df):
 TRADED = ("win", "loss", "be", "open")
 
 
-def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False):
+def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False, status_counter=None):
+    """trades_only: sadece işleme dönen setup'lar saklanır (500 coinde on binlerce satır bellek yer);
+    status_counter verilirse bütün setup'ların durumları sayılır (rapordaki huni için)."""
     if signals is None:
         signals = find_signals(df)
     rows = []
@@ -190,6 +255,8 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False)
         if i < next_free:
             continue
         r = tr.simulate(df, i, side, tick)
+        if status_counter is not None:
+            status_counter[r["status"]] += 1
         if trades_only and r["status"] not in TRADED:
             continue
         row = {
@@ -252,14 +319,16 @@ def btc_trend_map(df):
     return dict(zip(df["timestamp"].astype("int64"), np.where(df["EMA20"] > df["EMA50"], 1, -1)))
 
 
-def apply_portfolio(rows, max_open=0, cluster_max=0, btc=False, btc_map=None):
+def apply_portfolio(rows, max_open=0, cluster_max=0, btc=False, btc_map=None, touch_counts=None):
     """Coinler arası kurallar. Elenen işlemlerin durumu skip_* olur.
-    Sıra: BTC yönü -> toplu sinyal -> aynı anda açık işlem sınırı."""
+    Sıra: BTC yönü -> toplu sinyal -> aynı anda açık işlem sınırı.
+    touch_counts: (temas zamanı, yön) -> o mumda temas veren coin sayısı. Canlıdaki gibi BÜTÜN temaslar
+    sayılır (sadece işleme dönenler değil)."""
     if not (max_open or cluster_max or btc):
         return rows
     from collections import Counter
     import heapq
-    counts = Counter((r["_touch_ts"], r["yon"]) for r in rows)
+    counts = touch_counts if touch_counts is not None else Counter((r["_touch_ts"], r["yon"]) for r in rows)
     traded = ("win", "loss", "be", "open")
 
     def skip(r, status):
@@ -332,10 +401,13 @@ def month_label(touch_ts, p0):
     return int((touch_ts - p0) // (30 * 86400 * 1000)) + 1
 
 
-def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, days=30):
+def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, days=30, status_counts=None):
     trades = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
     s = stats(trades)
-    funnel = df_all["durum"].value_counts() if not df_all.empty else pd.Series(dtype=int)
+    funnel = df_all["durum"].value_counts().to_dict() if not df_all.empty else {}
+    if status_counts is not None:  # işleme dönmeyen setup'lar saklanmadı: sayıları buradan
+        funnel = {**{k: v for k, v in status_counts.items() if k not in TRADED}, **funnel}
+    n_setups = sum(funnel.values())
 
     def c(*keys):
         return int(sum(funnel.get(k, 0) for k in keys))
@@ -347,7 +419,7 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
     msg = [f"📊 <b>BACKTEST SONUCU (TP 1:{tr.RR:g}{be_txt}{f_txt})</b>",
            f"{period_txt}, {n_coins} coin ({minutes:.0f} dk sürdü)", ""]
     msg.append("<b>Huni</b>")
-    msg.append(f"Temas sinyali: {len(df_all)}")
+    msg.append(f"Temas sinyali: {n_setups}")
     msg.append(f"  ↳ EMA20 yanlış tarafta kapanış: {c('no_close')}")
     msg.append(f"  ↳ Onaydan önce iptal: {c('cancel_touch')}")
     msg.append(f"  ↳ 3 mumda onay yok: {c('no_confirm')}")
@@ -700,6 +772,9 @@ def main():
             return None
 
     results = {cfg["ad"]: [] for cfg in configs}
+    from collections import Counter
+    status_counts = Counter()   # tekli testte bütün setup'ların durumları (huni)
+    touch_counts = Counter()    # (mum, yön) -> temas veren coin sayısı (toplu sinyal filtresi, canlıdaki gibi)
     n_ok = 0
     btc_map = None
     examples_txt = []
@@ -715,11 +790,13 @@ def main():
                 if symbol == "BTCUSDT" and tf == "15m":
                     btc_map = btc_trend_map(df)
                 signals = find_signals(df)
+                ts_ = df["timestamp"].values
+                touch_counts.update((int(ts_[i]), side) for i, side in signals)
                 for ci, cfg in enumerate(configs):
                     apply_cfg(cfg)
                     results[cfg["ad"]] += run_df(df, symbol, tf, tick, signals,
-                                                 with_ctx=(ci == chart_idx),
-                                                 trades_only=bool(args.compare))
+                                                 with_ctx=(ci == chart_idx), trades_only=True,
+                                                 status_counter=None if args.compare else status_counts)
                 if not args.compare:
                     for ex_sym, ex_tf, ex_when in EXAMPLES:
                         if ex_sym == symbol and ex_tf == tf:
@@ -728,6 +805,7 @@ def main():
         except Exception as e:
             log.error("%s atlandı: %s", symbol, e)
         if n % 25 == 0:
+            _trim_memory()
             el = time.time() - t0
             log.info("%d/%d coin bitti (%.1f dk, kalan ~%.1f dk)", n, len(symbols),
                      el / 60, el / n * (len(symbols) - n) / 60)
@@ -759,7 +837,8 @@ def main():
             log.error("BTC verisi alınamadı, BTC filtresi uygulanmayacak: %s", e)
     for cfg in configs:
         results[cfg["ad"]] = apply_portfolio(results[cfg["ad"]], cfg.get("max_open", 0),
-                                             cfg.get("cluster_max", 0), cfg.get("btc", False), btc_map)
+                                             cfg.get("cluster_max", 0), cfg.get("btc", False), btc_map,
+                                             touch_counts=touch_counts)
     minutes = (time.time() - t0) / 60
     coins_txt = f"{n_ok}/{len(symbols)}" if n_ok < len(symbols) else f"{len(symbols)}"
     if n_ok == 0:
@@ -794,7 +873,8 @@ def main():
     apply_cfg(configs[0])
     rows = results[configs[0]["ad"]]
     df_all = pd.DataFrame(rows)
-    report = build_report(df_all, period_txt, coins_txt, minutes, examples_txt, p0=p0, days=args.days)
+    report = build_report(df_all, period_txt, coins_txt, minutes, examples_txt, p0=p0, days=args.days,
+                          status_counts=status_counts)
     report += "\n\n" + (archive.summary() if USE_ARCHIVE else f"Veri: {html.escape(source)}")
     log.info("\n%s", report)
     send_message(report)
@@ -803,7 +883,7 @@ def main():
         path = f"backtest_{time.strftime('%Y%m%d_%H%M')}.csv"
         df_all.drop(columns=[c for c in df_all.columns if c.startswith("_")]).to_csv(
             path, index=False, sep=";", decimal=",", encoding="utf-8-sig")
-        send_document(path, "Tüm setup'lar ve işlemler (Excel/Sheets ile açılır)")
+        send_document(path, "İşleme dönen setup'lar (Excel/Sheets ile açılır)")
 
         trades = df_all[df_all["durum"].isin(["win", "loss", "be"])].sort_values("_touch_ts")
         recs = trades.to_dict("records")
