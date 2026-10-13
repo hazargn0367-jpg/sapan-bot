@@ -65,6 +65,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2:
 
 - Kural 7 (önünde ≥1R yer), 90 gün: toplam -33R → -20R ama işlem başı aynı (-0.39R): sadece işlem sayısını azaltıyor.
 
+- 13.10 17:42: canlı tarama ile backtest aynı anda Binance istek sınırına takıldı. Düzeltme: canlı tarama sadece
+  15dk kapanışından sonraki ilk 60 sn'de başlar ve kendi iş parçacığında çalışır; backtest bu 120 sn'de bekler;
+  429/418'de tüm istekler birlikte bekler.
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.

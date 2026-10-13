@@ -61,7 +61,7 @@ STATUS_MSG = {
 _state = {"symbols": [], "symbols_time": 0.0, "ticks": {}, "last_bucket": None}
 _stats = {"started": time.time(), "cycles": 0, "last_run": None, "scanned": 0, "ok": 0, "touches": 0,
           "ready": 0, "cluster": 0, "sent": 0, "secs": 0.0, "total_sent": 0, "last_sent": None,
-          "last_error": None}
+          "last_error": None, "running_since": None}
 _active = {}   # (coin, temas_ts) -> {"side", "status", "entry", "stop", "tp"}
 
 
@@ -264,9 +264,14 @@ def run_cycle():
 
 def status_text():
     """/durum için canlı tarama özeti."""
-    if _stats["last_run"] is None:
-        return "📋 Canlı tarama: henüz ilk tarama yapılmadı (her 15 dk'lık mum kapanışında çalışır)."
     hhmm = lambda t: pd.Timestamp(t, unit="s", tz="UTC").tz_convert(TZ).strftime("%H:%M")
+    running = ""
+    if _stats["running_since"]:
+        running = f"\n⏳ Şu an tarama sürüyor ({time.time() - _stats['running_since']:.0f} sn)"
+    if _stats["last_run"] is None:
+        nxt = (int(time.time() // 900) + 1) * 900 + 10
+        return (f"📋 Canlı tarama: ilk tarama {hhmm(nxt)}'de yapılacak (her 15 dk'lık mum kapanışında)."
+                + running)
     up_h = (time.time() - _stats["started"]) / 3600
     lines = [
         f"📋 <b>Canlı tarama</b> (bot {up_h:.1f} saattir açık, {_stats['cycles']} tarama)",
@@ -276,6 +281,8 @@ def status_text():
         + (f" (son: {hhmm(_stats['last_sent'])})" if _stats["last_sent"] else ""),
         f"Takipteki setup: {len(_active)}",
     ]
+    if running:
+        lines.append(running.strip())
     if _stats["last_error"]:
         lines.append(f"⚠️ Son hata: {_stats['last_error']}")
     return "\n".join(lines)
@@ -290,14 +297,20 @@ def _safe_scan(symbol):
 
 
 def maybe_run():
-    """Her 15 dakikalık mum kapandıktan ~10 sn sonra bir kez çalışır."""
+    """Her 15 dakikalık mum kapandıktan ~10 sn sonra bir kez çalışır.
+    Sadece kapanıştan sonraki ilk 60 sn içinde başlar (backtest o sırada Binance'e yol verir);
+    bot çeyreğin ortasında açılırsa ilk tarama bir sonraki kapanışta yapılır."""
     now = time.time()
     bucket = int(now // 900)
-    if now - bucket * 900 < 10 or bucket == _state["last_bucket"]:
+    sec = now - bucket * 900
+    if sec < 10 or sec > 60 or bucket == _state["last_bucket"]:
         return
     _state["last_bucket"] = bucket
+    _stats["running_since"] = time.time()
     try:
         run_cycle()
     except Exception as e:
         log.exception("Setup taraması hatası: %s", e)
         _stats["last_error"] = f"{time.strftime('%H:%M')} {type(e).__name__}: {e}"[:200]
+    finally:
+        _stats["running_since"] = None

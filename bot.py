@@ -12,6 +12,7 @@ Dosyalar:
 """
 
 import logging
+import threading
 import time
 
 import config
@@ -75,6 +76,18 @@ def scan():
         log.info("%s taraması bitti, %d yeni sinyal.", tf_label, found)
 
 
+def setup_loop():
+    """EMİR HAZIR taraması kendi iş parçacığında: temas taraması uzun sürse bile
+    15dk'lık kapanış penceresini kaçırmaz."""
+    while True:
+        if config.SETUP_ALERTS:
+            try:
+                live_setups.maybe_run()
+            except Exception as e:
+                log.exception("Setup döngüsü hatası: %s", e)
+        time.sleep(5)
+
+
 def main():
     log.info("Keskin Nişancı Trend & Kırılım Botu Devrede...")
     durum = "açık" if config.TOUCH_ALERTS else "kapalı"
@@ -85,13 +98,13 @@ def main():
                  f"🔔 Temas bildirimleri: {durum}\n"
                  "Komutlar: /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal")
     start_listener()
+    threading.Thread(target=setup_loop, daemon=True).start()
     while True:
-        try:
-            scan()
-        except Exception as e:
-            log.exception("Tarama hatası: %s", e)
-        if config.SETUP_ALERTS:
-            live_setups.maybe_run()
+        if config.TOUCH_ALERTS:
+            try:
+                scan()
+            except Exception as e:
+                log.exception("Tarama hatası: %s", e)
         time.sleep(config.SCAN_SLEEP)
 
 

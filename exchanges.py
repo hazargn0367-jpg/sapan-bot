@@ -70,18 +70,32 @@ def _thread_session():
     return _local.session
 
 
-LIVE_SCAN_WINDOW = 75  # her 15dk'lık mum kapanışından sonraki 75 sn canlı taramaya ayrılır
+LIVE_SCAN_WINDOW = 120  # her 15dk'lık mum kapanışından sonraki 120 sn canlı taramaya ayrılır
+
+
+def _wait_pause():
+    delay = _pause_until - time.time()
+    if delay > 0:
+        time.sleep(delay)
 
 
 def _wait_if_paused():
     """Sadece backtest kullanır: istek sınırına yaklaşıldıysa ya da canlı tarama
-    zamanıysa (15dk'lık mum kapanışından sonraki ilk 75 sn) bekler."""
-    delay = _pause_until - time.time()
-    if delay > 0:
-        time.sleep(delay)
+    zamanıysa (15dk'lık mum kapanışından sonraki ilk 120 sn) bekler."""
+    _wait_pause()
     sec = time.time() % 900
     if sec < LIVE_SCAN_WINDOW:
         time.sleep(LIVE_SCAN_WINDOW - sec)
+
+
+def _pause_all(seconds, reason):
+    """Bu programdaki tüm iş parçacıklarını birlikte beklet (istek sınırı aşıldığında)."""
+    global _pause_until
+    with _pause_lock:
+        until = time.time() + seconds
+        if until > _pause_until:
+            _pause_until = until
+            log.warning("%s: tüm istekler %d sn bekletiliyor", reason, seconds)
 
 
 def _throttle(res):
@@ -111,9 +125,8 @@ def get_klines_range(symbol, interval, start_ms, end_ms):
                 timeout=20,
             )
             if res.status_code in (418, 429):
-                wait = int(res.headers.get("Retry-After", "60"))
-                log.warning("Binance istek sınırı, %d sn bekleniyor", wait)
-                time.sleep(wait)
+                _pause_all(int(res.headers.get("Retry-After", "60")), "Binance istek sınırı (backtest)")
+                _wait_pause()
                 continue
             res.raise_for_status()
             break
@@ -140,29 +153,33 @@ def get_klines_range(symbol, interval, start_ms, end_ms):
 
 
 def get_klines(symbol, interval):
-    """Binance vadeli mum verisi. Son satır şu an açık olan (canlı) mumdur."""
-    try:
-        res = _session.get(
-            f"{BASE_URL}/fapi/v1/klines",
-            params={"symbol": symbol, "interval": interval, "limit": KLINE_LIMIT},
-            timeout=10,
-        )
-        if res.status_code in (418, 429):
-            wait = int(res.headers.get("Retry-After", "60"))
-            log.warning("Binance istek sınırı aşıldı, %s sn bekleniyor", wait)
-            time.sleep(wait)
+    """Binance vadeli mum verisi (canlı tarama). Son satır şu an açık olan (canlı) mumdur.
+    İstek sınırı aşılırsa tüm iş parçacıkları birlikte bekler ve istek bir kez tekrarlanır."""
+    for attempt in range(2):
+        try:
+            _wait_pause()
+            res = _thread_session().get(
+                f"{BASE_URL}/fapi/v1/klines",
+                params={"symbol": symbol, "interval": interval, "limit": KLINE_LIMIT},
+                timeout=10,
+            )
+            if res.status_code in (418, 429):
+                _pause_all(int(res.headers.get("Retry-After", "60")),
+                           "Binance istek sınırı" if res.status_code == 429 else "Binance geçici IP engeli")
+                continue
+            res.raise_for_status()
+            _throttle(res)
+            rows = res.json()
+            if not rows:
+                return None
+            return pd.DataFrame({
+                "timestamp": [int(k[0]) for k in rows],
+                "Open": [float(k[1]) for k in rows],
+                "High": [float(k[2]) for k in rows],
+                "Low": [float(k[3]) for k in rows],
+                "Close": [float(k[4]) for k in rows],
+            })
+        except Exception as e:
+            log.debug("%s %s verisi alınamadı: %s", symbol, interval, e)
             return None
-        res.raise_for_status()
-        rows = res.json()
-        if not rows:
-            return None
-        return pd.DataFrame({
-            "timestamp": [int(k[0]) for k in rows],
-            "Open": [float(k[1]) for k in rows],
-            "High": [float(k[2]) for k in rows],
-            "Low": [float(k[3]) for k in rows],
-            "Close": [float(k[4]) for k in rows],
-        })
-    except Exception as e:
-        log.debug("%s %s verisi alınamadı: %s", symbol, interval, e)
-        return None
+    return None
