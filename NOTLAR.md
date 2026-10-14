@@ -100,7 +100,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   olmayan kısım (coin başına ~1 istek, 2 ağırlık). Sahte arşiv/API ile veri birebir aynı çıktı. Arşive ulaşılamazsa API'ye döner
   (`--api` ile zorla API). Rapor sonunda "Veri: X arşiv dosyası, Y API parçası".
 
-- 13.10 21:5x: kullanıcı isteği: canlı EMİR HAZIR taraması 5 dakikalık grafikte (config.LIVE_TF, Render'da LIVE_TF ile değişir).
+- 14.10 03:36: kullanıcı isteğiyle canlı tarama tekrar 15m (5m backtest iki ayda zararlı). Önceki not: 13.10 21:5x canlı EMİR HAZIR taraması 5 dakikalık grafikte (config.LIVE_TF, Render'da LIVE_TF ile değişir).
   Amaç kârlılık değil, canlı bildirimlerin kurallara uyduğunu daha sık görmek. Kurallar mum sayısıyla tanımlı, aynen geçerli.
   5m'de stoplar dar: %0.3'ten dar stoplu setup'lar elenir, komisyon payı 15m'den büyük. Backtest'ler hâlâ 15m.
   /incele için sona 5m: `/incele COIN 13.10 22:05 5m`.
