@@ -289,3 +289,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   yazılmadan doğrudan arşivden (kayıt kesintisiz tutulduğu için aradaki yıllar indirilirdi). Komutlar:
   `/backtest 30 canlı erken 2 sene önce`, `/backtest 30 canlı erken 3 sene önce`. Coin listesi bugünün ilk 500'ü; o
   tarihte olmayanlar atlanır.
+- 14.10 22:46-22:49 kullanıcı iki eski dönem testini, yükleme devreye girmeden çalıştırdı: eski kod "canlı erken 2 sene önce"yi
+  erken karşılaştırması + TP 2 olarak okudu, ikisi de 14.09-14.10 çıktı. Artık açılış mesajında ve /durum'da "Sürüm"
+  (config.VERSION + Render commit) var: yeni kod devreye girdi mi görülsün. /durum'daki log satırları escape edildi.
+  HER YÜKLEMEDE config.VERSION güncellenmeli.

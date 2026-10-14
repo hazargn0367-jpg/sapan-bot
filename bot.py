@@ -20,6 +20,7 @@ if os.environ.get("MALLOC_ARENA_MAX") != "2":
     os.environ["MALLOC_ARENA_MAX"] = "2"
     os.execv(sys.executable, [sys.executable] + sys.argv)
 
+import html
 import logging
 import shutil
 import signal
@@ -121,6 +122,7 @@ def main():
     durum = "açık" if config.TOUCH_ALERTS else "kapalı"
     setup = "açık" if config.SETUP_ALERTS else "kapalı"
     send_message(f"✅ Bot başladı\n"
+                 f"🏷 Sürüm: {html.escape(config.version_text())}\n"
                  f"📋 Emir bildirimleri: {setup} (hacmi en yüksek {live_setups.UNIVERSE} coin, {live_setups.LIVE_TF})\n"
                  f"Kurallar: {live_setups.rules_summary()}\n"
                  f"🔔 Temas bildirimleri: {durum}\n"

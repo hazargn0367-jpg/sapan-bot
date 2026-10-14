@@ -14,6 +14,15 @@ TIMEFRAMES = [("15m", "15m")]
 LIVE_TF = os.environ.get("LIVE_TF", "5m")
 
 
+# Yüklenen sürüm: açılış mesajında ve /durum'da görünür (yeni kod devreye girdi mi anlaşılsın diye)
+VERSION = "14.10 22:58 · eski dönem testleri (/backtest 30 canlı erken 2 sene önce)"
+GIT_COMMIT = os.environ.get("RENDER_GIT_COMMIT", "")[:7]
+
+
+def version_text():
+    return VERSION + (f" [{GIT_COMMIT}]" if GIT_COMMIT else "")
+
+
 def data_dir():
     """Render'da kalıcı disk takılıysa (/var/data) orası, yoksa /tmp (her yüklemede silinir)."""
     for d in (os.environ.get("DATA_DIR", ""), "/var/data"):

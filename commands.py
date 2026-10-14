@@ -45,6 +45,7 @@ Telegram komutları (bot arka planda dinler):
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
 """
 
+import html
 import logging
 import os
 import re
@@ -170,11 +171,12 @@ def status_text():
         with open(os.path.join(HERE, "backtest.log"), encoding="utf-8", errors="ignore") as f:
             lines = [ln.strip() for ln in f if "coin bitti" in ln or "ERROR" in ln or "Traceback" in ln]
         if lines:
-            progress = lines[-1].split(" INFO ")[-1].split(" ERROR ")[-1]
+            progress = html.escape(lines[-1].split(" INFO ")[-1].split(" ERROR ")[-1][:300], quote=False)
     except OSError:
         pass
     if running:
-        return (f"⏳ Backtest çalışıyor ({_bt_cmd})" + (f": {progress}" if progress else ", veri çekiliyor..."))
+        return (f"⏳ Backtest çalışıyor ({html.escape(_bt_cmd, quote=False)})"
+                + (f": {progress}" if progress else ", veri çekiliyor..."))
     if _bt_proc is not None:
         if _bt_proc.returncode == -15:
             return "🛑 Son backtest durduruldu (/iptal ya da bellek sınırı)."
@@ -186,7 +188,7 @@ def status_text():
                     tail = [ln.rstrip() for ln in f if ln.strip()][-3:]
             except OSError:
                 tail = []
-            return "⚠️ Son backtest hatayla kapandı:\n" + "\n".join(tail)
+            return "⚠️ Son backtest hatayla kapandı:\n" + html.escape("\n".join(tail)[-900:], quote=False)
         return "✅ Son backtest bitti." + (f"\nSon satır: {progress}" if progress else "")
     return "Çalışan backtest yok. Başlatmak için: /backtest"
 
@@ -264,7 +266,8 @@ def _listen():
                     import journal
                     send_message(f"{status_text()}\n\n{live_setups.status_text()}\nEmir bildirimleri: {sig}"
                                  f"\n\n{journal.summary()}"
-                                 f"\n\n{exchanges.status_line()}\n\n{memwatch.status_line()}")
+                                 f"\n\n{exchanges.status_line()}\n\n{memwatch.status_line()}"
+                                 f"\n\n🏷 Sürüm: {html.escape(config.version_text(), quote=False)}")
                 elif text.lower().startswith("/sinyal"):
                     low = text.lower()
                     if "kapa" in low:
