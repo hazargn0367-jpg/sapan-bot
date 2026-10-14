@@ -382,3 +382,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   kötü (5m -14/-18/+2, 15m -37/-21). Renk ayrımı CSV'de yok → kod: FAILED_ENTRY_RED (erken çıkış sadece ters renkli
   kapanışta; doji çıkmaz). COMPARE_SETS["renk"]: erken 2 mum · +renk · onay≤2+stop≥%0.5+erken · +renk.
   `/backtest 180 renk` (+ önceki), `/backtest 90 renk 5m` (Tem-Eki, 5m önbellekte).
+- 15.10 01:59-02:00 kullanıcı BANKUSDT 5m 14.09 13:35 LONG ("bok gibi, asla girmem: ne temiz tepe ne düzeltme, temas
+  mumu kötü; giriş tepenin hizası, bunları kaç kere düzelt diye attım"). Erken çıkışla -0.10R; erken çıkışsız eski
+  testlerde 14:35'te stop (-1.04R). Ölçüler: önünde yer 0.56R, EMA açıklığı 1.82 ATR, düzeltme 3 mum, ters mum %33.
+  HATA (benim): önünde yer kuralı (ROOM_MIN_R, STABLE örneği 14.10) 'örnek' setindeydi, 5m'ye geçince taşımadım,
+  hiç çalışmadı. CSV'den (5m en iyi ayar: onay≤2+stop≥%0.5, elenecek işlemlerin R'si): yer <0.5R -1.7/-2.3/-1.7,
+  yer <1R -2.1/+1.2/-7.5, EMA <2 ATR -4.1/-6.0/-8.2 (5m'de üç ayda da kötü; 15m -9.6/+11.2 karışık).
+  renk setine eklendi: +1R yer · +EMA ≥2 ATR · hepsi (yer+EMA+renk). Kullanıcı "yüklemeden bekle" dedi.

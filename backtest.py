@@ -887,6 +887,13 @@ COMPARE_SETS["renk"] = [
     C("Erken çıkış sadece ters renkli mumda", **dict(_EB0, FAILED_ENTRY_RED=True)),
     C("Onay ≤ 2. mum + stop ≥%0.5 + erken çıkış", **_EB5),
     C("Onay ≤ 2. mum + stop ≥%0.5 + erken çıkış sadece ters renkli mumda", **dict(_EB5, FAILED_ENTRY_RED=True)),
+    # Kullanıcı (15.10 01:59-02:00, BANKUSDT 5m 14.09 13:35 LONG: "ne temiz tepe ne düzeltme, temas mumu kötü, giriş
+    # tepenin hizası; kaç kere attım"). Önünde yer kuralı (ROOM_MIN_R, STABLE örneğinden) 'örnek' setindeydi ama hiç
+    # çalıştırılmadı. BANK: tepeye 0.56R, EMA açıklığı 1.82 ATR; erken çıkışsız testlerde stop oldu (-1.04R).
+    C("Onay ≤ 2 + stop ≥%0.5 + önünde en az 1R yer", **dict(_EB5, ROOM_MIN_R=1.0)),
+    C("Onay ≤ 2 + stop ≥%0.5 + EMA açıklığı ≥ 2 ATR", **dict(_EB5, EMA_FAN_MIN=2.0)),
+    C("Onay ≤ 2 + stop ≥%0.5 + 1R yer + EMA ≥ 2 ATR + ters renkte erken çıkış",
+      **dict(_EB5, ROOM_MIN_R=1.0, EMA_FAN_MIN=2.0, FAILED_ENTRY_RED=True)),
 ]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
