@@ -167,6 +167,14 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Filtreler LEG_BODY_MIN / LEG_ATR_MIN / SPIKE_MAX / EMA_FAN_MIN (durum not_clean), test eşikleri TEMIZ_TEST
   (0.4 / 4 ATR / 0.5 / 2 ATR, tahmini). `/backtest 90 temiz` (`dönüş temiz`): karşılaştırma + "fark analizi"
   (her ölçüde işlemler 3 eşit gruba bölünür, TP oranı/R, ay ay aynı yönde mi; R ±3'e kırpılır; max_open yok).
+- Temiz (KLASİK, 16.07-14.10): canlı 168 işlem -9.7R · gövde≥0.4 57 işlem +4.1R (aylar -3.2/-1.1/+8.5) · ≥4 ATR -21.6R ·
+  tek mum -7.1R · EMA≥2 -10.9R · dördü 27 işlem -0.7R. Fark analizi: hiçbir ölçü şans payını geçmedi, TP/stop ortancaları
+  aynı. Temiz önceki (17.04-16.07): canlı 130 işlem +5.0R · dördü 18 işlem +9.4R · EMA≥2 +18.9R (ilk dönemde işe yaramamıştı).
+  İki dönemde de aynı yönde (sonradan bakılarak): bacakta ters mum ≤%20 (6 ay 111 işlem +0.10/iş, kalanlar -0.11),
+  düzeltme ≥5 mum (157 işlem +0.08, kalanlar -0.15), bacak <4 ATR (76 işlem +0.15). Eşikler sabitlendi: ADAY_TEST,
+  `/backtest 90 aday önceki2` (Ocak-Nisan, bakılmamış dönem) ile klasikte sınanabilir.
+- Kullanıcı (12:38): temiz testlerini DÖNÜŞ varyasyonunda istiyordu ("ayrı test edicez"), ben klasikte çalıştırdım.
+  `/backtest 180 dönüş temiz`: dönüş 6 ay, temiz filtreleri + 3 aday + fark analizi (dönüş işlemleri) tek testte.
 
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
@@ -185,7 +193,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - `/incele COIN gg.aa.yyyy SS:DD` – bir işlemin tüm kurallardaki değerlendirmesi + grafik (p, q, önceki düzeltme çizgisi,
   kural 9 iğneli mumlar mavi üçgen)
 - `/backtest 90 destek` – kural 9 varyasyonları, ay ay
-- `/backtest 90 temiz` – TP/stop fark analizi + temiz trend filtreleri (`dönüş temiz` dönüş varyasyonuyla)
+- `/backtest 180 dönüş temiz` – dönüş varyasyonu: temiz trend + aday filtreleri + TP/stop fark analizi
+- `/backtest 90 temiz [önceki]` – aynısı klasik sistemde · `/backtest 90 aday önceki2` – klasikte adaylar, 3. dönem
 - `/backtest 30 canlı 5m` – sona 5m yazılırsa test 5 dakikalık grafikte (veri ayrı önbellekte)
 
 ## Dosyalar

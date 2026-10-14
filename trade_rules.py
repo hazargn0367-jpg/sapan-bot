@@ -66,6 +66,10 @@ LEG_BODY_MIN = 0.0           # >0: bacaktaki mumların yön gövdeleri toplamı 
 LEG_ATR_MIN = 0.0            # >0: bacak boyu en az bu kadar ATR
 SPIKE_MAX = 0.0              # >0: bacaktaki en büyük mum gövdesi bacağın en fazla bu oranı (tek mumluk fırlama değil)
 EMA_FAN_MIN = 0.0            # >0: EMA20 ile EMA100 arası en az bu kadar ATR (EMA'lar açılmış, trend oturmuş)
+# İki ayrı 90 günde (Nisan-Temmuz, Temmuz-Ekim) aynı yönde çıkan adaylar (14.10, /backtest 90 aday önceki2 ile 3. dönemde test)
+LEG_COUNTER_MAX = 1.0        # <1: bacaktaki ters mumların oranı en fazla bu kadar (0.2 = 5 mumda en fazla 1 ters mum)
+PULLBACK_MIN_BARS = 0        # >0: tepeden (LONG) / dipten (SHORT) temasa kadar en az bu kadar mum (düzeltme acele değil)
+LEG_ATR_MAX = 0.0            # >0: bacak boyu bu kadar ATR'den KISA olmalı (aşırı uzamış hareketten sonraki geri çekilme değil)
 ENTRY_MODE = "classic"       # "classic": temas EMA20'nin doğru tarafında kapatır, 3 mumda onay
                              # "reclaim" (dönüş varyasyonu): temas EMA20'nin YANLIŞ tarafında kapatır, sonraki mum
                              # EMA20'nin doğru tarafında kapatır, ondan sonraki mum o mumun tepesini (LONG) kapanışla geçer = onay
@@ -317,10 +321,22 @@ def trend_features(df, i, side, entry=None, risk=None):
 TEMIZ_TEST = dict(LEG_BODY_MIN=0.4, LEG_ATR_MIN=4.0, SPIKE_MAX=0.5, EMA_FAN_MIN=2.0)
 
 
+ADAY_TEST = dict(LEG_COUNTER_MAX=0.2, PULLBACK_MIN_BARS=5, LEG_ATR_MAX=4.0)
+_CLEAN_KEYS = ("LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN", "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS",
+               "LEG_ATR_MAX")
+_CLEAN_OFF = dict(LEG_BODY_MIN=0.0, LEG_ATR_MIN=0.0, SPIKE_MAX=0.0, EMA_FAN_MIN=0.0, LEG_COUNTER_MAX=1.0,
+                  PULLBACK_MIN_BARS=0, LEG_ATR_MAX=0.0)
+
+
+def clean_trend_active():
+    g = globals()
+    return any(g[k] != _CLEAN_OFF[k] for k in _CLEAN_KEYS)
+
+
 def clean_trend_ok(f, limits=None):
-    """Temiz trend filtreleri. limits verilmezse şu anki ayarlardaki açık olanlar uygulanır."""
-    g = limits or {"LEG_BODY_MIN": LEG_BODY_MIN, "LEG_ATR_MIN": LEG_ATR_MIN, "SPIKE_MAX": SPIKE_MAX,
-                   "EMA_FAN_MIN": EMA_FAN_MIN}
+    """Temiz trend filtreleri. limits verilmezse şu anki ayarlardaki açık olanlar uygulanır
+    (limits'te olmayan filtreler kapalı sayılır)."""
+    g = dict(_CLEAN_OFF, **limits) if limits else {k: globals()[k] for k in _CLEAN_KEYS}
     if g["LEG_BODY_MIN"] > 0 and f["bacak_govde"] < g["LEG_BODY_MIN"]:
         return False
     if g["LEG_ATR_MIN"] > 0 and not f["bacak_atr"] >= g["LEG_ATR_MIN"]:
@@ -328,6 +344,12 @@ def clean_trend_ok(f, limits=None):
     if g["SPIKE_MAX"] > 0 and f["tek_mum"] > g["SPIKE_MAX"]:
         return False
     if g["EMA_FAN_MIN"] > 0 and not f["ema_acilim"] >= g["EMA_FAN_MIN"]:
+        return False
+    if g["LEG_COUNTER_MAX"] < 1 and f["ters_mum"] > g["LEG_COUNTER_MAX"] + 1e-9:
+        return False
+    if g["PULLBACK_MIN_BARS"] > 0 and f["duzeltme_mum"] < g["PULLBACK_MIN_BARS"]:
+        return False
+    if g["LEG_ATR_MAX"] > 0 and not f["bacak_atr"] < g["LEG_ATR_MAX"]:
         return False
     return True
 
@@ -399,8 +421,7 @@ def simulate(df, i, side, tick, mode=None):
     if PIVOT_LEG_MIN > 0 and pivot_leg(df, i, side) < PIVOT_LEG_MIN:
         res["status"] = "pivot_leg"
         return res
-    if (LEG_BODY_MIN > 0 or LEG_ATR_MIN > 0 or SPIKE_MAX > 0 or EMA_FAN_MIN > 0) and \
-            not clean_trend_ok(trend_features(df, i, side)):
+    if clean_trend_active() and not clean_trend_ok(trend_features(df, i, side)):
         res["status"] = "not_clean"
         return res
 

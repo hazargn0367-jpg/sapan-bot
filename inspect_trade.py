@@ -168,6 +168,10 @@ def inspect(text, chart_path="/tmp/incele.png"):
     lines.append(f"{ok(tr.clean_trend_ok(f, t))} Testteki 'temiz trend' şartı (gövde oranı ≥ {t['LEG_BODY_MIN']:g}, "
                  f"bacak ≥ {t['LEG_ATR_MIN']:g} ATR, en büyük mum ≤ %{100 * t['SPIKE_MAX']:.0f}, "
                  f"EMA açıklığı ≥ {t['EMA_FAN_MIN']:g} ATR)")
+    a = tr.ADAY_TEST
+    lines.append(f"Aday kurallar: {ok(f['ters_mum'] <= a['LEG_COUNTER_MAX'] + 1e-9)} bacakta ters mum ≤ "
+                 f"%{100 * a['LEG_COUNTER_MAX']:.0f} · {ok(f['duzeltme_mum'] >= a['PULLBACK_MIN_BARS'])} düzeltme ≥ "
+                 f"{a['PULLBACK_MIN_BARS']} mum · {ok(f['bacak_atr'] < a['LEG_ATR_MAX'])} bacak < {a['LEG_ATR_MAX']:g} ATR")
     lines += ["", f"Grafikte farklı görüyorsan (ör. önceki düzeltmenin {pull} hangi mum olmalı) saatini yaz, tanımı ona göre düzeltelim."]
     path = None
     try:

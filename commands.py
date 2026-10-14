@@ -16,6 +16,9 @@ Telegram komutları (bot arka planda dinler):
   /backtest 30 tp önceki -> canlı kurallarla 1:1.5 / 1:2 / 1:2.2 / 1:2.5
   /backtest 90 temiz -> TP ile stop olan işlemler arasındaki farklar (bacak, EMA açılımı, önceki tepeye mesafe...)
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
+  /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
+  /backtest 90 aday önceki2 -> iki dönemde tutan aday kurallar (bacakta ters mum az, düzeltme ≥ 5 mum, bacak < 4 ATR),
+                               önceki2 = iki dönem önceki 90 gün (hiç bakmadığımız dönem)
   /backtest 90 dönüş kural -> dönüş varyasyonu + zaman stopu (8 saat) / kural 11 (temiz yükseliş) / kural 7, ay ay
   /backtest 14 dönüş -> dönüş varyasyonu: temas EMA20'nin öbür tarafında kapatır, sonraki mum geri alır, ondan sonraki onay
   /backtest 90 canlı -> canlı bildirimlerdeki ayarın aynısı, tüm işlemlerin grafikleri PDF
@@ -60,7 +63,7 @@ def start_backtest(text):
         send_message("⏳ Backtest zaten çalışıyor, bitince sonuçlar gelecek.")
         return
     tf_m = re.search(r"\b(5m|15m|30m|5dk|5 dk)\b", text.lower())
-    clean = re.sub(r"\b(5m|15m|30m|5dk|5 dk)\b|son2", " ", text.lower())
+    clean = re.sub(r"\b(5m|15m|30m|5dk|5 dk)\b|son2|[öo]nceki2", " ", text.lower())
     nums = re.findall(r"\d+(?:[.,]\d+)?", clean)
     days = 7
     args = []
@@ -73,10 +76,16 @@ def start_backtest(text):
         be = max(0.0, min(5.0, float(nums[2].replace(",", "."))))
         args += ["--be", str(be)]
     low = text.lower()
-    if "önceki" in low or "onceki" in low:
+    if "önceki2" in low or "onceki2" in low:
+        args += ["--ago", str(2 * days)]   # iki dönem önce (3. bağımsız dönem)
+    elif "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
     donus = any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon"))
-    if any(w in low for w in ("temiz", "fark")):
+    if any(w in low for w in ("temiz", "fark", "aday")) and donus:
+        args += ["--compare", "temiz_donus", "--fark"]   # dönüş: temiz trend + adaylar tek testte
+    elif "aday" in low:
+        args += ["--compare", "aday", "--fark"]
+    elif any(w in low for w in ("temiz", "fark")):
         args += ["--compare", "temiz_donus" if donus else "temiz", "--fark"]
     elif "iğne" in low or "igne" in low:
         args += ["--compare", "igne"]

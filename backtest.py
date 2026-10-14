@@ -215,14 +215,46 @@ def load_15m(symbol, days, ago=0):
                          "Low": sel[:, 3], "Close": sel[:, 4]})
 
 
+DISK_MIN_FREE = 150 * 1024 * 1024  # diskte bundan az yer kalırsa veri kaydedilmez (canlı günlük de aynı diskte)
+_disk_warned = False
+
+
 def _save_cache(path, arr, span):
+    global _disk_warned
+    tmp = f"{path}.{os.getpid()}.tmp.npz"
     try:
         os.makedirs(KLINE_CACHE, exist_ok=True)
-        tmp = f"{path}.{os.getpid()}.tmp.npz"
+        if shutil.disk_usage(KLINE_CACHE).free - arr.nbytes < DISK_MIN_FREE:
+            if not _disk_warned:
+                log.warning("Diskte yer az, veri kaydedilmiyor (test yine çalışır, sonraki test veriyi tekrar indirir)")
+                _disk_warned = True
+            return
         np.savez(tmp, data=arr, span=np.array(span, dtype=np.int64))
         os.replace(tmp, path)
     except OSError as e:
         log.warning("Veri diske kaydedilemedi: %s", e)
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+
+
+def drop_other_tf_cache():
+    """Kullanılmayan zaman diliminin (15m testinde 5m) kayıtlı verisini sil: disk 1GB, 15m geçmişine yer kalsın."""
+    other = "_5m.npz" if BASE_TF == "15m" else None
+    if not other or not os.path.isdir(KLINE_CACHE):
+        return
+    freed = 0
+    for name in os.listdir(KLINE_CACHE):
+        if name.endswith(other) or ".tmp.npz" in name:
+            p = os.path.join(KLINE_CACHE, name)
+            try:
+                freed += os.path.getsize(p)
+                os.remove(p)
+            except OSError:
+                pass
+    if freed:
+        log.info("Kullanılmayan 5m verisi silindi: %.0f MB", freed / 1e6)
 
 
 def archive_reachable():
@@ -496,7 +528,7 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
         msg.append(f"  ↳ Önceki tepe/dibe {tr.ROOM_MIN_R:g}R'den yakın: {c('no_room')}")
     if tr.PIVOT_WICK_MAX > 0:
         msg.append(f"  ↳ Tepe/dip iğnesi uzun: {c('pivot_wick')}")
-    if tr.LEG_BODY_MIN > 0 or tr.LEG_ATR_MIN > 0 or tr.SPIKE_MAX > 0 or tr.EMA_FAN_MIN > 0:
+    if tr.clean_trend_active():
         msg.append(f"  ↳ Trend temiz değil: {c('not_clean')}")
     min_pct = tr.MIN_RISK_PCT if tr.FILTERS else tr.BASE_MIN_RISK_PCT
     if tr.FILTERS:
@@ -549,7 +581,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R", "STRUCTURE_BREAK",
               "SUPPORT_N", "SUPPORT_MIN", "SUPPORT_WICK_BODY", "SUPPORT_WICK_ATR",
               "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE", "PIVOT_LEG_MIN", "TIME_STOP_BARS",
-              "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN"]
+              "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN",
+              "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS", "LEG_ATR_MAX"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -680,7 +713,7 @@ _TEMIZ = dict(tr.TEMIZ_TEST)
 def _temiz_set(base):
     t = _TEMIZ
     return [
-        C("Temel ayar", **base),
+        C("Dönüş varyasyonu" if base.get("ENTRY_MODE") == "reclaim" else "Temel ayar", **base),
         C(f"+ temiz bacak (gövde oranı ≥ {t['LEG_BODY_MIN']:g})", **base, LEG_BODY_MIN=t["LEG_BODY_MIN"]),
         C(f"+ güçlü bacak (≥ {t['LEG_ATR_MIN']:g} ATR)", **base, LEG_ATR_MIN=t["LEG_ATR_MIN"]),
         C(f"+ tek mumluk fırlama yok (en büyük gövde ≤ bacağın %{100 * t['SPIKE_MAX']:.0f}'si)", **base,
@@ -692,7 +725,23 @@ def _temiz_set(base):
 
 
 COMPARE_SETS["temiz"] = _temiz_set(_LIVE_NOW)
-COMPARE_SETS["temiz_donus"] = _temiz_set(_DONUS)
+# İki dönemde (Nisan-Temmuz, Temmuz-Ekim) aynı yönde çıkan adaylar; eşikler sabit, 3. dönemde (önceki2) sınanır
+_A = tr.ADAY_TEST
+COMPARE_SETS["aday"] = [
+    C("Canlı ayar", **_LIVE_NOW),
+    C(f"+ bacakta ters mum ≤ %{100 * _A['LEG_COUNTER_MAX']:.0f}", **_LIVE_NOW, LEG_COUNTER_MAX=_A["LEG_COUNTER_MAX"]),
+    C(f"+ düzeltme en az {_A['PULLBACK_MIN_BARS']} mum", **_LIVE_NOW, PULLBACK_MIN_BARS=_A["PULLBACK_MIN_BARS"]),
+    C(f"+ bacak {_A['LEG_ATR_MAX']:g} ATR'den kısa", **_LIVE_NOW, LEG_ATR_MAX=_A["LEG_ATR_MAX"]),
+    C("+ ters mum + düzeltme", **_LIVE_NOW, LEG_COUNTER_MAX=_A["LEG_COUNTER_MAX"],
+      PULLBACK_MIN_BARS=_A["PULLBACK_MIN_BARS"]),
+    C("+ üçü birlikte", **_LIVE_NOW, **_A),
+]
+# Dönüş varyasyonu ayrı test: temiz trend filtreleri + klasikte iki dönemde tutan adaylar (hepsi tek testte)
+COMPARE_SETS["temiz_donus"] = _temiz_set(_DONUS) + [
+    C(f"+ bacakta ters mum ≤ %{100 * _A['LEG_COUNTER_MAX']:.0f}", **_DONUS, LEG_COUNTER_MAX=_A["LEG_COUNTER_MAX"]),
+    C(f"+ düzeltme en az {_A['PULLBACK_MIN_BARS']} mum", **_DONUS, PULLBACK_MIN_BARS=_A["PULLBACK_MIN_BARS"]),
+    C(f"+ bacak {_A['LEG_ATR_MAX']:g} ATR'den kısa", **_DONUS, LEG_ATR_MAX=_A["LEG_ATR_MAX"]),
+]
 _LIVE_NO_CLUSTER = dict(live_setups.LIVE_RULES)
 COMPARE_SETS["toplu"] = [
     C("Canlı ayar (aynı mumda 5+ coin varsa girme)", **_LIVE_NOW),
@@ -702,7 +751,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -939,6 +988,7 @@ def main():
 
     t0 = time.time()
     clean_cache()
+    drop_other_tf_cache()
     global USE_ARCHIVE
     exchanges.WEIGHT_SOFT_LIMIT = exchanges.BACKTEST_SOFT_LIMIT  # canlı taramaya pay bırak
     if args.api:
