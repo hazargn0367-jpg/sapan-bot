@@ -895,6 +895,16 @@ COMPARE_SETS["renk"] = [
     C("Onay ≤ 2 + stop ≥%0.5 + 1R yer + EMA ≥ 2 ATR + ters renkte erken çıkış",
       **dict(_EB5, ROOM_MIN_R=1.0, EMA_FAN_MIN=2.0, FAILED_ENTRY_RED=True)),
 ]
+# renk testi sonucu (15.10 02:2x): ters renk kuralı 5m ve 15m'de kötü (bırakıldı). 15m 12 ay: onay≤2+stop≥%0.5+1R yer
+# +48.6R (kaymayla +36.2, en kötü ay -3.3; iki dönemde de 3'ten iyi), EMA≥2 ATR +24.1 / +14.3 (karışık). 5m 90 gün:
+# EMA≥2 üç ayda da iyi (+15.7), 1R yer 2/3 ay (+6.2). Renksiz birleşim ve yumuşak EMA eşiği denenir.
+_EBY = dict(_EB5, ROOM_MIN_R=1.0)
+COMPARE_SETS["yer"] = [
+    C("Onay ≤ 2 + stop ≥%0.5 + erken çıkış", **_EB5),
+    C("+ önünde en az 1R yer", **_EBY),
+    C("+ 1R yer + EMA açıklığı ≥ 2 ATR", **dict(_EBY, EMA_FAN_MIN=2.0)),
+    C("+ 1R yer + EMA açıklığı ≥ 1.5 ATR", **dict(_EBY, EMA_FAN_MIN=1.5)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -924,7 +934,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

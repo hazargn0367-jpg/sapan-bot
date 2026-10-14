@@ -389,3 +389,13 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   hiç çalışmadı. CSV'den (5m en iyi ayar: onay≤2+stop≥%0.5, elenecek işlemlerin R'si): yer <0.5R -1.7/-2.3/-1.7,
   yer <1R -2.1/+1.2/-7.5, EMA <2 ATR -4.1/-6.0/-8.2 (5m'de üç ayda da kötü; 15m -9.6/+11.2 karışık).
   renk setine eklendi: +1R yer · +EMA ≥2 ATR · hepsi (yer+EMA+renk). Kullanıcı "yüklemeden bekle" dedi.
+- renk testi sonuçları (CSV 0033156b 5m 90g, 6119c501 15m Nis-Eki, 0361c2da 15m Eki-Nis):
+  5m 90 gün (Tem-Ağu / Ağu-Eyl / Eyl-Eki): erken -37.9 · +renk -52.8 · onay≤2+stop≥%0.5 (3) -8.8/+1.5/+4.6=-2.7 ·
+  +renk -12.5 · +1R yer -1.8/+0.8/+7.1=+6.2 · **+EMA≥2 -0.9/+7.8/+8.8=+15.7 (3'e göre üç ayda da iyi)** · hepsi
+  (yer+EMA+renk) +4.7/+5.9/+2.9=+13.5 (her ay artı, düşüş -12.8).
+  15m 12 ay (Nis-Eki / Eki-Nis): erken +12.8/+33.0=+45.9 (kayma +17.4) · +renk +13.2 · (3) +10.9/+27.3=+38.2 ·
+  **(5) +1R yer +17.2/+31.5=+48.6 (kaymayla +36.2; 13 ayın 10'u artı, en kötü ay -3.3, ~31 işlem/ay)** · (6) +EMA
+  +24.1/+14.3 (Eki-Nis'te 3'ten -13 kötü) · hepsi +21.3.
+  KARAR: ters renk kuralı bırakıldı (her yerde kötü). Yer 1R 15m'de iki dönemde de iyi; EMA 5m'de 3 ayda iyi, 15m'de
+  karışık. Yeni set "yer": (3) · +1R yer · +1R yer +EMA≥2 · +1R yer +EMA≥1.5. `/backtest 90 yer 5m`, `/backtest 180 yer`
+  (+ önceki).
