@@ -653,7 +653,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN",
               "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS", "LEG_ATR_MAX", "BTC_CORR_MAX", "BTC_CORR_BARS",
               "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT", "CONFIRM_WINDOW", "SPIKE_TOP_ATR",
-              "BASE_MIN_RISK_PCT"]
+              "BASE_MIN_RISK_PCT", "FAILED_ENTRY_RED"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -879,6 +879,15 @@ COMPARE_SETS["komisyon"] = [
     C("+ stop en az %0.5 + TP 1:2.5", **dict(_EB2, BASE_MIN_RISK_PCT=0.5, RR=2.5)),
     C("+ stop en az %0.5 + sivri tepe yok (3 ATR)", **dict(_EB2, BASE_MIN_RISK_PCT=0.5, SPIKE_TOP_ATR=3.0)),
 ]
+# Erken çıkışta mum rengi (kullanıcı, 15.10 01:57, ZETAUSDT 13.09 13:55 5m: giriş sonrası mum iğne atıp girişin 0.15R
+# altında ama YEŞİL kapattı, erken çıkıldı, fiyat sonra 10R gitti). "Kırmızı kapatırsa çıkmalı." 15m ve 5m'de denenir.
+_EB5 = dict(_EB0, CONFIRM_WINDOW=2, BASE_MIN_RISK_PCT=0.5)
+COMPARE_SETS["renk"] = [
+    C("Erken çıkış (2 mum)", **_EB0),
+    C("Erken çıkış sadece ters renkli mumda", **dict(_EB0, FAILED_ENTRY_RED=True)),
+    C("Onay ≤ 2. mum + stop ≥%0.5 + erken çıkış", **_EB5),
+    C("Onay ≤ 2. mum + stop ≥%0.5 + erken çıkış sadece ters renkli mumda", **dict(_EB5, FAILED_ENTRY_RED=True)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -908,7 +917,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

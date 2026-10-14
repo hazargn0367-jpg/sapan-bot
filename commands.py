@@ -18,6 +18,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 renk -> erken çıkış sadece ters renkli mumda (LONG'da kırmızı kapanış); 5m için /backtest 90 renk 5m
   /backtest 30 komisyon 5m -> onay ≤ 2. mum tabanında TP 2.5 ve en az %0.5 stop (komisyon payı küçülsün)
   /backtest 30 sivri 5m -> onay en geç 2. mumda + sivri tepe (2 dev mumla yapılan tepe) yok, erken çıkış üstüne
   /backtest 180 başabaş -> fiyat 1R / 1.5R / 2R'ye gelince stopu girişe çekme, TP 2.2 ve TP 4 ile (erken çıkış üstüne)
@@ -95,7 +96,9 @@ def start_backtest(text):
     elif "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
     donus = any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon"))
-    if "komisyon" in low:
+    if "renk" in low:
+        args += ["--compare", "renk"]
+    elif "komisyon" in low:
         args += ["--compare", "komisyon"]
     elif "sivri" in low:
         args += ["--compare", "sivri"]

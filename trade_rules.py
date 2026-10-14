@@ -75,6 +75,8 @@ TOUCH_PREV_EXTREME = False   # True: temas mumunun dibi (SHORT) önceki mumun di
 FAILED_ENTRY_BARS = 0        # >0: giriş mumu dahil ilk bu kadar mumdan biri girişin gerisinde kapatırsa (LONG'da altında)
                              # o mumun kapanışında çıkılır: kırılım tutmadı, fiyat girişe sadece iğneyle değdi (kullanıcı,
                              # 14.10, BSV 15.09 19:45). Erken çıkış "be" durumuyla sayılır, res["early_exit"] = True
+FAILED_ENTRY_RED = False     # True: erken çıkış sadece girişin gerisinde kapatan mum ters renkliyse (LONG'da kırmızı,
+                             # SHORT'ta yeşil). Kullanıcı (15.10 01:57, ZETAUSDT 13.09 13:55): iğne atıp yeşil kapatan mumda çıkma.
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
 BTC_CORR_BARS = 96           # benzerlik penceresi (15dk'da 96 mum = 24 saat)
@@ -613,7 +615,8 @@ def simulate(df, i, side, tick, mode=None):
     def failed(bar):
         # Kırılım tutmadı: mum girişin gerisinde kapattı (giriş sadece iğneyle olmuş)
         return FAILED_ENTRY_BARS > 0 and bar - k_in < FAILED_ENTRY_BARS and \
-            ((C[bar] < entry) if long else (C[bar] > entry))
+            ((C[bar] < entry) if long else (C[bar] > entry)) and \
+            (not FAILED_ENTRY_RED or ((C[bar] < O[bar]) if long else (C[bar] > O[bar])))
 
     # Giriş mumunda TP (stop bu mumda olamaz: olsaydı giriş iptal edilirdi)
     if (H[k_in] >= tp) if long else (L[k_in] <= tp):

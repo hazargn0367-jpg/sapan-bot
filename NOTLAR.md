@@ -376,3 +376,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   çıkış (TP 2.2) 12 ay: Binance +45.9R · +kayma (%0.02/piyasa emri) +17.4 · BNB+referans +60.1 · BNB+ref+kayma +31.6 ·
   MEXC (%0.02/%0) +92.2 · MEXC+kayma +63.7 (ayda ~5.3R, en kötü ay -7.2, 13 ayın 10'u artı). 15m her senaryoda artı;
   ayda R olarak da 5m'den iyi (5m MEXC+kayma ~2R/ay). Backtest'te kayma YOK → gerçek sonuç daha düşük.
+- 15.10 01:54 kullanıcı ZETAUSDT 5m 13.09 13:55 LONG: giriş 14:05 0.03713, 14:10 mumu iğne atıp 0.03709'da (girişin 0.15R
+  altında) YEŞİL kapattı → erken çıkış -0.30R; MFE 10.2R (TP gelirdi). "Kırmızı kapatırsa çıkmalı."
+  CSV'den: girişin 0-0.2R altında kapatıp çıkanların ~%20'si sonradan TP'ye gidiyor; hepsini tutmak 5 dönemin 4'ünde
+  kötü (5m -14/-18/+2, 15m -37/-21). Renk ayrımı CSV'de yok → kod: FAILED_ENTRY_RED (erken çıkış sadece ters renkli
+  kapanışta; doji çıkmaz). COMPARE_SETS["renk"]: erken 2 mum · +renk · onay≤2+stop≥%0.5+erken · +renk.
+  `/backtest 180 renk` (+ önceki), `/backtest 90 renk 5m` (Tem-Eki, 5m önbellekte).
