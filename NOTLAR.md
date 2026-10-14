@@ -155,6 +155,18 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   yatay → 7-8 saatte sonuç yoksa stop girişe), VIRTUAL 05.10 09:30 (tepe tek mumda, temiz trend yok), HOLO 12.10 07:00 (giriş
   önceki tepenin dibinde). Eklenenler: TIME_STOP_BARS (32 mum=8 saat; fiyat gerideyse piyasadan çıkış, "be" sayılır),
   kural 11 PIVOT_LEG_MIN (tepe eski zirveyi kırdıktan sonra en az N mumla yapılmış). `/backtest 90 dönüş kural`.
+- Dönüş kural 90 gün (17.07–12.10): dönüş 57 işlem %28 -12.4R (-0.22/işlem, klasik -0.20) · +8 saat -13.6R (1 stop
+  kurtardı, 1 TP'yi başabaşa çevirdi) · +11 (2 mum) -12.4R · +11 (3 mum) -10.6R (TP oranı %21) · +7 (1R) -4.9R
+  (aylar -9.4/+3.6/+0.9) · hepsi -6.6R. Hiçbiri kâra çevirmedi, canlıya bir şey eklenmedi.
+- Temiz trend (kullanıcı 14.10 04:21, 10/10 TP örnekleri HOMEUSDT 18.09 20:15, TWTUSDT 15.08 16:45 dönüş): "bu tarz
+  mumlu işlemlere öncelik verelim" + "TP'lerle stoplar arasındaki farklar ne". 5 grafikte göze çarpan: stoplarda giriş
+  önceki tepenin dibinde (0.1-0.5R yer), TP'lerde 2-3.5R; TP bacakları büyük gövdeli ardışık mumlar, stoplarda iç içe/
+  tek mum/EMA'lar yapışık. trade_rules.trend_features: bacak = tepeden önceki son EMA20 temasından tepeye; ölçüler
+  bacak_govde (yön gövdeleri / mum boyları), bacak_atr, tek_mum (en büyük gövde / bacak), ters_mum, bacak_mum,
+  ema_acilim (EMA20-100 / ATR), ema_egim, trend_yasi, duzeltme, duzeltme_mum, onu_r. Hepsi CSV'de ve /incele'de.
+  Filtreler LEG_BODY_MIN / LEG_ATR_MIN / SPIKE_MAX / EMA_FAN_MIN (durum not_clean), test eşikleri TEMIZ_TEST
+  (0.4 / 4 ATR / 0.5 / 2 ATR, tahmini). `/backtest 90 temiz` (`dönüş temiz`): karşılaştırma + "fark analizi"
+  (her ölçüde işlemler 3 eşit gruba bölünür, TP oranı/R, ay ay aynı yönde mi; R ±3'e kırpılır; max_open yok).
 
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
@@ -173,6 +185,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - `/incele COIN gg.aa.yyyy SS:DD` – bir işlemin tüm kurallardaki değerlendirmesi + grafik (p, q, önceki düzeltme çizgisi,
   kural 9 iğneli mumlar mavi üçgen)
 - `/backtest 90 destek` – kural 9 varyasyonları, ay ay
+- `/backtest 90 temiz` – TP/stop fark analizi + temiz trend filtreleri (`dönüş temiz` dönüş varyasyonuyla)
 - `/backtest 30 canlı 5m` – sona 5m yazılırsa test 5 dakikalık grafikte (veri ayrı önbellekte)
 
 ## Dosyalar

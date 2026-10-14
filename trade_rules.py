@@ -60,6 +60,12 @@ PIVOT_LEG_MIN = 0            # >0: tepe (LONG) eski zirveyi kırdıktan sonra en
                              # tek mumluk fırlamayla yapılan tepe = temiz trend yükselişi değil)
 TIME_STOP_BARS = 0           # >0: girişten bu kadar mum sonra TP/stop olmadıysa stop girişe çekilir; fiyat girişin
                              # gerisindeyse o mumun açılışında çıkılır (zaman stopu, "be" sayılır)
+# Temiz trend (testte). Bacak: tepeden (LONG) / dipten (SHORT) önceki son EMA20 temasından tepeye/dibe kadar olan hareket
+LEG_BODY_MIN = 0.0           # >0: bacaktaki mumların yön gövdeleri toplamı / mum boyları toplamı en az bu kadar
+                             # (1 = hepsi iğnesiz düz gövde, ters mumlar ve iğneler düşürür)
+LEG_ATR_MIN = 0.0            # >0: bacak boyu en az bu kadar ATR
+SPIKE_MAX = 0.0              # >0: bacaktaki en büyük mum gövdesi bacağın en fazla bu oranı (tek mumluk fırlama değil)
+EMA_FAN_MIN = 0.0            # >0: EMA20 ile EMA100 arası en az bu kadar ATR (EMA'lar açılmış, trend oturmuş)
 ENTRY_MODE = "classic"       # "classic": temas EMA20'nin doğru tarafında kapatır, 3 mumda onay
                              # "reclaim" (dönüş varyasyonu): temas EMA20'nin YANLIŞ tarafında kapatır, sonraki mum
                              # EMA20'nin doğru tarafında kapatır, ondan sonraki mum o mumun tepesini (LONG) kapanışla geçer = onay
@@ -255,6 +261,77 @@ def pivot_leg(df, i, side):
     return p - (past_end + int(above[0])) + 1
 
 
+LEG_LOOK = 60      # bacağın başı (son EMA20 teması) tepeden en fazla bu kadar mum geride aranır
+TREND_AGE_MAX = 300
+
+
+def trend_features(df, i, side, entry=None, risk=None):
+    """Temiz trend ölçüleri (i: temas mumu). TP ile stop olan işlemleri karşılaştırmak ve filtre için.
+    Bacak: son tepeden (LONG) / dipten (SHORT) önceki son EMA20 temasından sonraki mumlar, tepe mumu dahil."""
+    long = side == "LONG"
+    O, H, L, C, A = (df[c].values for c in ("Open", "High", "Low", "Close", "ATR"))
+    E20, E50, E100 = (df[c].values for c in ("EMA20", "EMA50", "EMA100"))
+    start = max(0, i - st.LOOKBACK)
+    p = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    lo = max(start, p - LEG_LOOK)
+    s = None
+    for m in range(p - 1, lo - 1, -1):
+        if (L[m] <= E20[m] * st.TOLERANCE_LONG) if long else (H[m] >= E20[m] * st.TOLERANCE_SHORT):
+            s = m
+            break
+    if s is None:  # bacak EMA20'ye hiç değmeden başlamış: penceredeki en uç dip (LONG) / tepe (SHORT)
+        s = lo + int(np.argmin(L[lo:p]) if long else np.argmax(H[lo:p])) if p > lo else max(0, p - 1)
+    seg = slice(s + 1, p + 1)
+    if long:
+        leg = H[p] - L[s:p + 1].min()
+        dirb = C[seg] - O[seg]
+    else:
+        leg = H[s:p + 1].max() - L[p]
+        dirb = O[seg] - C[seg]
+    rng = float((H[seg] - L[seg]).sum())
+    a = float(A[i]) if A[i] > 0 else float("nan")
+    sign = 1.0 if long else -1.0
+    age, m = 0, i
+    while m >= 0 and age < TREND_AGE_MAX and ((E20[m] > E50[m] > E100[m]) if long else (E20[m] < E50[m] < E100[m])):
+        age += 1
+        m -= 1
+    f = {
+        "bacak_mum": int(p - s),
+        "bacak_atr": leg / a,
+        "bacak_govde": float(dirb.sum()) / rng if rng > 0 else 0.0,
+        "tek_mum": max(float(dirb.max()), 0.0) / leg if leg > 0 and len(dirb) else 1.0,
+        "ters_mum": float((dirb < 0).mean()) if len(dirb) else 0.0,
+        "ema_acilim": sign * (E20[i] - E100[i]) / a,
+        "ema_egim": sign * (E20[i] - E20[max(0, i - 8)]) / a,
+        "trend_yasi": age,
+        "duzeltme": ((H[p] - L[i]) if long else (H[i] - L[p])) / leg if leg > 0 else float("nan"),
+        "duzeltme_mum": int(i - p),
+        "_p": int(p), "_s": int(s),
+    }
+    if entry is not None and risk:
+        f["onu_r"] = ((H[p] - entry) if long else (entry - L[p])) / risk
+    return f
+
+
+# Testteki "temiz trend" eşikleri (/backtest 90 temiz, /incele'de de gösterilir)
+TEMIZ_TEST = dict(LEG_BODY_MIN=0.4, LEG_ATR_MIN=4.0, SPIKE_MAX=0.5, EMA_FAN_MIN=2.0)
+
+
+def clean_trend_ok(f, limits=None):
+    """Temiz trend filtreleri. limits verilmezse şu anki ayarlardaki açık olanlar uygulanır."""
+    g = limits or {"LEG_BODY_MIN": LEG_BODY_MIN, "LEG_ATR_MIN": LEG_ATR_MIN, "SPIKE_MAX": SPIKE_MAX,
+                   "EMA_FAN_MIN": EMA_FAN_MIN}
+    if g["LEG_BODY_MIN"] > 0 and f["bacak_govde"] < g["LEG_BODY_MIN"]:
+        return False
+    if g["LEG_ATR_MIN"] > 0 and not f["bacak_atr"] >= g["LEG_ATR_MIN"]:
+        return False
+    if g["SPIKE_MAX"] > 0 and f["tek_mum"] > g["SPIKE_MAX"]:
+        return False
+    if g["EMA_FAN_MIN"] > 0 and not f["ema_acilim"] >= g["EMA_FAN_MIN"]:
+        return False
+    return True
+
+
 def touch_closes_right_side(df, i, side):
     c, e = df["Close"].values[i], df["EMA20"].values[i]
     return c > e if side == "LONG" else c < e
@@ -262,7 +339,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
-    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -321,6 +398,10 @@ def simulate(df, i, side, tick, mode=None):
         return res
     if PIVOT_LEG_MIN > 0 and pivot_leg(df, i, side) < PIVOT_LEG_MIN:
         res["status"] = "pivot_leg"
+        return res
+    if (LEG_BODY_MIN > 0 or LEG_ATR_MIN > 0 or SPIKE_MAX > 0 or EMA_FAN_MIN > 0) and \
+            not clean_trend_ok(trend_features(df, i, side)):
+        res["status"] = "not_clean"
         return res
 
     # --- Onay ---

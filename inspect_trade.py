@@ -154,6 +154,20 @@ def inspect(text, chart_path="/tmp/incele.png"):
         lines.append(f"Onay {fmt(r['confirm'])}, giriş {p8(r['entry'])}, stop {p8(r['stop'])}, TP {p8(r['tp'])}")
     if "room_r" in r:
         lines.append(f"7) Önceki {'tepeye' if long else 'dibe'} mesafe: {r['room_r']:.2f}R")
+    f = tr.trend_features(df, i, side, entry=r.get("entry"), risk=r.get("risk"))
+    lines += ["", "<b>Temiz trend ölçüleri (testte)</b>",
+              f"Bacak: {fmt(f['_s'])} → {fmt(f['_p'])}, {f['bacak_mum']} mum, {f['bacak_atr']:.1f} ATR",
+              f"Gövde oranı {f['bacak_govde']:.2f} (1 = hepsi iğnesiz düz gövde) · ters mum %{100 * f['ters_mum']:.0f} · "
+              f"en büyük mumun bacaktaki payı %{100 * f['tek_mum']:.0f}",
+              f"EMA20–EMA100 açıklığı {f['ema_acilim']:.1f} ATR · EMA20 eğimi {f['ema_egim']:.2f} ATR/2 saat · "
+              f"trend yaşı {f['trend_yasi']} mum",
+              f"Düzeltme: bacağın %{100 * f['duzeltme']:.0f} kadarı geri verildi, {f['duzeltme_mum']} mum"]
+    if "onu_r" in f:
+        lines.append(f"Girişten önceki {'tepeye' if long else 'dibe'} mesafe: {f['onu_r']:.2f}R")
+    t = tr.TEMIZ_TEST
+    lines.append(f"{ok(tr.clean_trend_ok(f, t))} Testteki 'temiz trend' şartı (gövde oranı ≥ {t['LEG_BODY_MIN']:g}, "
+                 f"bacak ≥ {t['LEG_ATR_MIN']:g} ATR, en büyük mum ≤ %{100 * t['SPIKE_MAX']:.0f}, "
+                 f"EMA açıklığı ≥ {t['EMA_FAN_MIN']:g} ATR)")
     lines += ["", f"Grafikte farklı görüyorsan (ör. önceki düzeltmenin {pull} hangi mum olmalı) saatini yaz, tanımı ona göre düzeltelim."]
     path = None
     try:

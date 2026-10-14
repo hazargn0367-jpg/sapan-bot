@@ -77,6 +77,7 @@ STATUS_TR = {
     "no_close_below": "Temas mumu EMA20'nin öbür tarafında kapatmadı (dönüş varyasyonu)",
     "no_reclaim": "Sonraki mum EMA20'nin doğru tarafında kapatmadı (dönüş varyasyonu)",
     "pivot_leg": "Tepe/dip tek mumluk fırlamayla yapılmış (temiz trend yok)",
+    "not_clean": "Trend temiz değil (bacak / EMA açılımı şartı tutmadı)",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
     "skip_open": "Açık işlem sınırı dolu (portföy koruması)",
@@ -315,6 +316,9 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
             row.update(giris_zamani=fmt_time(ts[r["entry_bar"]]), _entry_ts=int(ts[r["entry_bar"]]),
                        dolum=r["fill"],
                        risk_yuzde=100 * r["risk"] / r["fill"])
+            # Temiz trend ölçüleri (TP / stop karşılaştırması ve CSV için)
+            f = tr.trend_features(df, i, side, entry=r["entry"], risk=r["risk"])
+            row.update({k: (round(v, 3) if isinstance(v, float) else v) for k, v in f.items() if not k.startswith("_")})
             if r["status"] in ("win", "loss", "be"):
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
                            R_brut=round(r["r_gross"], 3), R_net=round(r["r_net"], 3),
@@ -492,6 +496,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
         msg.append(f"  ↳ Önceki tepe/dibe {tr.ROOM_MIN_R:g}R'den yakın: {c('no_room')}")
     if tr.PIVOT_WICK_MAX > 0:
         msg.append(f"  ↳ Tepe/dip iğnesi uzun: {c('pivot_wick')}")
+    if tr.LEG_BODY_MIN > 0 or tr.LEG_ATR_MIN > 0 or tr.SPIKE_MAX > 0 or tr.EMA_FAN_MIN > 0:
+        msg.append(f"  ↳ Trend temiz değil: {c('not_clean')}")
     min_pct = tr.MIN_RISK_PCT if tr.FILTERS else tr.BASE_MIN_RISK_PCT
     if tr.FILTERS:
         msg.append(f"  ↳ Asya seansı (00-08 UTC): {c('session')}")
@@ -542,7 +548,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR",
               "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R", "STRUCTURE_BREAK",
               "SUPPORT_N", "SUPPORT_MIN", "SUPPORT_WICK_BODY", "SUPPORT_WICK_ATR",
-              "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE", "PIVOT_LEG_MIN", "TIME_STOP_BARS"]
+              "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE", "PIVOT_LEG_MIN", "TIME_STOP_BARS",
+              "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -666,6 +673,26 @@ COMPARE_SETS["donus"] = [
     C("+ 7: önünde en az 1R yer", **_DONUS, ROOM_MIN_R=1.0),
     C("+ 8 saat + 11 (2 mum) + 7 (1R)", **_DONUS, TIME_STOP_BARS=32, PIVOT_LEG_MIN=2, ROOM_MIN_R=1.0),
 ]
+# Temiz trend: kullanıcının 10/10 dediği işlemler (HOME, TWT): bacak büyük gövdeli mumlarla, az iğne, ters mum yok
+_TEMIZ = dict(tr.TEMIZ_TEST)
+
+
+def _temiz_set(base):
+    t = _TEMIZ
+    return [
+        C("Temel ayar", **base),
+        C(f"+ temiz bacak (gövde oranı ≥ {t['LEG_BODY_MIN']:g})", **base, LEG_BODY_MIN=t["LEG_BODY_MIN"]),
+        C(f"+ güçlü bacak (≥ {t['LEG_ATR_MIN']:g} ATR)", **base, LEG_ATR_MIN=t["LEG_ATR_MIN"]),
+        C(f"+ tek mumluk fırlama yok (en büyük gövde ≤ bacağın %{100 * t['SPIKE_MAX']:.0f}'si)", **base,
+          SPIKE_MAX=t["SPIKE_MAX"]),
+        C(f"+ EMA'lar açılmış (EMA20–100 ≥ {t['EMA_FAN_MIN']:g} ATR)", **base, EMA_FAN_MIN=t["EMA_FAN_MIN"]),
+        C("+ temiz trend (dördü birlikte)", **base, **_TEMIZ),
+        C("+ temiz trend + önünde 1R yer", **base, **_TEMIZ, ROOM_MIN_R=1.0),
+    ]
+
+
+COMPARE_SETS["temiz"] = _temiz_set(_LIVE_NOW)
+COMPARE_SETS["temiz_donus"] = _temiz_set(_DONUS)
 _LIVE_NO_CLUSTER = dict(live_setups.LIVE_RULES)
 COMPARE_SETS["toplu"] = [
     C("Canlı ayar (aynı mumda 5+ coin varsa girme)", **_LIVE_NOW),
@@ -674,7 +701,8 @@ COMPARE_SETS["toplu"] = [
     C("Toplu sinyal filtresi kapalı", **_LIVE_NO_CLUSTER),
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
-             "destek": 2, "toplu": 3, "igne": 1, "donus": 5}  # grafikleri çizilecek ayar (listedeki sırası)
+             "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
+             "temiz": 5, "temiz_donus": 5}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -692,11 +720,13 @@ CHECK_TRADES = [
     ("TRUTHUSDT", "02.10.2026 10:45", "dönüş: tepeye yakın, saatlerce yatay (zaman stopu)"),
     ("VIRTUALUSDT", "05.10.2026 09:30", "dönüş: tepe tek mumda, temiz trend yok"),
     ("HOLOUSDT", "12.10.2026 07:00", "dönüş: giriş önceki tepenin dibinde (kural 7)"),
+    ("HOMEUSDT", "18.09.2026 20:15", "dönüş: 10/10 temiz trend (TP)"),
+    ("TWTUSDT", "15.08.2026 16:45", "dönüş: 10/10 temiz trend (TP)"),
     ("AXSUSDT", "01.08.2026 02:00", "girmezdim (yapı)"),
     ("ADAUSDT", "01.08.2026 13:30", "iyi işlem"),
 ]
 SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ/ZAMAN", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
-                "touch_tail": "elendi(ters iğne)",
+                "touch_tail": "elendi(ters iğne)", "not_clean": "elendi(temiz değil)",
                 "no_room": "elendi(yer)", "open": "açık"}
 
 
@@ -746,6 +776,92 @@ def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
     return "\n".join(msg)
 
 
+# TP ile stop olan işlemleri ayıran ölçüler: (sütun, ad, ondalık)
+FARK_OLCULER = [
+    ("onu_r", "Önceki tepe/dibe mesafe (R)", 2),
+    ("bacak_govde", "Bacağın gövde oranı (1 = hepsi iğnesiz düz gövde)", 2),
+    ("bacak_atr", "Bacak boyu (ATR)", 1),
+    ("tek_mum", "En büyük mumun bacaktaki payı", 2),
+    ("ters_mum", "Bacaktaki ters mum oranı", 2),
+    ("bacak_mum", "Bacak kaç mum", 0),
+    ("ema_acilim", "EMA20–EMA100 açıklığı (ATR)", 1),
+    ("ema_egim", "EMA20 eğimi (son 2 saat, ATR)", 2),
+    ("trend_yasi", "Trend yaşı (EMA'lar kaç mumdur sıralı, en fazla 300)", 0),
+    ("duzeltme", "Düzeltme derinliği (bacağın ne kadarı geri verildi)", 2),
+    ("duzeltme_mum", "Düzeltme kaç mum sürdü", 0),
+    ("risk_atr", "Stop mesafesi (ATR)", 2),
+]
+
+
+def build_fark(rows, p0, days, title):
+    """TP olan işlemlerle stop olanlar arasındaki farklar: her ölçüde işlemler 3 eşit gruba bölünür,
+    grupların TP oranı ve işlem başı R'si karşılaştırılır. Mesaj parçaları listesi döner."""
+    d = pd.DataFrame(rows)
+    if d.empty or "durum" not in d:
+        return ["🔬 Fark analizi: işlem yok."]
+    d = d[d["durum"].isin(["win", "loss", "be"])]
+    n = len(d)
+    if n < 30:
+        return [f"🔬 Fark analizi için işlem çok az ({n}). Daha uzun dönemle dene (ör. /backtest 90 temiz)."]
+    # Tek bir boşluklu (gap) mumun -10R'lik kaybı bütün grubu belirlemesin diye R -3 ile +3 arasına sınırlanır
+    wins, losses, R = d["durum"] == "win", d["durum"] == "loss", d["R_net"].astype(float).clip(-3, 3)
+    noise = 2 * R.std() * (2 / (n / 3)) ** 0.5   # iki grup ortalaması arasındaki farkın ~2 standart hatası
+    n_months = (days + 29) // 30
+    months = d["_touch_ts"].apply(lambda t: month_label(t, p0)) if p0 is not None and n_months > 1 else None
+    fmt = lambda v, nd: f"{v:.{nd}f}"
+    blocks = []
+    for col, label, nd in FARK_OLCULER:
+        if col not in d:
+            continue
+        x = pd.to_numeric(d[col], errors="coerce")
+        ok = x.notna()
+        if ok.sum() < 30:
+            continue
+        xs, Rs, ws = x[ok], R[ok], wins[ok]
+        grp = pd.qcut(xs.rank(method="first"), 3, labels=False)
+        parts = []
+        for k in range(3):
+            m = grp == k
+            parts.append((xs[m].min(), xs[m].max(), int(m.sum()), 100 * ws[m].mean(), Rs[m].mean()))
+        spread = parts[2][4] - parts[0][4]
+        same = tot = 0
+        if months is not None:
+            lo_cut, hi_cut = parts[0][1], parts[2][0]
+            mo = months[ok]
+            for k in range(1, n_months + 1):
+                lo_r, hi_r = Rs[(mo == k) & (xs <= lo_cut)], Rs[(mo == k) & (xs >= hi_cut)]
+                if len(lo_r) >= 5 and len(hi_r) >= 5:
+                    tot += 1
+                    same += int((hi_r.mean() - lo_r.mean()) * spread > 0)
+        strong = abs(spread) >= noise
+        mark = "✅" if strong and tot and same == tot else ("🟡" if strong or (tot and same == tot) else "⚪")
+        better = "yüksek" if spread > 0 else "düşük"
+        lines = [f"{mark} <b>{label}</b>",
+                 f"TP'lerde {fmt(xs[ws].median(), nd)}, stoplarda {fmt(xs[losses[ok]].median(), nd)} (ortanca)"]
+        for name, (a, b, cnt, wr, avg) in zip(("düşük", "orta", "yüksek"), parts):
+            lines.append(f"  {name} ({fmt(a, nd)}…{fmt(b, nd)}): {cnt} işlem, %{wr:.0f} TP, {avg:+.2f}R")
+        cons = f", ay ay: {same}/{tot} ayda aynı yönde" if tot else ""
+        lines.append(f"  ➜ {better} grup daha iyi ({abs(spread):.2f}R fark{cons})")
+        blocks.append((abs(spread) / noise if noise > 0 else 0, "\n".join(lines)))
+    blocks.sort(key=lambda b: -b[0])
+    head = (f"🔬 <b>TP ile STOP olan işlemler arasındaki farklar</b>\n"
+            f"{html.escape(title)}: {n} işlem ({int(wins.sum())} TP, {int(losses.sum())} stop"
+            f"{', ' + str(n - int(wins.sum()) - int(losses.sum())) + ' başabaş' if n > wins.sum() + losses.sum() else ''}). "
+            f"Örnek çok olsun diye aynı anda işlem sınırı uygulanmadı.\n"
+            f"Her ölçüde işlemler 3 eşit gruba bölündü (düşük / orta / yüksek), en belirgin farklar üstte. "
+            f"Gruplar arasında ~{noise:.2f}R'den küçük fark şans eseri olabilir.\n"
+            f"✅ fark büyük ve her ay aynı yönde · 🟡 ikisinden biri · ⚪ şans olabilir")
+    msgs, cur = [], head
+    for _, b in blocks:
+        if len(cur) + len(b) + 2 > 3800:
+            msgs.append(cur)
+            cur = b
+        else:
+            cur += "\n\n" + b
+    msgs.append(cur)
+    return msgs
+
+
 def send_samples(recs, name, n_each=15):
     """3 aya yayılmış 15 TP ve 15 stop grafiği, 10'arlı albümler halinde (PDF yok: bellek)."""
     gc.collect()
@@ -785,6 +901,7 @@ def main():
     ap.add_argument("--cluster", type=int, default=0, help="aynı mumda bu kadar sinyal varsa girme (0 = kapalı)")
     ap.add_argument("--btc", action="store_true", help="BTC yön filtresi")
     ap.add_argument("--api", action="store_true", help="veriyi arşiv yerine sadece Binance API'den çek")
+    ap.add_argument("--fark", action="store_true", help="TP ile stop olan işlemler arasındaki farkları ölç (ilk ayar)")
     args = ap.parse_args()
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
     if "5m" in tfs:
@@ -943,6 +1060,19 @@ def main():
             btc_map = btc_trend_map(prepare(load_15m("BTCUSDT", args.days, args.ago)))
         except Exception as e:
             log.error("BTC verisi alınamadı, BTC filtresi uygulanmayacak: %s", e)
+    fark_msgs = []
+    if args.fark:
+        cfg0 = configs[0]
+        rows0 = apply_portfolio(results[cfg0["ad"]], 0, cfg0.get("cluster_max", 0), cfg0.get("btc", False), btc_map,
+                                touch_counts=touch_counts)
+        title = ("Dönüş varyasyonu" if cfg0.get("ENTRY_MODE") == "reclaim" else "Canlı kurallar") + \
+                (", toplu sinyal filtresi açık" if cfg0.get("cluster_max") else "")
+        try:
+            fark_msgs = build_fark(rows0, p0, args.days, title)
+        except Exception as e:
+            log.exception("Fark analizi yapılamadı")
+            fark_msgs = [f"⚠️ Fark analizi yapılamadı: {type(e).__name__}: {e}"]
+        del rows0
     for cfg in configs:
         results[cfg["ad"]] = apply_portfolio(results[cfg["ad"]], cfg.get("max_open", 0),
                                              cfg.get("cluster_max", 0), cfg.get("btc", False), btc_map,
@@ -957,6 +1087,8 @@ def main():
         report += "\n\n" + (archive.summary() if USE_ARCHIVE else f"Veri: {html.escape(source)}")
         log.info("\n%s", report)
         send_message(report)
+        for m in fark_msgs:
+            send_message(m)
         parts = [d.assign(ayar=name) for name, d in frames_all.items() if not d.empty]
         if parts:
             out = pd.concat(parts)
@@ -986,6 +1118,8 @@ def main():
     report += "\n\n" + (archive.summary() if USE_ARCHIVE else f"Veri: {html.escape(source)}")
     log.info("\n%s", report)
     send_message(report)
+    for m in fark_msgs:
+        send_message(m)
 
     if not df_all.empty:
         path = f"backtest_{time.strftime('%Y%m%d_%H%M')}.csv"
