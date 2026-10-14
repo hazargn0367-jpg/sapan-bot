@@ -293,3 +293,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   erken karşılaştırması + TP 2 olarak okudu, ikisi de 14.09-14.10 çıktı. Artık açılış mesajında ve /durum'da "Sürüm"
   (config.VERSION + Render commit) var: yeni kod devreye girdi mi görülsün. /durum'daki log satırları escape edildi.
   HER YÜKLEMEDE config.VERSION güncellenmeli.
+- 14.10 23:1x eski dönemler (canlı + erken 2 mum, 30 gün): Ekim 2024 222 coin 37 işlem (TP 7, stop 5, erken 25) 0.0R,
+  48 toplu filtre · Ekim 2023 145 coin 23 işlem (3/2/18) -3.3R, 14 toplu filtre.
+- 14.10 23:14 kullanıcı: "erken çıkışlar çok R yiyor; işlemler ortalama kaç R gidiyor, TP'yi ona göre artıralım".
+  trade_rules.mfe_r: girişten sonra ilk stopa kadar (TP/erken çıkış yokmuş gibi, en fazla 96 mum) lehte en uzak nokta (R),
+  CSV'de mfe_r. COMPARE_SETS["tp"] yeni: erken çıkış 2 mum + TP 1.5/2.2/3/4/5 + erken çıkışsız TP 3; raporun sonunda MFE
+  dağılımı (1R+/2R+/3R+… oranları). Eski tp seti tp_eski oldu. `/backtest 30 tp`, doğrulama `/backtest 180 tp` (+ önceki).

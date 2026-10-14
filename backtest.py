@@ -384,6 +384,7 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
             if "BTC_Close" in df.columns:
                 k = tr.btc_corr(df, i)
                 row["btc_kor"] = round(k, 3) if k == k else None
+            row["mfe_r"] = round(tr.mfe_r(df, r, side), 2)
             f = tr.trend_features(df, i, side, entry=r["entry"], risk=r["risk"])
             row.update({k: (round(v, 3) if isinstance(v, float) else v) for k, v in f.items() if not k.startswith("_")})
             if r["status"] in ("win", "loss", "be"):
@@ -723,7 +724,7 @@ COMPARE_SETS["saat"] = [
     C("1-6 + toplu + 03-07 TR yok (canlıdaki)", **_R16, cluster_max=5, QUIET_UTC=(0, 4)),
 ]
 _LIVE = dict(**_R16, cluster_max=5, QUIET_UTC=(0, 4))
-COMPARE_SETS["tp"] = [
+COMPARE_SETS["tp_eski"] = [
     C("Canlı kurallar 1:2", **_LIVE, RR=2.0),
     C("Canlı kurallar 1:2.2 (canlıdaki)", **_LIVE, RR=2.2),
     C("Canlı kurallar 1:2.5", **_LIVE, RR=2.5),
@@ -829,6 +830,17 @@ COMPARE_SETS["erken"] = [
     C("+ BTC'ye benzerlik < 0.4", **_CANLI, BTC_CORR_MAX=0.4),
     C("+ giriş mumu çıkışı + BTC < 0.6", **_CANLI, FAILED_ENTRY_BARS=1, BTC_CORR_MAX=0.6),
 ]
+# TP mesafesi (kullanıcı, 14.10 23:14: "erken çıkışlar çok R yiyor, işlemler ortalama kaç R gidiyor, TP'yi ona göre artıralım")
+# Taban: canlı ayar + erken çıkış (2 mum). Raporun sonunda fiyatın stop olmadan önce en fazla kaç R gittiği (MFE) dağılımı.
+_EB0 = dict(_CANLI, FAILED_ENTRY_BARS=2)
+COMPARE_SETS["tp"] = [
+    C("Erken çıkış (2 mum), TP 1:1.5", **dict(_EB0, RR=1.5)),
+    C("Erken çıkış (2 mum), TP 1:2.2 (şu anki)", **_EB0),
+    C("Erken çıkış (2 mum), TP 1:3", **dict(_EB0, RR=3.0)),
+    C("Erken çıkış (2 mum), TP 1:4", **dict(_EB0, RR=4.0)),
+    C("Erken çıkış (2 mum), TP 1:5", **dict(_EB0, RR=5.0)),
+    C("Erken çıkış yok, TP 1:3", **dict(_CANLI, RR=3.0)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -858,7 +870,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -939,6 +951,21 @@ def tp_stop_line(t):
     if other:
         parts.append(f"⚪ Başabaş {other}")
     return " · ".join(parts) + f"\n  {'🟢' if net > 0 else '🔴'} <b>{net:+.1f}R ({usd(net)})</b>"
+
+
+def mfe_summary(d, name):
+    """Fiyatın stop olmadan önce lehte gittiği en uzak nokta (R) dağılımı."""
+    t = d[d["durum"].isin(["win", "loss", "be"])] if not d.empty and "mfe_r" in d else None
+    if t is None or t.empty:
+        return ""
+    m = pd.to_numeric(t["mfe_r"], errors="coerce").dropna()
+    if m.empty:
+        return ""
+    pct = lambda x: f"%{100 * (m >= x).mean():.0f}"
+    return (f"📏 <b>İşlemler stop olmadan önce en fazla kaç R gitti?</b> ({html.escape(name, quote=False)}, {len(m)} işlem)\n"
+            f"1R+: {pct(1)} · 1.5R+: {pct(1.5)} · 2R+: {pct(2)} · 2.2R+: {pct(2.2)}\n"
+            f"3R+: {pct(3)} · 4R+: {pct(4)} · 5R+: {pct(5)}\n"
+            f"Ortanca: {m.median():.1f}R · Hiç 0.5R'ye bile gitmeyen: %{100 * (m < 0.5).mean():.0f}")
 
 
 def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
@@ -1334,6 +1361,10 @@ def main():
     if args.compare:
         frames_all = {cfg: pd.DataFrame(rows) for cfg, rows in results.items()}
         report = build_compare(frames_all, period_txt, coins_txt, minutes, p0=p0, days=args.days)
+        if args.compare == "tp":
+            ms = mfe_summary(frames_all[configs[1]["ad"]], configs[1]["ad"])
+            if ms:
+                report += "\n\n" + ms
         if args.compare == "tarama":
             fark_msgs = build_sweep(frames_all, tfs, period_txt, p0, args.days) + fark_msgs
         log.info("\n%s\n%s", report, archive.summary() if USE_ARCHIVE else source)

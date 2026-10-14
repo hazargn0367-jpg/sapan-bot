@@ -382,6 +382,22 @@ def btc_corr(df, i, bars=None):
     return float(np.corrcoef(rc[ok], rb[ok])[0, 1])
 
 
+def mfe_r(df, res, side, max_bars=96):
+    """Girişten sonra, ilk stop (erken çıkış ve TP yokmuş gibi) gelmeden önce fiyatın lehte gittiği en uzak nokta (R).
+    En fazla max_bars mum (15dk'da 96 = 24 saat) bakılır. Stop mumunun içindeki uç sayılmaz (önce stop varsayılır)."""
+    if "entry_bar" not in res:
+        return float("nan")
+    H, L = df["High"].values, df["Low"].values
+    long = side == "LONG"
+    k, fill, stop, risk = res["entry_bar"], res["fill"], res["stop"], res["risk"]
+    best = H[k] if long else L[k]
+    for m in range(k + 1, min(len(df), k + 1 + max_bars)):
+        if (L[m] <= stop) if long else (H[m] >= stop):
+            break
+        best = max(best, H[m]) if long else min(best, L[m])
+    return ((best - fill) if long else (fill - best)) / risk if risk else float("nan")
+
+
 def touch_closes_right_side(df, i, side):
     c, e = df["Close"].values[i], df["EMA20"].values[i]
     return c > e if side == "LONG" else c < e

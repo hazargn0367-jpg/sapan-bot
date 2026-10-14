@@ -13,7 +13,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 30 son önceki -> 4 kural + korumalar birlikte
   /backtest 30 son2 önceki -> 6 kural + toplu sinyal filtresi
   /backtest 30 saat önceki -> 03-07 TR saat filtresinin etkisi
-  /backtest 30 tp önceki -> canlı kurallarla 1:1.5 / 1:2 / 1:2.2 / 1:2.5
+  /backtest 30 tp -> erken çıkış (2 mum) ile TP 1:1.5 / 2.2 / 3 / 4 / 5 + işlemlerin stop olmadan önce kaç R gittiği
   /backtest 90 temiz -> TP ile stop olan işlemler arasındaki farklar (bacak, EMA açılımı, önceki tepeye mesafe...)
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
