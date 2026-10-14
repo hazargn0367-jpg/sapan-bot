@@ -845,12 +845,15 @@ COMPARE_SETS["tp"] = [
 ]
 # Başabaş (kullanıcı, 15.10 00:32): TP testinde stop olan 14 işlemin 7'si önce 1R+ kâra gitmişti. Fiyat 1R'ye gelince
 # stop girişe çekilir (bir sonraki mumdan itibaren). Eski taban sistemde (erken çıkışsız) başabaş kötüleştirmişti.
+# 180 gün TP testinde (18.04-14.10) TP 4 +36.5R, TP 2.2 +12.8R (7 ayın 5'inde daha iyi ama eşleşik fark gürültü içinde)
+# → TP 4 de bu sette, önceki dönemde de sınansın.
 COMPARE_SETS["basabas"] = [
     C("Erken çıkış (2 mum), TP 1:2.2 (şu anki)", **_EB0),
-    C("+ 1R'de stop girişe", **dict(_EB0, BE_TRIGGER=1.0)),
-    C("+ 1.5R'de stop girişe", **dict(_EB0, BE_TRIGGER=1.5)),
-    C("+ 1R'de stop girişe, TP 1:3", **dict(_EB0, BE_TRIGGER=1.0, RR=3.0)),
-    C("Erken çıkış yok, 1R'de stop girişe", **dict(_CANLI, BE_TRIGGER=1.0)),
+    C("TP 1:2.2 + 1R'de stop girişe", **dict(_EB0, BE_TRIGGER=1.0)),
+    C("TP 1:2.2 + 1.5R'de stop girişe", **dict(_EB0, BE_TRIGGER=1.5)),
+    C("TP 1:4", **dict(_EB0, RR=4.0)),
+    C("TP 1:4 + 1R'de stop girişe", **dict(_EB0, RR=4.0, BE_TRIGGER=1.0)),
+    C("TP 1:4 + 2R'de stop girişe", **dict(_EB0, RR=4.0, BE_TRIGGER=2.0)),
 ]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin

@@ -313,3 +313,12 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   TP 2.2) · +1R'de stop girişe · +1.5R · +1R ve TP 3 · erken çıkışsız +1R. Var olan BE_TRIGGER kullanılır (1R'ye gelen
   mumdan SONRAKİ mumdan itibaren stop = giriş). CSV cikis_turu "başabaş stop". Komut `/backtest 180 başabaş` (+ önceki).
   `/backtest 180 tp` çalışırken yüklenmedi (yükleme botu yeniden başlatır, testi öldürür).
+- TP testi 180 gün (18.04-14.10, erken çıkış 2 mum): TP 1.5 402 işlem -9.9R · **2.2 401 işlem +12.8R** (85 TP, 72 stop,
+  244 erken; ay ay -0.9/+5.8/+9.4/+7.6/-9.6/+5.6/-5.1) · 3 +20.7R · **4 381 işlem +36.5R** (+0.096/iş; ay ay +1.7/+11.8/
+  +18.3/+11.3/-11.2/+12.5/-7.9, 7 ayın 5'inde 2.2'den iyi) · 5 325 işlem +34.5R · erken çıkışsız TP 3 -21.7R.
+  Eşleşik (aynı işlemler) fark TP4−TP2.2 +16.2R (±43 gürültü); kalan +7.5R TP 4'te açık işlem sınırı yüzünden atlanan
+  20 işlemden (2.2'de -7.5R) → şans payı. MFE (401): ortanca 1.0R, 1R+ %49, 2.2R+ %32, 4R+ %20. Erken çıkmayan 157
+  işlemin %54'ü 2.2R'ye, %36'sı 4R'ye gidiyor. Stop olan 72 işlemin 32'si önce 1R+ kâra gitmiş. Erken çıkış 244 işlem
+  ort -0.35R (toplam -86.5R), 43'ü çıkmasa 2.2R'ye gidecekti.
+- basabas seti güncellendi (yüklenmeden önce): 2.2 · 2.2+1R BE · 2.2+1.5R BE · TP 4 · TP 4+1R BE · TP 4+2R BE.
+  `/backtest 180 başabaş` + `/backtest 180 başabaş önceki` hem başabaşı hem TP 4'ü önceki dönemde sınar.
