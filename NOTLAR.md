@@ -329,3 +329,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +23.7 / +23.3 (eşleşik +3.6 / -6.9). Başabaş iki dönemde de kötüleştirdi: 1R'de 31 stop kurtarıyor ama 29 TP'yi
   girişten çıkarıyor (fiyat 1R'den girişe dönüp sonra TP'ye gidiyor). TP 4 tutarsız (bir dönem iyi, bir dönem kötü).
   KARAR: erken çıkış 2 mum + TP 2.2 kalır, başabaş yok. En kötü ay -9.6R (Ağustos), 14 ay parçasının 10'u artı.
+- 15.10 01:05 kullanıcı: "işlem sayısı çok az, 5 dklığa alıp 1 aylık backtest". `/backtest 30 canlı erken 5m`
+  (15.09-13.10, 5m, canlı ayar + erken çıkış 2 mum = 10 dk): 182 işlem (günde ~6), TP 41 (%23), stop 41, erken 100,
+  net +1.8R (+44$), brüt +28.7R, komisyon 26.9R (0.15R/iş; stop ortanca %0.68; stop ≤%0.5 olanlarda 0.23R/iş).
+  Klasik 123 işlem +0.3R · dönüş 59 işlem +1.5R. Ay içi en büyük düşüş -20.1R, en kötü hafta -17.0R.
+  Aynı ay: 15m erken çıkışla -9.1R (66 işlem), 5m erken çıkışsız -12.2R (184 işlem) → erken çıkış 5m'de de ~+13R.
+  MFE ortanca 1.0R (15m ile aynı). Doğrulama: `/backtest 30 canlı erken 5m önceki`.
