@@ -257,3 +257,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   charts.context'teki dilim (df.iloc[...][cols]) ana tablonun verisini paylaşıyordu, her işlemin grafik bağlamı coinin
   bütün (180 gün) mum tablosunu bellekte tutuyordu (coin başına ~0.4MB birikim). .copy() ile düzeltildi: sahte veride
   200 coinde RSS 151→215MB büyürken düzeltmeden sonra ~143MB sabit. Önceki bellek sorunlarının da (5m 419MB) sebebi bu.
+- ERKEN 180 gün (17.04-14.10, 15m, canlı ayar klasik+dönüş, max 2, toplu): canlı 393 işlem %32 -27.0R (1/6 ay artı) ·
+  +erken çıkış 1 mum 399 işlem +10.8R (+0.03/iş, 171 erken çıkış ort -0.34R; ~140'ı stop olacaktı ~+108R, ~28'i TP
+  olacaktı ~-69R; 6 ayın 5'inde canlıdan iyi, 3/6 artı) · erken 2 mum +12.5R · BTC<0.8 etkisiz · BTC<0.6 -8.2R ·
+  BTC<0.4 -2.3R (243 işlem) · erken+BTC<0.6 +15.6R (+0.045/iş). Zarar BTC benzerliği 0.6-0.8'de (51 işlem %25 -0.32R/iş).
+  BSV örneği -1.10R → -0.17R. Dönüş erken çıkışla da eksi (-7.7R/99), klasik +18.5R/300. Sıradaki: `/backtest 180 erken önceki`.
