@@ -140,7 +140,10 @@ def inspect(text, chart_path="/tmp/incele.png"):
     lines.append(f"İlk 2 mum iğneli (iğne ≥ ½ gövde): {'evet → ' + word if v_half else 'hayır'}")
     lines.append(f"3 mumun 2'si iğneli (iğne ≥ ½ gövde): {'evet → ' + word if v_3 else 'hayır'}")
 
-    r = tr.simulate(df, i, side, tick)
+    mode = "reclaim" if any(w in text.lower() for w in ("dönüş", "donus")) else None
+    r = tr.simulate(df, i, side, tick, mode=mode)
+    if mode:
+        lines += ["", "<b>Dönüş varyasyonuyla değerlendirildi</b>"]
     try:
         from backtest import STATUS_TR
         status_tr = STATUS_TR.get(r["status"], r["status"])

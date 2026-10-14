@@ -74,6 +74,8 @@ STATUS_TR = {
     "pivot_wick": "Tepe/dip mumunun iğnesi çok uzun",
     "support": "Dip/tepeden sonra iğneli mumlar (destek/direnç oluşmuş)",
     "touch_tail": "Temas mumunun ters iğnesi uzun (EMA20'den dönüş zayıf)",
+    "no_close_below": "Temas mumu EMA20'nin öbür tarafında kapatmadı (dönüş varyasyonu)",
+    "no_reclaim": "Sonraki mum EMA20'nin doğru tarafında kapatmadı (dönüş varyasyonu)",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
     "skip_open": "Açık işlem sınırı dolu (portföy koruması)",
@@ -456,13 +458,20 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
     f_txt = ", filtreli" if tr.FILTERS else ", filtresiz"
     if tr.TOUCH_WICK_MIN > 0 and tr.REQUIRE_PRIOR_TOUCH:
         f_txt = ", canlı ayar: 6 kural + toplu + 03-07 yok"
+    if tr.ENTRY_MODE == "reclaim":
+        f_txt = ", DÖNÜŞ VARYASYONU: temas EMA20'nin öbür tarafında kapatır, sonraki mum geri alır, sonraki onay"
     msg = [f"📊 <b>BACKTEST SONUCU (TP 1:{tr.RR:g}{be_txt}{f_txt})</b>",
            f"{period_txt}, {n_coins} coin ({minutes:.0f} dk sürdü)", ""]
     msg.append("<b>Huni</b>")
     msg.append(f"Temas sinyali: {n_setups}")
-    msg.append(f"  ↳ EMA20 yanlış tarafta kapanış: {c('no_close')}")
+    if tr.ENTRY_MODE == "reclaim":
+        msg.append(f"  ↳ Temas mumu EMA20'nin öbür tarafında kapatmadı: {c('no_close_below')}")
+        msg.append(f"  ↳ Sonraki mum EMA20'yi geri almadı: {c('no_reclaim')}")
+    else:
+        msg.append(f"  ↳ EMA20 yanlış tarafta kapanış: {c('no_close')}")
     msg.append(f"  ↳ Onaydan önce iptal: {c('cancel_touch')}")
-    msg.append(f"  ↳ 3 mumda onay yok: {c('no_confirm')}")
+    msg.append(f"  ↳ Onay mumu dönüş mumunun ucunu geçmedi: {c('no_confirm')}" if tr.ENTRY_MODE == "reclaim"
+               else f"  ↳ 3 mumda onay yok: {c('no_confirm')}")
     msg.append(f"  ↳ ATR filtresine takıldı: {c('atr')}")
     if tr.MIN_ATR_MULT > 0:
         msg.append(f"  ↳ Stop {tr.MIN_ATR_MULT:g} ATR'den kısa: {c('atr_min')}")
@@ -532,7 +541,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR",
               "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R", "STRUCTURE_BREAK",
               "SUPPORT_N", "SUPPORT_MIN", "SUPPORT_WICK_BODY", "SUPPORT_WICK_ATR",
-              "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF"]
+              "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -771,6 +780,13 @@ def main():
     if args.compare:
         configs = COMPARE_SETS[args.compare]
         chart_idx = CHART_CFG.get(args.compare, 0)
+    elif args.preset == "donus":
+        import live_setups
+        rules = dict(live_setups.LIVE_RULES, ENTRY_MODE="reclaim")
+        if args.rr is not None:
+            rules["RR"] = args.rr
+        configs = [C("dönüş varyasyonu", **rules, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)]
+        chart_idx = 0
     elif args.preset == "canli":
         import live_setups
         rules = dict(live_setups.LIVE_RULES)

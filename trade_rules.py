@@ -56,6 +56,9 @@ SUPPORT_N = 0                # >0: son dipten (SHORT) / tepeden (LONG) sonraki b
 SUPPORT_MIN = 2              # bunların en az bu kadarı dibe (tepeye) doğru iğneliyse destek (direnç) oluşmuş: işlem yok
 SUPPORT_WICK_BODY = 1.0      # "iğneli" mum: dibe (tepeye) doğru iğne >= gövdenin bu katı
 SUPPORT_WICK_ATR = 0.1       # ve iğne >= bu kadar ATR (minik mumların iğnesi sayılmasın)
+ENTRY_MODE = "classic"       # "classic": temas EMA20'nin doğru tarafında kapatır, 3 mumda onay
+                             # "reclaim" (dönüş varyasyonu): temas EMA20'nin YANLIŞ tarafında kapatır, sonraki mum
+                             # EMA20'nin doğru tarafında kapatır, ondan sonraki mum o mumun tepesini (LONG) kapanışla geçer = onay
 RR = 2.0               # hedef: riskin kaç katı
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
@@ -235,9 +238,9 @@ def touch_closes_right_side(df, i, side):
     return c > e if side == "LONG" else c < e
 
 
-def simulate(df, i, side, tick):
-    """i: temas mumu. Sonucu sözlük olarak döner.
-    status: session | quiet | no_close | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
+def simulate(df, i, side, tick, mode=None):
+    """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
+    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -247,6 +250,7 @@ def simulate(df, i, side, tick):
     A = df["ATR"].values
     n = len(df)
     long = side == "LONG"
+    mode = ENTRY_MODE if mode is None else mode
     res = {"side": side, "touch": i}
 
     if FILTERS and "timestamp" in df.columns:
@@ -261,11 +265,18 @@ def simulate(df, i, side, tick):
             res["status"] = "quiet"
             return res
 
-    if not touch_closes_right_side(df, i, side):
+    E20 = df["EMA20"].values
+    if mode == "reclaim":
+        # Dönüş varyasyonu: temas mumu EMA20'yi gövdeyle geçip YANLIŞ tarafta kapatmalı
+        if (C[i] >= E20[i]) if long else (C[i] <= E20[i]):
+            res["status"] = "no_close_below"
+            return res
+    elif not touch_closes_right_side(df, i, side):
         res["status"] = "no_close"
         return res
 
-    if TOUCH_WICK_MIN > 0 and not touch_is_wick_candle(df, i, side):
+    # Kural 5 (fitil temas) dönüş varyasyonunda uygulanmaz: temas mumu zaten EMA20'nin öbür tarafında kapatıyor
+    if mode != "reclaim" and TOUCH_WICK_MIN > 0 and not touch_is_wick_candle(df, i, side):
         res["status"] = "touch_body"
         return res
     if TOUCH_TAIL_MAX > 0 and not touch_tail_ok(df, i, side):
@@ -289,7 +300,23 @@ def simulate(df, i, side, tick):
 
     # --- Onay ---
     conf = None
-    for j in range(i + 1, i + 1 + CONFIRM_WINDOW):
+    if mode == "reclaim":
+        j = i + 1  # dönüş mumu: EMA20'nin doğru tarafında kapatmalı
+        if j >= n:
+            res["status"] = "pending"
+            return res
+        if not ((C[j] > E20[j]) if long else (C[j] < E20[j])):
+            res["status"] = "no_reclaim"
+            return res
+        res["reclaim"] = j
+        conf = j + 1  # onay: dönüş mumunun tepesini (LONG) / dibini (SHORT) kapanışla geçmeli
+        if conf >= n:
+            res["status"] = "pending"
+            return res
+        if not ((C[conf] > H[j]) if long else (C[conf] < L[j])):
+            res["status"] = "no_confirm"
+            return res
+    for j in (range(i + 1, i + 1 + CONFIRM_WINDOW) if conf is None else ()):
         if j >= n:
             res["status"] = "pending"
             return res

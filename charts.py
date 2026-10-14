@@ -24,7 +24,7 @@ def context(df, r):
     hi = min(len(df), r.get("exit_bar", r["touch"] + 6) + BARS_AFTER)
     cols = ["timestamp", "Open", "High", "Low", "Close", "EMA20", "EMA50", "EMA100", "Stoch_K"]
     ctx = df.iloc[lo:hi][cols].reset_index(drop=True)
-    rel = {k: r[k] - lo for k in ("touch", "confirm", "entry_bar", "exit_bar") if k in r}
+    rel = {k: r[k] - lo for k in ("touch", "confirm", "entry_bar", "exit_bar", "reclaim") if k in r}
     return ctx, rel
 
 
@@ -75,14 +75,16 @@ def draw(trade, path=None, pdf=None):
     long = trade["yon"] == "LONG"
     pad = rng * 0.05
 
-    def mark(bar, text, color, below):
+    def mark(bar, text, color, below, lift=1.0):
         c = ctx.iloc[bar]
-        y = c["Low"] - pad if below else c["High"] + pad
+        y = c["Low"] - pad * lift if below else c["High"] + pad * lift
         ax.annotate(text, (bar, c["Low"] if below else c["High"]), (bar, y),
                     color=color, fontsize=8, ha="center", va="top" if below else "bottom",
                     fontweight="bold", arrowprops=dict(arrowstyle="-", color=color, lw=0.8))
 
     mark(rel["touch"], "Temas", "#ffeb3b", below=long)
+    if "reclaim" in rel:  # dönüş varyasyonu: EMA20'yi geri alan mum
+        mark(rel["reclaim"], "Dönüş", "#4dd0e1", below=long, lift=2.2)  # temas yazısıyla üst üste binmesin
     mark(rel["confirm"], "Onay", "#ce93d8", below=not long)
     if "exit_bar" in rel:
         col = {"win": UP, "be": "#9e9e9e"}.get(trade["durum"], DOWN)

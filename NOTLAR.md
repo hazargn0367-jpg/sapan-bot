@@ -146,6 +146,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - Günlük (journal.py, kalıcı diskte journal.json): her EMİR HAZIR altında "Girdim / Girmedim" düğmeleri; sonuçlar takipten
   yazılır; /durum'da "botun bütün bildirimleri / senin girdiklerin / girmediklerin" R toplamları.
 
+- Dönüş varyasyonu (kullanıcı, 14.10 03:55): aynı sistem; temas mumu EMA20'ye değip EMA20'nin ÖBÜR tarafında kapatır (LONG'da
+  altında), sonraki mum EMA20'nin doğru tarafında kapatır (dönüş), ondan sonraki mum dönüş mumunun tepesinin (LONG) üstünde kapatır
+  = onay. Giriş/stop/TP/ATR/diğer kurallar aynı; kural 5 (fitil temas) uygulanmaz. trade_rules.ENTRY_MODE="reclaim",
+  `/backtest 14 dönüş` (grafiklerde "Dönüş" mumu işaretli), `/incele COIN tarih saat dönüş`. Klasik mod eski kodla birebir aynı.
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.
