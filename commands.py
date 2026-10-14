@@ -22,7 +22,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 30 toplu 5m -> toplu sinyal filtresi: 5 / 8 / 12 coin / kapalı karşılaştırması
   /backtest 90 destek -> kural 9 (dip/tepeden sonra iğneli mumlar = destek/direnç), ay ay + grafik PDF
   (varsayılan: hacmi en yüksek 500 coin, canlı bildirimlerle aynı; 'tüm' yazılırsa hepsi)
-  /durum          -> backtest ilerlemesi + canlı tarama durumu
+  /durum          -> backtest ilerlemesi + canlı tarama + günlük (Girdim/Girmedim sonuçları)
   /incele AXSUSDT 01.08.2026 02:00 -> bir işlemin tüm kurallardaki değerlendirmesi + grafik (TR saati, 15m)
   /incele AXSUSDT 13.10 22:05 5m  -> 5 dakikalık canlı bildirimi incele
   /iptal          -> çalışan backtest'i durdurur
@@ -147,6 +147,28 @@ def status_text():
     return "Çalışan backtest yok. Başlatmak için: /backtest"
 
 
+def _on_button(cq):
+    """EMİR HAZIR altındaki "Girdim / Girmedim" düğmesi."""
+    import journal
+    from telegram import answer_callback, decision_buttons, edit_buttons
+    msg = cq.get("message") or {}
+    chat_id = (msg.get("chat") or {}).get("id")
+    if str(chat_id) != str(config.TELEGRAM_CHAT_ID):
+        return
+    data = cq.get("data") or ""
+    kind, _, key = data.partition("|")
+    decision = {"g": "girdim", "n": "girmedim"}.get(kind)
+    if not decision or not key:
+        answer_callback(cq["id"])
+        return
+    s = journal.set_decision(key, decision)
+    if s is None:
+        answer_callback(cq["id"], "Bu bildirim günlükte yok")
+        return
+    answer_callback(cq["id"], "Kaydedildi: " + ("Girdim" if decision == "girdim" else "Girmedim"))
+    edit_buttons(chat_id, msg.get("message_id"), decision_buttons(key, decision))
+
+
 def _listen():
     url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_TOKEN}/getUpdates"
     offset = None
@@ -160,12 +182,15 @@ def _listen():
 
     while True:
         try:
-            params = {"timeout": 30}
+            params = {"timeout": 30, "allowed_updates": '["message", "callback_query"]'}
             if offset is not None:
                 params["offset"] = offset
             updates = requests.get(url, params=params, timeout=40).json().get("result", [])
             for u in updates:
                 offset = u["update_id"] + 1
+                if u.get("callback_query"):
+                    _on_button(u["callback_query"])
+                    continue
                 msg = u.get("message") or {}
                 if str(msg.get("chat", {}).get("id")) != str(config.TELEGRAM_CHAT_ID):
                     continue
@@ -192,7 +217,9 @@ def _listen():
                     sig = "açık" if config.SETUP_ALERTS else "KAPALI"
                     import exchanges
                     exchanges.probe_weight()  # IP'nin şu anki Binance kullanımı (1 hafif istek)
+                    import journal
                     send_message(f"{status_text()}\n\n{live_setups.status_text()}\nEmir bildirimleri: {sig}"
+                                 f"\n\n{journal.summary()}"
                                  f"\n\n{exchanges.status_line()}\n\n{memwatch.status_line()}")
                 elif text.lower().startswith("/sinyal"):
                     low = text.lower()

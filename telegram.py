@@ -12,22 +12,45 @@ from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 log = logging.getLogger("bot")
 
 
-def send_message(text):
+def decision_buttons(key, chosen=None):
+    """EMİR HAZIR mesajının altındaki "Girdim / Girmedim" düğmeleri (seçilen işaretli, fikir değiştirilebilir)."""
+    mark = lambda d, label: ("✅ " if chosen == d else "") + label
+    return {"inline_keyboard": [[{"text": mark("girdim", "Girdim"), "callback_data": f"g|{key}"},
+                                  {"text": mark("girmedim", "Girmedim"), "callback_data": f"n|{key}"}]]}
+
+
+def _api(method, payload, timeout=10):
+    if not TELEGRAM_BOT_TOKEN:
+        return False
+    try:
+        r = requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}", json=payload, timeout=timeout)
+        if r.status_code != 200:
+            log.error("Telegram %s hatası %s: %s", method, r.status_code, r.text[:200])
+            return False
+        return True
+    except requests.RequestException as e:
+        log.error("Telegram %s gönderilemedi: %s", method, e)
+        return False
+
+
+def answer_callback(callback_id, text=""):
+    return _api("answerCallbackQuery", {"callback_query_id": callback_id, "text": text})
+
+
+def edit_buttons(chat_id, message_id, reply_markup):
+    return _api("editMessageReplyMarkup", {"chat_id": chat_id, "message_id": message_id, "reply_markup": reply_markup})
+
+
+def send_message(text, reply_markup=None):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         log.warning("Telegram ayarları eksik, mesaj gönderilmedi:\n%s", text)
         return False
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
     try:
-        r = requests.post(
-            url,
-            json={
-                "chat_id": TELEGRAM_CHAT_ID,
-                "text": text,
-                "parse_mode": "HTML",
-                "disable_web_page_preview": True,
-            },
-            timeout=10,
-        )
+        r = requests.post(url, json=payload, timeout=10)
         if r.status_code != 200:
             log.error("Telegram hatası %s: %s", r.status_code, r.text)
             return False
@@ -60,16 +83,19 @@ def send_document(path, caption=""):
         return False
 
 
-def send_photo(path, caption=""):
-    """Tek fotoğraf + HTML açıklama."""
+def send_photo(path, caption="", reply_markup=None):
+    """Tek fotoğraf + HTML açıklama (+ düğmeler)."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         log.warning("Telegram ayarları eksik, fotoğraf gönderilmedi")
         return False
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
     try:
         with open(path, "rb") as f:
-            r = requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption[:1024],
-                                         "parse_mode": "HTML"}, files={"photo": f}, timeout=60)
+            data = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption[:1024], "parse_mode": "HTML"}
+            if reply_markup:
+                import json
+                data["reply_markup"] = json.dumps(reply_markup)
+            r = requests.post(url, data=data, files={"photo": f}, timeout=60)
         if r.status_code != 200:
             log.error("Telegram fotoğraf hatası %s: %s", r.status_code, r.text)
             return False

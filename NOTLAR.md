@@ -140,6 +140,12 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   trade_rules'ta tablo kopyası yok → evaluate_at 19x hızlı, eski kodla 514 sinyalde birebir aynı sonuç. 5m 30 gün 120 coin
   yerelde 47sn/40 coin → 16sn/120 coin. Arşiv indirme havuzu 32, aynı anda 16 coin. Render'da kalıcı disk /var/data (1GB) eklendi.
 
+- 5m önceki ay (15.08–13.09): 139 işlem %30.2 -29.8R (işlem başı -0.21R, brüt -5.8R). İki ay 5m: ~-31R / 269 işlem.
+  Toplu sinyalle elenenler bu ay %19 TP (~-41R kaçınıldı) → filtre kalıyor. 15m 90 gün toplu: kapalı en kötü (-42R).
+  Sonuç: mekanik kurallarda avantaj yok. Kullanıcının seçiminin değerini ölçmek için günlük eklendi.
+- Günlük (journal.py, kalıcı diskte journal.json): her EMİR HAZIR altında "Girdim / Girmedim" düğmeleri; sonuçlar takipten
+  yazılır; /durum'da "botun bütün bildirimleri / senin girdiklerin / girmediklerin" R toplamları.
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.

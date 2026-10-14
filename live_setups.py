@@ -26,7 +26,8 @@ import strategy as st
 import trade_rules as tr
 import exchanges
 from exchanges import KLINE_LIMIT as KLINE_KEEP, get_klines, get_tick_sizes, get_top_symbols
-from telegram import send_message, send_photo
+import journal
+from telegram import decision_buttons, send_message, send_photo
 
 log = logging.getLogger("bot")
 
@@ -213,6 +214,12 @@ def setup_message(symbol, side, r, df):
 
 def send_setup(symbol, side, r, df):
     caption = setup_message(symbol, side, r, df)
+    touch_ts = int(df["timestamp"].values[r["touch"]])
+    try:
+        journal.record_alert(symbol, touch_ts, side, float(r["entry"]), float(r["stop"]), float(r["tp"]))
+    except Exception as e:
+        log.error("Günlüğe yazılamadı: %s", e)
+    buttons = decision_buttons(journal.key_of(symbol, touch_ts))
     try:
         import charts  # matplotlib sadece bildirim çizerken yüklenir (bellek)
         os.makedirs(CHART_DIR, exist_ok=True)
@@ -225,7 +232,7 @@ def send_setup(symbol, side, r, df):
         }
         path = f"{CHART_DIR}/{symbol}_{int(ts[r['touch']])}.png"
         charts.draw(trade, path=path)
-        sent = send_photo(path, caption)
+        sent = send_photo(path, caption, buttons)
         try:
             os.remove(path)
         except OSError:
@@ -234,7 +241,7 @@ def send_setup(symbol, side, r, df):
             return
     except Exception as e:
         log.error("%s grafik çizilemedi: %s", symbol, e)
-    send_message(caption)
+    send_message(caption, buttons)
 
 
 def follow_up(symbol, df):
@@ -264,6 +271,10 @@ def follow_up(symbol, df):
             emoji = "🟢" if info["side"] == "LONG" else "🔴"
             send_message(f"{emoji} <b>{info['side']} {html.escape(symbol)}</b> (temas {fmt(key[1])})\n" + "\n".join(lines))
         info["status"] = status
+        try:
+            journal.set_result(symbol, key[1], status, r.get("r_net") if status in ("win", "loss", "be") else None)
+        except Exception as e:
+            log.error("Günlüğe yazılamadı: %s", e)
         if status in FINAL:
             _active.pop(key)
 
