@@ -239,7 +239,8 @@ def _index_pages(trades, pdf, per_page=26):
     rows = []
     for t in trades:
         res = {"win": "TP", "be": "BAŞABAŞ"}.get(t["durum"], "STOP")
-        rows.append([f"#{t['_no']}", f"{t['_ay']}. ay" if "_ay" in t else "", t["coin"], t["yon"],
+        side = t["yon"] + (f" {t['varyasyon']}" if isinstance(t.get("varyasyon"), str) else "")
+        rows.append([f"#{t['_no']}", f"{t['_ay']}. ay" if "_ay" in t else "", t["coin"], side,
                      f"{t['temas']} TR", f"{t['temas_utc']} UTC", res, f"{t['R_net']:+.2f}R", f"{t['dolar']:+.0f}$"])
     total = sum(t["R_net"] for t in trades)
     wins = sum(t["durum"] == "win" for t in trades)

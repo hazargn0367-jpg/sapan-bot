@@ -16,8 +16,11 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger("bot")
 
 
+PDF_MAX = 500   # bir PDF'te en fazla bu kadar işlem (fazlası ayrı dosyalara bölünür)
+
+
 def main(path, name, n_each=15):
-    from telegram import send_message, send_photos
+    from telegram import send_document, send_message, send_photos
     folder = "/tmp/bt_charts"
     try:
         with open(path, "rb") as f:
@@ -27,7 +30,6 @@ def main(path, name, n_each=15):
         shutil.rmtree(folder, ignore_errors=True)
         os.makedirs(folder, exist_ok=True)
         wins, losses = charts.make_samples(recs, folder, n_each)
-        del recs
         label = f" ({name})" if name else ""
         for kind, paths in (("TP", wins), ("STOP", losses)):
             for k in range(0, len(paths), 10):
@@ -35,6 +37,19 @@ def main(path, name, n_each=15):
                 send_photos(part, f"{kind} örnekleri{label}: {k + 1}-{k + len(part)} / {len(paths)} "
                                   f"(dönem boyunca eşit aralıklı)")
         log.info("Örnek grafikler gönderildi: %d TP, %d stop", len(wins), len(losses))
+        shutil.rmtree(folder, ignore_errors=True)
+        # Bütün işlemlerin grafikleri PDF olarak (tarih sırasıyla, ilk sayfalarda numaralı liste)
+        recs.sort(key=lambda r: r.get("_touch_ts", 0))
+        parts = [recs[k:k + PDF_MAX] for k in range(0, len(recs), PDF_MAX)]
+        for no, part in enumerate(parts, 1):
+            pdf_path = f"/tmp/bt_grafikler_{no}.pdf"
+            charts.make_pdf(part, pdf_path)
+            n_win = sum(r["durum"] == "win" for r in part)
+            extra = f" (parça {no}/{len(parts)})" if len(parts) > 1 else ""
+            send_document(pdf_path, f"Bütün işlemlerin grafikleri{label}{extra}: {len(part)} işlem, {n_win} TP. "
+                                    f"İlk sayfalarda numaralı liste, sonra her işlem bir sayfa (tarih sırasıyla).")
+            os.remove(pdf_path)
+        log.info("PDF gönderildi: %d işlem, %d parça", len(recs), len(parts))
     except Exception as e:
         log.exception("Grafikler oluşturulamadı")
         send_message(f"⚠️ Grafikler oluşturulamadı: {type(e).__name__}: {e}")

@@ -924,7 +924,7 @@ def build_fark(rows, p0, days, title):
 
 
 def send_samples(recs, name, n_each=15):
-    """Dönem boyunca eşit aralıklı 15 TP ve 15 stop grafiği, 10'arlı albümler halinde.
+    """Dönem boyunca eşit aralıklı 15 TP ve 15 stop grafiği (10'arlı albümler) + bütün işlemler PDF.
     Grafikler temiz bir süreçte çizilir: bu süreç sample_charts.py'ye dönüşür (os.execv), veri işlerken tutulan
     bellek bırakılır. Bu yüzden en son adım olarak çağrılır; execv başarılı olursa geri dönmez."""
     import pickle
