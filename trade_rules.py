@@ -70,6 +70,8 @@ EMA_FAN_MIN = 0.0            # >0: EMA20 ile EMA100 arası en az bu kadar ATR (E
 LEG_COUNTER_MAX = 1.0        # <1: bacaktaki ters mumların oranı en fazla bu kadar (0.2 = 5 mumda en fazla 1 ters mum)
 PULLBACK_MIN_BARS = 0        # >0: tepeden (LONG) / dipten (SHORT) temasa kadar en az bu kadar mum (düzeltme acele değil)
 LEG_ATR_MAX = 0.0            # >0: bacak boyu bu kadar ATR'den KISA olmalı (aşırı uzamış hareketten sonraki geri çekilme değil)
+TOUCH_PREV_EXTREME = False   # True: temas mumunun dibi (SHORT) önceki mumun dibinin altına inmemeli; LONG'da tepesi önceki
+                             # mumun tepesinin üstüne çıkmamalı (kullanıcı, 14.10, XMR 19.03.2026 02:45)
 FAILED_ENTRY_BARS = 0        # >0: giriş mumu dahil ilk bu kadar mumdan biri girişin gerisinde kapatırsa (LONG'da altında)
                              # o mumun kapanışında çıkılır: kırılım tutmadı, fiyat girişe sadece iğneyle değdi (kullanıcı,
                              # 14.10, BSV 15.09 19:45). Erken çıkış "be" durumuyla sayılır, res["early_exit"] = True
@@ -387,7 +389,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
-    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -432,6 +434,9 @@ def simulate(df, i, side, tick, mode=None):
         return res
     if TOUCH_TAIL_MAX > 0 and not touch_tail_ok(df, i, side):
         res["status"] = "touch_tail"
+        return res
+    if TOUCH_PREV_EXTREME and i >= 1 and ((H[i] > H[i - 1]) if long else (L[i] < L[i - 1])):
+        res["status"] = "touch_prev"
         return res
     if REQUIRE_PRIOR_TOUCH and not prior_touch_ok(df, i, side):
         res["status"] = "no_prior_touch"

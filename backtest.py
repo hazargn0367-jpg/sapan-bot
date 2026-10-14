@@ -80,6 +80,7 @@ STATUS_TR = {
     "pivot_leg": "Tepe/dip tek mumluk fırlamayla yapılmış (temiz trend yok)",
     "not_clean": "Trend temiz değil (bacak / EMA açılımı şartı tutmadı)",
     "btc_corr": "Coin BTC'ye çok benzer hareket ediyor (korelasyon)",
+    "touch_prev": "Temas mumu önceki mumun dibini (SHORT) / tepesini (LONG) geçti",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
     "skip_open": "Açık işlem sınırı dolu (portföy koruması)",
@@ -638,7 +639,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE", "PIVOT_LEG_MIN", "TIME_STOP_BARS",
               "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN",
               "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS", "LEG_ATR_MAX", "BTC_CORR_MAX", "BTC_CORR_BARS",
-              "FAILED_ENTRY_BARS"]
+              "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -820,6 +821,22 @@ COMPARE_SETS["erken"] = [
     C("+ BTC'ye benzerlik < 0.4", **_CANLI, BTC_CORR_MAX=0.4),
     C("+ giriş mumu çıkışı + BTC < 0.6", **_CANLI, FAILED_ENTRY_BARS=1, BTC_CORR_MAX=0.6),
 ]
+# PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
+# STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
+# hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
+_EB = dict(_CANLI, FAILED_ENTRY_BARS=2)
+COMPARE_SETS["ornek"] = [
+    C("Canlı ayar + erken çıkış (2 mum)", **_EB),
+    C("+ dip/tepe tabanı: 0.5 ATR bant", **dict(_EB, CLEAN_PIVOT_ATR=0.5)),
+    C("+ dip/tepe tabanı: 1 ATR bant", **dict(_EB, CLEAN_PIVOT_ATR=1.0)),
+    C("+ önünde en az 0.5R yer", **dict(_EB, ROOM_MIN_R=0.5)),
+    C("+ önünde en az 1R yer", **dict(_EB, ROOM_MIN_R=1.0)),
+    C("+ onay mumu en fazla 1.2 ATR", **dict(_EB, ATR_MAX_MULT=1.2)),
+    C("+ onay mumu en fazla 1 ATR", **dict(_EB, ATR_MAX_MULT=1.0)),
+    C("+ temas mumu önceki mumun ucunu geçmesin", **dict(_EB, TOUCH_PREV_EXTREME=True)),
+    C("+ hepsi (0.5 ATR bant, 0.5R yer, onay ≤ 1.2 ATR, temas kuralı)",
+      **dict(_EB, CLEAN_PIVOT_ATR=0.5, ROOM_MIN_R=0.5, ATR_MAX_MULT=1.2, TOUCH_PREV_EXTREME=True)),
+]
 # Zaman dilimi / coin büyüklüğü taraması: TP 1:2, aynı anda işlem sınırı ve toplu filtre yok (sistemin kendisi ölçülür)
 COMPARE_SETS["tarama"] = [
     C("Orijinal kurallar (taban)", FILTERS=False, RR=2.0),
@@ -833,7 +850,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -853,6 +870,9 @@ CHECK_TRADES = [
     ("HOLOUSDT", "12.10.2026 07:00", "dönüş: giriş önceki tepenin dibinde (kural 7)"),
     ("HOMEUSDT", "18.09.2026 20:15", "dönüş: 10/10 temiz trend (TP)"),
     ("BSVUSDT", "15.09.2026 19:45", "giriş sadece iğneyle, sonraki mum stop (erken çıkış)"),
+    ("STABLEUSDT", "09.12.2025 10:45", "dip taban yapmış, giriş dibe yakın"),
+    ("ACEUSDT", "17.04.2026 16:30", "onay mumu çok büyük, tepenin hizasında"),
+    ("XMRUSDT", "19.03.2026 02:45", "temas mumunun dibi önceki mumun altında"),
     ("TWTUSDT", "15.08.2026 16:45", "dönüş: 10/10 temiz trend (TP)"),
     ("AXSUSDT", "01.08.2026 02:00", "girmezdim (yapı)"),
     ("ADAUSDT", "01.08.2026 13:30", "iyi işlem"),

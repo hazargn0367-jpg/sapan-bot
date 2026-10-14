@@ -279,3 +279,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   BACKTEST_SOFT_LIMIT 1000→600. Kalıcı çözüm adayı: canlı veriyi WebSocket'ten almak (REST ağırlığı yok).
   Aynı /durum: erken önceki karşılaştırma mesajı Telegram 400 (ayar adındaki "<") ile gelmemişti; 22:19 yüklemesinde
   düzeltildi ama bot 22:27'de hâlâ 20:57'den beri açıktı (o yükleme henüz devreye girmemişti).
+- 14.10 22:3x PDF örnekleri: STABLE 09.12.2025 10:45 SHORT dönüş (dip taban yapmış; kural 4'ün 0.3 ATR bandına girmemiş,
+  önünde 0.36R), ACE 17.04.2026 16:30 LONG (onay mumu büyük 1.3 ATR, tepenin hizasında, önünde 0.22R), XMR 19.03.2026
+  02:45 SHORT (temas mumunun dibi önceki mumun dibinin altında). Yeni: TOUCH_PREV_EXTREME (durum touch_prev), ATR_MAX_MULT
+  PARAM_KEYS'e eklendi. `/backtest 180 örnek` (+ önceki): erken çıkış 2 mum üstüne bant 0.5/1 ATR, yer 0.5/1R, onay ≤1.2/1 ATR,
+  temas kuralı, hepsi; PDF "hepsi" ayarından.
