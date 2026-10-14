@@ -27,8 +27,9 @@ WEIGHT_LIMIT = 2400
 WEIGHT_SOFT_LIMIT = 1200  # buna gelince dakika dolana kadar beklenir. IP (Render'da başka uygulamalarla da
                           # paylaşılıyor olabilir) 2400'e dayanınca 429, sonra 418 engeli geliyordu (14.10: 19:25 ve 21:31)
 BACKTEST_SOFT_LIMIT = 600  # backtest artık API'yi neredeyse hiç kullanmıyor (veri arşivden, bugünün mumları yok)
-PAUSE_FILE = "/tmp/binance_pause"
 import config  # noqa: E402
+# Kalıcı diskte: bot yeniden başlayınca (yükleme) Binance engelini hatırlasın, engel sürerken istek atıp uzatmasın
+PAUSE_FILE = os.path.join(config.data_dir(), "binance_pause")
 
 LIVE_PERIOD = config.tf_minutes(config.LIVE_TF) * 60  # canlı taramanın mum süresi (sn)
 LIVE_SCAN_WINDOW = 75  # her canlı mum kapanışından sonraki 75 sn canlı taramaya ayrılır (tarama ~30 sn)
