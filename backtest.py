@@ -239,10 +239,19 @@ def _save_cache(path, arr, span):
             pass
 
 
+DISK_LOW = 300 * 1024 * 1024  # diskte bundan az boş yer kalınca diğer zaman diliminin verisi silinir
+
+
 def drop_other_tf_cache():
-    """Kullanılmayan zaman diliminin (15m testinde 5m) kayıtlı verisini sil: disk 1GB, 15m geçmişine yer kalsın."""
+    """Disk dolmak üzereyse kullanılmayan zaman diliminin (15m testinde 5m) kayıtlı verisini sil.
+    Yer varsa ikisi de kalır: 5m ve 15m testleri sırayla çalıştırılınca her seferinde yeniden indirilmesin."""
     other = "_5m.npz" if BASE_TF == "15m" else None
     if not other or not os.path.isdir(KLINE_CACHE):
+        return
+    try:
+        if shutil.disk_usage(KLINE_CACHE).free > DISK_LOW:
+            return
+    except OSError:
         return
     freed = 0
     for name in os.listdir(KLINE_CACHE):
