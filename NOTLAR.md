@@ -262,3 +262,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   olacaktı ~-69R; 6 ayın 5'inde canlıdan iyi, 3/6 artı) · erken 2 mum +12.5R · BTC<0.8 etkisiz · BTC<0.6 -8.2R ·
   BTC<0.4 -2.3R (243 işlem) · erken+BTC<0.6 +15.6R (+0.045/iş). Zarar BTC benzerliği 0.6-0.8'de (51 işlem %25 -0.32R/iş).
   BSV örneği -1.10R → -0.17R. Dönüş erken çıkışla da eksi (-7.7R/99), klasik +18.5R/300. Sıradaki: `/backtest 180 erken önceki`.
+- ERKEN ÖNCEKİ (19.10.2025-17.04.2026): canlı 322 işlem -0.9R · erken 1 mum +20.4R · erken 2 mum +32.8R (5/6 ay artı) ·
+  BTC<0.8 +3.6 · BTC<0.6 +10.6 · BTC<0.4 -0.7 · erken1+BTC<0.6 +22.6R. İKİ DÖNEMDE DE TUTAN İLK KURAL: erken çıkış.
+  12 ay toplam: canlı 715 işlem -27.9R (5/12 ay artı, düşüş -37.6) · erken 1 mum +31.2R (+0.043/iş, 7/12) · erken 2 mum
+  +45.2R (+0.061/iş, ayda +3.8R, 8/12 ay artı, en kötü ay -10.3, düşüş -14.3; TP %22, tam stop %16, erken çıkış %62) ·
+  BTC<0.6 +2.4R (iki dönemde de canlıdan iyi, küçük) · erken1+BTC<0.6 +38.2R. Kullanıcıya canlıya alma önerildi
+  (15m + erken çıkış 2 mum, bot "ÇIK" bildirimi), karar bekleniyor.
