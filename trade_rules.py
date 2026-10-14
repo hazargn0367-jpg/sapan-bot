@@ -70,6 +70,9 @@ EMA_FAN_MIN = 0.0            # >0: EMA20 ile EMA100 arası en az bu kadar ATR (E
 LEG_COUNTER_MAX = 1.0        # <1: bacaktaki ters mumların oranı en fazla bu kadar (0.2 = 5 mumda en fazla 1 ters mum)
 PULLBACK_MIN_BARS = 0        # >0: tepeden (LONG) / dipten (SHORT) temasa kadar en az bu kadar mum (düzeltme acele değil)
 LEG_ATR_MAX = 0.0            # >0: bacak boyu bu kadar ATR'den KISA olmalı (aşırı uzamış hareketten sonraki geri çekilme değil)
+BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
+                             # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
+BTC_CORR_BARS = 96           # benzerlik penceresi (15dk'da 96 mum = 24 saat)
 ENTRY_MODE = "classic"       # "both": temas mumu EMA20'nin doğru tarafında kapatırsa klasik, öbür tarafında kapatırsa dönüş
                              # "classic": temas EMA20'nin doğru tarafında kapatır, 3 mumda onay
                              # "reclaim" (dönüş varyasyonu): temas EMA20'nin YANLIŞ tarafında kapatır, sonraki mum
@@ -355,6 +358,25 @@ def clean_trend_ok(f, limits=None):
     return True
 
 
+def btc_corr(df, i, bars=None):
+    """Coinin son `bars` mumdaki getirilerinin BTC getirileriyle korelasyonu (1 = birebir aynı hareket, 0 = ilgisiz).
+    Tabloda BTC_Close sütunu yoksa (BTC'nin kendisi ya da BTC verisi alınamadı) NaN."""
+    if "BTC_Close" not in df.columns:
+        return float("nan")
+    bars = BTC_CORR_BARS if bars is None else bars
+    lo = i - bars
+    if lo < 0:
+        return float("nan")
+    c = df["Close"].values[lo:i + 1]
+    b = df["BTC_Close"].values[lo:i + 1]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        rc, rb = np.diff(np.log(c)), np.diff(np.log(b))
+    ok = np.isfinite(rc) & np.isfinite(rb)
+    if ok.sum() < 0.8 * bars or rc[ok].std() == 0 or rb[ok].std() == 0:
+        return float("nan")
+    return float(np.corrcoef(rc[ok], rb[ok])[0, 1])
+
+
 def touch_closes_right_side(df, i, side):
     c, e = df["Close"].values[i], df["EMA20"].values[i]
     return c > e if side == "LONG" else c < e
@@ -362,7 +384,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
-    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -429,6 +451,12 @@ def simulate(df, i, side, tick, mode=None):
     if clean_trend_active() and not clean_trend_ok(trend_features(df, i, side)):
         res["status"] = "not_clean"
         return res
+    if BTC_CORR_MAX > 0:
+        k = btc_corr(df, i)
+        res["btc_kor"] = k
+        if k == k and k >= BTC_CORR_MAX:   # NaN (BTC'nin kendisi / veri yok) filtrelenmez
+            res["status"] = "btc_corr"
+            return res
 
     # --- Onay ---
     conf = None

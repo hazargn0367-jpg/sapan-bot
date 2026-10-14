@@ -242,3 +242,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   ayda ~+3.6R, en kötü ay -10.9R). Taban 30m %39 +0.08 (ilk +0.04), aylar çok dalgalı. 15m iki dönemde de eksi.
   Sonuç: 12 ayda hiçbir ayar sürekli %40+ değil; 6 kural 30m/1h'de dönem dışı işe yaramıyor. Kullanıcıya dürüstçe
   söylendi: kısa vadeli (scalp) ve ayda 10R hedefi bu sistemle verilerde yok.
+- 14.10 18:55 kullanıcı: "coin BTC'ye benzer gidiyorsa girmeyelim". trade_rules.btc_corr (son 96 mumda log getirilerin
+  BTC ile korelasyonu; BTC_Close sütunu backtest'te eklenir, BTC'nin kendisine uygulanmaz), BTC_CORR_MAX filtresi
+  (durum btc_corr), CSV/fark analizinde btc_kor. `/backtest 180 btc` (canlı ayar klasik+dönüş, <0.8/<0.6/<0.4, 12 saat).
+  Sadece sonraki dalında, YÜKLENMEDİ (kullanıcı PDF örnekleri gönderiyor; birlikte yüklenecek).
+- 14.10 18:58 PDF örneği BSVUSDT 15.09 19:45 SHORT: giriş mumu girişe sadece iğneyle değip üstünde kapatmış, sonraki mum
+  stop. "Buna girmezdim". Aday kural: (1) kapanışla giriş ya da (2) giriş mumu girişin gerisine kapatırsa kapanışta çık.
+  Kullanıcı daha örnek gönderecek, "kodla" deyince yapılacak.
