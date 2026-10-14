@@ -253,3 +253,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   biri girişin gerisinde kapatırsa o mumun kapanışında çık ("be" durumu, early_exit, CSV'de cikis_turu=erken çıkış,
   grafikte ERKEN ÇIKIŞ). `/backtest 180 erken`: canlı ayar, +erken çıkış 1/2 mum, +BTC <0.8/0.6/0.4, +erken+BTC<0.6;
   PDF erken çıkış (1 mum) ayarından. BTC filtresiyle birlikte yüklendi.
+- 14.10 19:12 `/backtest 180 erken` 2 dk'da bellek bekçisine takıldı (backtest 413MB). Sebep bulundu: pandas 3 copy-on-write;
+  charts.context'teki dilim (df.iloc[...][cols]) ana tablonun verisini paylaşıyordu, her işlemin grafik bağlamı coinin
+  bütün (180 gün) mum tablosunu bellekte tutuyordu (coin başına ~0.4MB birikim). .copy() ile düzeltildi: sahte veride
+  200 coinde RSS 151→215MB büyürken düzeltmeden sonra ~143MB sabit. Önceki bellek sorunlarının da (5m 419MB) sebebi bu.

@@ -23,7 +23,9 @@ def context(df, r):
     lo = max(0, r["touch"] - BARS_BEFORE)
     hi = min(len(df), r.get("exit_bar", r["touch"] + 6) + BARS_AFTER)
     cols = ["timestamp", "Open", "High", "Low", "Close", "EMA20", "EMA50", "EMA100", "Stoch_K"]
-    ctx = df.iloc[lo:hi][cols].reset_index(drop=True)
+    # .copy(): pandas 3'te dilim, ana tablonun verisini paylaşır (copy-on-write); kopyalanmazsa her işlemin bağlamı
+    # coinin bütün (aylarca) mum tablosunu bellekte tutar: 500 coinlik testte yüzlerce MB
+    ctx = df.iloc[lo:hi][cols].copy().reset_index(drop=True)
     rel = {k: r[k] - lo for k in ("touch", "confirm", "entry_bar", "exit_bar", "reclaim") if k in r}
     return ctx, rel
 
