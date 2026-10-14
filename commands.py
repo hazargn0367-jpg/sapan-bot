@@ -17,6 +17,8 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 temiz -> TP ile stop olan işlemler arasındaki farklar (bacak, EMA açılımı, önceki tepeye mesafe...)
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
+  /backtest 180 tarama -> orijinal ve canlı kurallar 15dk / 30dk / 1s / 4s'te, büyük / orta / küçük coinlerde ayrı ayrı
+                          kazanma oranı (dönemin iki yarısı ayrı), TP 1:2
   /backtest 90 aday önceki2 -> iki dönemde tutan aday kurallar (bacakta ters mum az, düzeltme ≥ 5 mum, bacak < 4 ATR),
                                önceki2 = iki dönem önceki 90 gün (hiç bakmadığımız dönem)
   /backtest 90 dönüş kural -> dönüş varyasyonu + zaman stopu (8 saat) / kural 11 (temiz yükseliş) / kural 7, ay ay
@@ -82,7 +84,10 @@ def start_backtest(text):
     elif "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
     donus = any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon"))
-    if any(w in low for w in ("temiz", "fark", "aday")) and donus:
+    if "tarama" in low:
+        args += ["--compare", "tarama", "--tf", "15m,30m,1h,4h"]
+        tf_m = None   # zaman dilimleri taramanın kendisi
+    elif any(w in low for w in ("temiz", "fark", "aday")) and donus:
         args += ["--compare", "temiz_donus", "--fark"]   # dönüş: temiz trend + adaylar tek testte
     elif "aday" in low:
         args += ["--compare", "aday", "--fark"]

@@ -222,3 +222,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - `strategy.py` temas kuralları · `trade_rules.py` onay/giriş/çıkış + 1-6 kurallar
 - `live_setups.py` canlı EMİR HAZIR · `backtest.py` testler ve karşılaştırma setleri
 - `exchanges.py` Binance · `telegram.py` · `charts.py` · `commands.py` · `bot.py` ana döngü
+- 14.10 17:03 kullanıcı: sistemi 3 yıl önce satın almış, satıcı %40-60 kazanma oranı söylüyormuş; "40'ın üstüne
+  çıkana kadar backtest". Ölçüt (kullanıcıya söylendi): TP 1:2'de İKİ AYRI DÖNEMDE %40+ (tek dönemde aramak aşırı uyum).
+  Şimdiye kadar 3 aylık dönemlerde %33-35; haftalık %30-58 oynuyor. Kullanıcıya sorulan: orijinal sistemin zaman dilimi,
+  coinleri, TP/stop yeri, %40-60 hangi TP ile. `/backtest 180 tarama`: taban ve canlı kurallar (klasik, 1:2, portföy
+  sınırı yok) 15m/30m/1h/4h x hacim sırası (ilk 50 / 51-150 / 151+), dönemin iki yarısı ayrı; ✅ = iki yarıda %40+
+  (her yarıda ≥20 işlem). resample_tf (15m→30m/1h/4h), WARMUP_FACTOR (4s için 50 gün ısınma), dönem başından önceki
+  temaslar sayılmaz, satırlarda hacim_sirasi. Taramada grafik/PDF yok.

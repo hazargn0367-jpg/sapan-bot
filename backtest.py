@@ -33,6 +33,7 @@ import numpy as np
 import pandas as pd
 
 import archive
+import config
 import charts
 import live_setups
 import strategy as st
@@ -161,6 +162,9 @@ BASE_TF = "15m"  # indirilen veri: 15m (30m bundan üretilir) ya da 5m
 BAR_MS = 15 * 60 * 1000
 
 
+WARMUP_FACTOR = 1  # 1s/4s testinde EMA100'ün oturması için temel veride WARMUP x (4s / 15dk) mum geriden başlanır
+
+
 def set_base_tf(tf):
     global BASE_TF, BAR_MS
     BASE_TF = tf
@@ -187,7 +191,7 @@ def load_15m(symbol, days, ago=0):
     """Önce diskteki veri; eksik kalan baş/son kısım Binance'ten çekilir ve kayda eklenir.
     Kayıt her zaman kesintisizdir: span = çekilmiş aralık (coin o tarihte yoksa da çekilmiş sayılır)."""
     start_ms, end_ms = period(days, ago)
-    start_ms -= WARMUP * BAR_MS
+    start_ms -= WARMUP * BAR_MS * WARMUP_FACTOR
     path = _cache_path(symbol)
     arr = span = None
     try:
@@ -276,14 +280,21 @@ def archive_reachable():
 
 def to_30m(df15):
     """15dk mumları Binance'in 30dk mumlarıyla aynı şekilde birleştirir."""
+    return resample_tf(df15, 30)
+
+
+def resample_tf(df15, minutes):
+    """Temel mumları (15dk) Binance'in 30dk / 1s / 4s mumlarıyla aynı şekilde birleştirir (UTC 00:00'dan hizalı).
+    Eksik parçası olan mum (coin yeni listelenmiş ya da veri boşluğu) atılır."""
+    base_min = BAR_MS // 60000
     d = df15.copy()
     d.index = pd.to_datetime(d["timestamp"], unit="ms", utc=True)
-    g = d.resample("30min", origin="epoch", label="left")
+    g = d.resample(f"{minutes}min", origin="epoch", label="left")
     out = pd.DataFrame({
         "Open": g["Open"].first(), "High": g["High"].max(),
         "Low": g["Low"].min(), "Close": g["Close"].last(), "n": g["Open"].count(),
     })
-    out = out[out["n"] == 2].drop(columns="n")
+    out = out[out["n"] == minutes // base_min].drop(columns="n")
     out["timestamp"] = (out.index - pd.Timestamp(0, tz="UTC")) // pd.Timedelta(milliseconds=1)
     return out.reset_index(drop=True)[["timestamp", "Open", "High", "Low", "Close"]]
 
@@ -764,6 +775,11 @@ COMPARE_SETS["temiz_donus"] = _temiz_set(_DONUS) + [
     C(f"+ bacak {_A['LEG_ATR_MAX']:g} ATR'den kısa", **_DONUS, LEG_ATR_MAX=_A["LEG_ATR_MAX"]),
 ]
 _LIVE_NO_CLUSTER = dict(live_setups.LIVE_RULES, ENTRY_MODE="classic")
+# Zaman dilimi / coin büyüklüğü taraması: TP 1:2, aynı anda işlem sınırı ve toplu filtre yok (sistemin kendisi ölçülür)
+COMPARE_SETS["tarama"] = [
+    C("Orijinal kurallar (taban)", FILTERS=False, RR=2.0),
+    C("Canlı kurallar (6 kural + 03-07 yok, klasik)", **dict(live_setups.LIVE_RULES, ENTRY_MODE="classic", RR=2.0)),
+]
 COMPARE_SETS["toplu"] = [
     C("Canlı ayar (aynı mumda 5+ coin varsa girme)", **_LIVE_NOW),
     C("Toplu sinyal sınırı 8 coin", **_LIVE_NO_CLUSTER, cluster_max=8),
@@ -772,7 +788,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -798,6 +814,40 @@ CHECK_TRADES = [
 SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ/ZAMAN", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
                 "touch_tail": "elendi(ters iğne)", "not_clean": "elendi(temiz değil)",
                 "no_room": "elendi(yer)", "open": "açık"}
+
+
+SWEEP_GROUPS = [("tümü", 1, 10**9), ("ilk 50", 1, 50), ("51-150", 51, 150), ("151+", 151, 10**9)]
+TF_TR = {"15m": "15dk", "30m": "30dk", "1h": "1 saat", "4h": "4 saat"}
+
+
+def build_sweep(frames, tfs, period_txt, p0, days):
+    """Zaman dilimi x coin büyüklüğü tablosu: kazanma oranı dönemin iki yarısında ayrı ayrı.
+    ✅ = iki yarıda da %40 ve üstü (her yarıda en az 20 işlem)."""
+    half = p0 + days * 86400000 // 2
+    a = pd.Timestamp(p0, unit="ms", tz="UTC").tz_convert(TZ)
+    m = pd.Timestamp(half, unit="ms", tz="UTC").tz_convert(TZ)
+    msgs = []
+    for name, d in frames.items():
+        lines = [f"🔭 <b>TARAMA: {html.escape(name)}</b>",
+                 f"{period_txt}, TP 1:2, aynı anda işlem sınırı ve toplu sinyal filtresi yok.",
+                 f"Kazanma oranı: tümü (1. yarı {a:%d.%m}– / 2. yarı {m:%d.%m}–) · işlem başı R (komisyonlu)",
+                 "✅ = iki yarıda da %40+ (her yarıda en az 20 işlem)", ""]
+        t = d[d["durum"].isin(["win", "loss", "be"])] if not d.empty else d
+        for tf in tfs:
+            tt = t[t["zaman_dilimi"] == tf] if not t.empty else t
+            lines.append(f"<b>{TF_TR.get(tf, tf)}</b>")
+            for label, lo, hi in SWEEP_GROUPS:
+                g = tt[(tt["hacim_sirasi"] >= lo) & (tt["hacim_sirasi"] <= hi)] if not tt.empty else tt
+                if g.empty:
+                    lines.append(f"  {label}: işlem yok")
+                    continue
+                h1, h2 = g[g["_touch_ts"] < half], g[g["_touch_ts"] >= half]
+                wr = lambda x: 100 * (x["durum"] == "win").mean() if len(x) else float("nan")
+                ok = len(h1) >= 20 and len(h2) >= 20 and wr(h1) >= 40 and wr(h2) >= 40
+                lines.append(f"  {'✅ ' if ok else ''}{label}: {len(g)} işlem %{wr(g):.0f} "
+                             f"(%{wr(h1):.0f} / %{wr(h2):.0f}) · {g['R_net'].mean():+.2f}R")
+        msgs.append("\n".join(lines))
+    return msgs
 
 
 def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
@@ -998,6 +1048,8 @@ def main():
     if "5m" in tfs:
         tfs = ["5m"]  # 5 dakikalık test tek başına çalışır
         set_base_tf("5m")
+    global WARMUP_FACTOR
+    WARMUP_FACTOR = max(1, max(config.tf_minutes(t) for t in tfs) // (BAR_MS // 60000))
     if args.compare:
         configs = COMPARE_SETS[args.compare]
         chart_idx = CHART_CFG.get(args.compare, 0)
@@ -1089,6 +1141,7 @@ def main():
             return None
 
     results = {cfg["ad"]: [] for cfg in configs}
+    rank = {sym: k + 1 for k, sym in enumerate(symbols)}  # 24 saatlik hacim sırası (1 = en büyük)
     from collections import Counter
     status_counts = Counter()   # tekli testte bütün setup'ların durumları (huni)
     touch_counts = Counter()    # (mum, yön) -> temas veren coin sayısı (toplu sinyal filtresi, canlıdaki gibi)
@@ -1103,17 +1156,20 @@ def main():
             n_ok += 1
             tick = ticks.get(symbol, 0.0)
             for tf in tfs:
-                df = prepare(df15 if tf == BASE_TF else to_30m(df15))
+                df = prepare(df15 if tf == BASE_TF else resample_tf(df15, config.tf_minutes(tf)))
                 if symbol == "BTCUSDT" and tf == BASE_TF:
                     btc_map = btc_trend_map(df)
-                signals = find_signals(df)
                 ts_ = df["timestamp"].values
+                signals = [(i, sd) for i, sd in find_signals(df) if ts_[i] >= p0]  # ısınma payındaki temaslar sayılmaz
                 touch_counts.update((int(ts_[i]), side) for i, side in signals)
                 for ci, cfg in enumerate(configs):
                     apply_cfg(cfg)
-                    results[cfg["ad"]] += run_df(df, symbol, tf, tick, signals,
-                                                 with_ctx=(ci == chart_idx), trades_only=True,
-                                                 status_counter=None if args.compare else status_counts)
+                    new = run_df(df, symbol, tf, tick, signals,
+                                 with_ctx=(ci == chart_idx), trades_only=True,
+                                 status_counter=None if args.compare else status_counts)
+                    for r in new:
+                        r["hacim_sirasi"] = rank.get(symbol, 0)
+                    results[cfg["ad"]] += new
                 if not args.compare:
                     for ex_sym, ex_tf, ex_when in EXAMPLES:
                         if ex_sym == symbol and ex_tf == tf:
@@ -1176,6 +1232,8 @@ def main():
     if args.compare:
         frames_all = {cfg: pd.DataFrame(rows) for cfg, rows in results.items()}
         report = build_compare(frames_all, period_txt, coins_txt, minutes, p0=p0, days=args.days)
+        if args.compare == "tarama":
+            fark_msgs = build_sweep(frames_all, tfs, period_txt, p0, args.days) + fark_msgs
         report += "\n\n" + (archive.summary() if USE_ARCHIVE else f"Veri: {html.escape(source)}")
         log.info("\n%s", report)
         send_message(report)
@@ -1188,6 +1246,8 @@ def main():
             out.drop(columns=[c for c in out.columns if c.startswith("_")]).to_csv(
                 path, index=False, sep=";", decimal=",", encoding="utf-8-sig")
             send_document(path, "Tüm ayarların işlemleri ('ayar' sütununa göre filtrele)")
+        if chart_idx is None:  # tarama: binlerce işlem, grafik yok
+            return
         chart_name = configs[chart_idx]["ad"]
         d = frames_all[chart_name]
         if not d.empty:
