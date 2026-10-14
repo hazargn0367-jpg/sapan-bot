@@ -348,3 +348,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   önceki ATR), SPIKE_TOP_ATR (status spike_top), CSV'de sivri_atr (bütün işlemlerde, eşik sonradan ayarlanabilsin).
   Rastgele veride ortalama ~2 ATR. COMPARE_SETS["sivri"] (5m için): canlı+erken · +onay ≤2. mum · +sivri ≥3 ATR ·
   +sivri ≥4 ATR · ikisi (PDF). Komut `/backtest 30 sivri 5m` (+ önceki).
+- Sivri testi 5m (15.09-13.10): taban 182 işlem +1.8R · **onay ≤2. mum 165 işlem +7.6R** · sivri ≥3 ATR 117 işlem +0.3R
+  (elenen 66 işlem +0.2R) · sivri ≥4 ATR 151 işlem -4.4R (elenen 32 işlem +4.9R, TP %28) · ikisi 108 işlem +2.7R.
+  sivri_atr ortanca 2.5, SQD 10.4. Bu ay sivri tepeler kaybettirmiyor; önceki ay bekleniyor.
+- TP 2.5 tahmini (MFE'den; TP olanların kaçı 2.5R'ye de gidiyor): 5m Eyl-Eki +5.2R · 5m Ağu-Eyl -12.9R · 15m Nis-Eki
+  +4.2R · 15m Eki-Nis -8.9R. Bir TP'nin stopa dönmesi 3.2R, 2.5'e gitmesi +0.3R → TP'lerin %91'i 2.5'e gitmeli.
+- 5m stop mesafesi: <%0.5 olanlar komisyon 0.21-0.28R/iş; Eyl-Eki 62 işlem +1.5R, Ağu-Eyl 66 işlem -19.2R.
+  COMPARE_SETS["komisyon"] (5m): onay ≤2 tabanı · +TP 2.5 · +stop ≥%0.5 (BASE_MIN_RISK_PCT, PARAM_KEYS'e eklendi) ·
+  ikisi. `/backtest 30 komisyon 5m` (+ önceki). Sivri önceki testi bitmeden yüklenmedi.

@@ -652,7 +652,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE", "PIVOT_LEG_MIN", "TIME_STOP_BARS",
               "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN",
               "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS", "LEG_ATR_MAX", "BTC_CORR_MAX", "BTC_CORR_BARS",
-              "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT", "CONFIRM_WINDOW", "SPIKE_TOP_ATR"]
+              "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT", "CONFIRM_WINDOW", "SPIKE_TOP_ATR",
+              "BASE_MIN_RISK_PCT"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -867,6 +868,16 @@ COMPARE_SETS["sivri"] = [
     C("+ sivri tepe yok (2 mum ≥ 4 ATR)", **dict(_EB0, SPIKE_TOP_ATR=4.0)),
     C("+ onay ≤ 2. mum + sivri tepe yok (3 ATR)", **dict(_EB0, CONFIRM_WINDOW=2, SPIKE_TOP_ATR=3.0)),
 ]
+# Komisyon (kullanıcı, 15.10 01:23: "2.2 değil 2.5 yapsak komisyonu çıkarırız"). 5m'de komisyon 0.15R/iş; stopu %0.5'ten
+# dar işlemlerde 0.21-0.28R. CSV tahmini: stop <%0.5 olanlar Eyl-Eki +1.5R, Ağu-Eyl -19.2R. TP 2.5 (MFE'den tahmin)
+# 4 dönemin 2'sinde iyi, 2'sinde kötü. Taban: onay en geç 2. mumda (5m'de iki ayda da kötü olanları eliyor).
+_EB2 = dict(_EB0, CONFIRM_WINDOW=2)
+COMPARE_SETS["komisyon"] = [
+    C("Canlı + erken çıkış + onay ≤ 2. mum", **_EB2),
+    C("+ TP 1:2.5", **dict(_EB2, RR=2.5)),
+    C("+ stop en az %0.5", **dict(_EB2, BASE_MIN_RISK_PCT=0.5)),
+    C("+ stop en az %0.5 + TP 1:2.5", **dict(_EB2, BASE_MIN_RISK_PCT=0.5, RR=2.5)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -896,7 +907,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
