@@ -1,7 +1,7 @@
 """
 CANLI SETUP BİLDİRİMLERİ
 
-Her mum kapanışında (LIVE_TF, varsayılan 5m) hacmi en yüksek coinleri tarar. Bütün kuralları
+Her mum kapanışında (LIVE_TF, varsayılan 15m) hacmi en yüksek coinleri tarar. Bütün kuralları
 geçen bir setup'ta onay mumu kapanır kapanmaz "EMİR HAZIR" bildirimi gönderir
 (giriş, stop, TP, pozisyon büyüklüğü, grafik, TradingView linki).
 Sonra o setup'ı takip edip giriş / iptal / TP / stop olduğunda haber verir.
@@ -42,8 +42,8 @@ TF_SEC = TF_MIN * 60
 TZ = "Europe/Istanbul"
 CHART_DIR = "/tmp/live_charts"
 
-# Backtest'teki "1-6 + toplu" ayarı
-LIVE_RULES = dict(
+# 14.10'daki canlı ayar (backtest karşılaştırma setleri bunun üzerine kurulu, değişmesin)
+LIVE_RULES_14_10 = dict(
     RR=2.2,                     # komisyon sonrası kazanç ~2R olsun diye 1:2.2
     BE_TRIGGER=0.0, FILTERS=False, MIN_ATR_MULT=0.0,
     WICK_MAX_BODY=1.0,          # 1: onay mumunda uzun ters iğne yok
@@ -55,6 +55,16 @@ LIVE_RULES = dict(
     QUIET_UTC=(0, 4),           # 03:00-07:00 TR arası temaslar dikkate alınmaz
     ENTRY_MODE="both",          # klasik + dönüş varyasyonu birlikte (14.10): temas mumu EMA20'nin öbür tarafında
                                 # kapatırsa dönüş (sonraki mum geri alır, ondan sonraki onay), doğru tarafında kapatırsa klasik
+)
+# 15.10 02:44 kullanıcı: "hangisi daha iyiyse onu yükle". 15m 12 ay (iki dönem): onay ≤ 2. mum + stop ≥ %0.5 +
+# önünde en az 1R yer + erken çıkış (2 mum) → +48.6R (kaymayla +36.2), en kötü ay -3.3R, ~31 işlem/ay.
+# 5m'nin en iyisi 3 ayda kaymayla +4.2R (ayda 1.4R) → canlı 15m.
+LIVE_RULES = dict(
+    LIVE_RULES_14_10,
+    CONFIRM_WINDOW=2,           # onay temastan sonra en geç 2. mumda (dönüşte zaten 2. mum)
+    BASE_MIN_RISK_PCT=0.5,      # stop en az %0.5 (daha darında komisyon + kayma R'nin büyük kısmını yiyor)
+    ROOM_MIN_R=1.0,             # giriş ile önceki tepe (LONG) / dip (SHORT) arası en az 1R ("tepenin hizasından girme")
+    FAILED_ENTRY_BARS=2,        # erken çıkış: giriş mumu ya da sonraki mum girişin gerisinde kapatırsa "ERKEN ÇIK" bildirimi
 )
 MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
 
@@ -95,6 +105,11 @@ def rules_summary():
         f"aynı anda en fazla {MAX_OPEN} işlem" if MAX_OPEN else None,
         (f"{tr.QUIET_UTC[0] + 3:02d}-{tr.QUIET_UTC[1] + 3:02d} TR yok"
          if tr.QUIET_UTC[0] < tr.QUIET_UTC[1] else None),
+        f"onay en geç {tr.CONFIRM_WINDOW}. mumda" if tr.CONFIRM_WINDOW < 3 else None,
+        f"stop ≥ %{tr.BASE_MIN_RISK_PCT:g}" if not tr.FILTERS and tr.BASE_MIN_RISK_PCT > 0.3 else None,
+        f"önünde ≥ {tr.ROOM_MIN_R:g}R yer" if tr.ROOM_MIN_R > 0 else None,
+        (f"erken çıkış uyarısı (giriş mumu / sonraki mum girişin gerisinde kapatırsa)"
+         if tr.FAILED_ENTRY_BARS == 2 else (f"erken çıkış uyarısı ({tr.FAILED_ENTRY_BARS} mum)" if tr.FAILED_ENTRY_BARS else None)),
         "⚠️ ESKİ FİLTRELER AÇIK" if tr.FILTERS else None,
         "klasik + dönüş varyasyonu" if tr.ENTRY_MODE == "both" else ("dönüş varyasyonu" if tr.ENTRY_MODE == "reclaim" else None),
     ]
@@ -215,6 +230,8 @@ def setup_message(symbol, side, r, df):
         f"{steps}\n"
         f"Emir {fmt(valid_until, '%H:%M')}'e kadar geçerli. Girişten önce fiyat onay mumunun "
         f"{'dibini' if side == 'LONG' else 'tepesini'} kırarsa iptal.\n"
+        + (f"Giriş mumu ya da sonraki mum girişin {'altında' if side == 'LONG' else 'üstünde'} kapatırsa "
+           f"⚠️ ERKEN ÇIK mesajı gelir: o an piyasa emriyle kapat.\n" if tr.FAILED_ENTRY_BARS else "") +
         f'<a href="{tv}">TradingView\'da aç</a>'
     )
 
@@ -271,7 +288,12 @@ def follow_up(symbol, df):
         # Aynı mumda hem giriş hem çıkış olduysa ikisini de yaz
         if info["status"] == "pending" and status in ("win", "loss", "be", "open"):
             lines.append(f"✅ Giriş gerçekleşti: {p(r.get('fill', r['entry']))} ({fmt(ts[r['entry_bar']])})")
-        if status in STATUS_MSG and status != "open":
+        if status == "be" and r.get("early_exit"):
+            under = "altında" if info["side"] == "LONG" else "üstünde"
+            lines.append(f"⚠️ <b>ERKEN ÇIK</b>: {fmt(ts[r['exit_bar']])} mumu girişin {under} kapattı ({p(r['exit'])}), "
+                         f"kırılım tutmadı. Pozisyonu şimdi piyasa emriyle kapat.\n"
+                         f"Bu kapanıştan çıkışla: <b>{r['r_net']:+.2f}R ({r['r_net'] * tr.RISK_USD:+.0f}$)</b>")
+        elif status in STATUS_MSG and status != "open":
             line = STATUS_MSG[status]
             if status in ("win", "loss", "be"):
                 line += f": {p(r['exit'])}  →  <b>{r['r_net']:+.2f}R ({r['r_net'] * tr.RISK_USD:+.0f}$)</b>"

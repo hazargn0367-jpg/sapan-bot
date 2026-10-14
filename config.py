@@ -11,11 +11,11 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 # (Telegram'da görünen ad, Binance API aralık adı)
 TIMEFRAMES = [("15m", "15m")]
 # Canlı EMİR HAZIR taramasının zaman dilimi ("5m", "15m", ...). Render Environment'ta LIVE_TF ile değiştirilebilir.
-LIVE_TF = os.environ.get("LIVE_TF", "5m")
+LIVE_TF = os.environ.get("LIVE_TF", "15m")
 
 
 # Yüklenen sürüm: açılış mesajında ve /durum'da görünür (yeni kod devreye girdi mi anlaşılsın diye)
-VERSION = "15.10 02:35 · önünde yer + EMA testi (/backtest 90 yer 5m, /backtest 180 yer)"
+VERSION = "15.10 02:50 · CANLI 15m: onay ≤2 + stop ≥%0.5 + 1R yer + ERKEN ÇIK uyarısı"
 GIT_COMMIT = os.environ.get("RENDER_GIT_COMMIT", "")[:7]
 
 

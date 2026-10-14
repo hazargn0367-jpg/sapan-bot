@@ -736,7 +736,7 @@ COMPARE_SETS["tp_eski"] = [
     C("Canlı kurallar 1:1.5", **_LIVE, RR=1.5),
 ]
 # Karşılaştırma setleri klasik sistemde sabit (canlı 14.10'dan beri klasik + dönüş; o: --preset canli)
-_LIVE_NOW = dict(live_setups.LIVE_RULES, ENTRY_MODE="classic", cluster_max=live_setups.CLUSTER_MAX,
+_LIVE_NOW = dict(live_setups.LIVE_RULES_14_10, ENTRY_MODE="classic", cluster_max=live_setups.CLUSTER_MAX,
                  max_open=live_setups.MAX_OPEN)
 COMPARE_SETS["dip"] = [
     C("Canlı ayar (1:2.2)", **_LIVE_NOW),
@@ -815,9 +815,9 @@ COMPARE_SETS["temiz_donus"] = _temiz_set(_DONUS) + [
     C(f"+ düzeltme en az {_A['PULLBACK_MIN_BARS']} mum", **_DONUS, PULLBACK_MIN_BARS=_A["PULLBACK_MIN_BARS"]),
     C(f"+ bacak {_A['LEG_ATR_MAX']:g} ATR'den kısa", **_DONUS, LEG_ATR_MAX=_A["LEG_ATR_MAX"]),
 ]
-_LIVE_NO_CLUSTER = dict(live_setups.LIVE_RULES, ENTRY_MODE="classic")
+_LIVE_NO_CLUSTER = dict(live_setups.LIVE_RULES_14_10, ENTRY_MODE="classic")
 # BTC'ye benzerlik filtresi (kullanıcı, 14.10): coin BTC gibi hareket ediyorsa girme. Canlı ayar = klasik + dönüş
-_CANLI = dict(live_setups.LIVE_RULES, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)
+_CANLI = dict(live_setups.LIVE_RULES_14_10, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)
 COMPARE_SETS["btc"] = [
     C("Canlı ayar (klasik + dönüş)", **_CANLI),
     C("+ BTC'ye benzerlik < 0.8 (son 24 saat)", **_CANLI, BTC_CORR_MAX=0.8),
@@ -924,7 +924,7 @@ COMPARE_SETS["ornek"] = [
 # Zaman dilimi / coin büyüklüğü taraması: TP 1:2, aynı anda işlem sınırı ve toplu filtre yok (sistemin kendisi ölçülür)
 COMPARE_SETS["tarama"] = [
     C("Orijinal kurallar (taban)", FILTERS=False, RR=2.0),
-    C("Canlı kurallar (6 kural + 03-07 yok, klasik)", **dict(live_setups.LIVE_RULES, ENTRY_MODE="classic", RR=2.0)),
+    C("Canlı kurallar (6 kural + 03-07 yok, klasik)", **dict(live_setups.LIVE_RULES_14_10, ENTRY_MODE="classic", RR=2.0)),
 ]
 COMPARE_SETS["toplu"] = [
     C("Canlı ayar (aynı mumda 5+ coin varsa girme)", **_LIVE_NOW),

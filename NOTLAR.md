@@ -399,3 +399,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   KARAR: ters renk kuralı bırakıldı (her yerde kötü). Yer 1R 15m'de iki dönemde de iyi; EMA 5m'de 3 ayda iyi, 15m'de
   karışık. Yeni set "yer": (3) · +1R yer · +1R yer +EMA≥2 · +1R yer +EMA≥1.5. `/backtest 90 yer 5m`, `/backtest 180 yer`
   (+ önceki).
+- 15.10 02:44 kullanıcı: "hangisi daha iyiyse o yükle şimdi". CANLI DEĞİŞTİ (02:50): 15m (config.LIVE_TF varsayılanı;
+  Render'da LIVE_TF env varsa o geçer) + LIVE_RULES = LIVE_RULES_14_10 + CONFIRM_WINDOW=2, BASE_MIN_RISK_PCT=0.5,
+  ROOM_MIN_R=1.0, FAILED_ENTRY_BARS=2. Erken çıkışta follow_up "⚠️ ERKEN ÇIK" mesajı atar (mum kapanışından ~10 sn
+  sonra; aynı mumda giriş + erken çıkış olursa ikisi tek mesajda). EMİR HAZIR'da erken çıkış satırı. Gerekçe: 15m 12 ay
+  +48.6R (kaymayla +36.2), en kötü ay -3.3R; 5m en iyisi kaymayla 3 ayda +4.2R. Backtest karşılaştırma setleri
+  LIVE_RULES_14_10'a sabitlendi; preset "canli" artık yeni canlı ayar (`/backtest 180 canlı` ≈ renk setindeki 5. ayar).
