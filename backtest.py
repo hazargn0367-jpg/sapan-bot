@@ -164,6 +164,7 @@ BASE_TF = "15m"  # indirilen veri: 15m (30m bundan üretilir) ya da 5m
 BAR_MS = 15 * 60 * 1000
 
 
+OLD_DAYS = 400  # dönem sonu bundan eskiyse veri diske kaydedilmeden doğrudan arşivden alınır
 WARMUP_FACTOR = 1  # 1s/4s testinde EMA100'ün oturması için temel veride WARMUP x (4s / 15dk) mum geriden başlanır
 
 
@@ -194,6 +195,13 @@ def load_15m(symbol, days, ago=0):
     Kayıt her zaman kesintisizdir: span = çekilmiş aralık (coin o tarihte yoksa da çekilmiş sayılır)."""
     start_ms, end_ms = period(days, ago)
     start_ms -= WARMUP * BAR_MS * WARMUP_FACTOR
+    if end_ms < time.time() * 1000 - OLD_DAYS * 86400 * 1000:
+        # Çok eski dönem (ör. 2-3 yıl önce): sadece o aylar arşivden indirilir, kayda eklenmez
+        # (kayıt kesintisiz tutulduğu için aradaki yılların hepsi indirilip diske yazılırdı)
+        df = _fetch_range(symbol, start_ms, end_ms)
+        if df is None or df.empty:
+            return pd.DataFrame({"timestamp": np.array([], dtype=np.int64), "Open": [], "High": [], "Low": [], "Close": []})
+        return df[(df["timestamp"] >= start_ms) & (df["timestamp"] < end_ms)].reset_index(drop=True)
     path = _cache_path(symbol)
     arr = span = None
     try:
@@ -1130,6 +1138,14 @@ def main():
         if args.rr is not None:
             rules["RR"] = args.rr
         configs = [C("dönüş varyasyonu", **rules, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)]
+        chart_idx = 0
+    elif args.preset == "canli_erken":
+        import live_setups
+        rules = dict(live_setups.LIVE_RULES, FAILED_ENTRY_BARS=2)
+        if args.rr is not None:
+            rules["RR"] = args.rr
+        configs = [C("canlı ayar + erken çıkış (2 mum)", **rules, cluster_max=live_setups.CLUSTER_MAX,
+                     max_open=live_setups.MAX_OPEN)]
         chart_idx = 0
     elif args.preset == "canli":
         import live_setups

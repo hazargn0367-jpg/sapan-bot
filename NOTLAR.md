@@ -284,3 +284,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   02:45 SHORT (temas mumunun dibi önceki mumun dibinin altında). Yeni: TOUCH_PREV_EXTREME (durum touch_prev), ATR_MAX_MULT
   PARAM_KEYS'e eklendi. `/backtest 180 örnek` (+ önceki): erken çıkış 2 mum üstüne bant 0.5/1 ATR, yer 0.5/1R, onay ≤1.2/1 ATR,
   temas kuralı, hepsi; PDF "hepsi" ayarından.
+- 14.10 22:43 kullanıcı: 2 ve 3 yıl önceki birer ayın testi, bütün işlemlerin grafikleri. `--preset canli_erken`
+  (canlı ayar + erken çıkış 2 mum), komutta "N sene/yıl önce" → --ago N*365. Dönem sonu 400 günden eskiyse veri diske
+  yazılmadan doğrudan arşivden (kayıt kesintisiz tutulduğu için aradaki yıllar indirilirdi). Komutlar:
+  `/backtest 30 canlı erken 2 sene önce`, `/backtest 30 canlı erken 3 sene önce`. Coin listesi bugünün ilk 500'ü; o
+  tarihte olmayanlar atlanır.

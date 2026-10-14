@@ -17,6 +17,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 temiz -> TP ile stop olan işlemler arasındaki farklar (bacak, EMA açılımı, önceki tepeye mesafe...)
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
+  /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
   /backtest 180 örnek -> PDF örneklerinden kurallar (dip tabanı, önünde yer, büyük onay mumu, temas mumu) erken çıkış üstüne
   /backtest 180 erken -> giriş mumu girişin gerisinde kapatırsa çık (1 / 2 mum) + BTC'ye benzerlik filtresi, ay ay + PDF
   /backtest 180 btc -> BTC'ye benzer hareket eden coinlere girmeme filtresi (canlı ayar, 0.8 / 0.6 / 0.4) + fark analizi
@@ -69,7 +70,8 @@ def start_backtest(text):
         send_message("⏳ Backtest zaten çalışıyor, bitince sonuçlar gelecek.")
         return
     tf_m = re.search(r"\b(5m|15m|30m|5dk|5 dk)\b", text.lower())
-    clean = re.sub(r"\b(5m|15m|30m|5dk|5 dk)\b|son2|[öo]nceki2", " ", text.lower())
+    yil = re.search(r"(\d+)\s*(yıl|yil|sene)", text.lower())   # "2 sene önce": dönemi o kadar yıl geriye kaydır
+    clean = re.sub(r"\b(5m|15m|30m|5dk|5 dk)\b|son2|[öo]nceki2|\d+\s*(yıl|yil|sene)", " ", text.lower())
     nums = re.findall(r"\d+(?:[.,]\d+)?", clean)
     days = 7
     args = []
@@ -82,12 +84,16 @@ def start_backtest(text):
         be = max(0.0, min(5.0, float(nums[2].replace(",", "."))))
         args += ["--be", str(be)]
     low = text.lower()
-    if "önceki2" in low or "onceki2" in low:
+    if yil:
+        args += ["--ago", str(int(yil.group(1)) * 365)]
+    elif "önceki2" in low or "onceki2" in low:
         args += ["--ago", str(2 * days)]   # iki dönem önce (3. bağımsız dönem)
     elif "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
     donus = any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon"))
-    if any(w in low for w in ("örnek", "ornek", "pdf")):
+    if ("canlı" in low or "canli" in low) and "erken" in low:
+        args += ["--preset", "canli_erken"]
+    elif any(w in low for w in ("örnek", "ornek", "pdf")):
         args += ["--compare", "ornek"]
     elif "erken" in low:
         args += ["--compare", "erken"]
