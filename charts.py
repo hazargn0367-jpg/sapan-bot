@@ -118,6 +118,8 @@ def draw(trade, path=None, pdf=None):
         title = (f"{trade['coin']}  {trade['zaman_dilimi']}  {trade['yon']}   "
                  f"temas: {trade['temas']} TR / {trade['temas_utc']} UTC")
         badge_txt, badge = trade.get("etiket", "EMİR HAZIR"), (None, "#2962ff")
+    if isinstance(trade.get("varyasyon"), str):
+        title = f"[{trade['varyasyon']}]  " + title
     if "_no" in trade:
         title = f"#{trade['_no']}  " + (f"[{trade['_ay']}. ay]  " if "_ay" in trade else "") + title
     ax.set_title(title, color=TXT, fontsize=10.5, loc="left")

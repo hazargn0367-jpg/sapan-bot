@@ -11,7 +11,7 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 # (Telegram'da görünen ad, Binance API aralık adı)
 TIMEFRAMES = [("15m", "15m")]
 # Canlı EMİR HAZIR taramasının zaman dilimi ("5m", "15m", ...). Render Environment'ta LIVE_TF ile değiştirilebilir.
-LIVE_TF = os.environ.get("LIVE_TF", "15m")
+LIVE_TF = os.environ.get("LIVE_TF", "5m")
 
 
 def data_dir():

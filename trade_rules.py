@@ -70,7 +70,8 @@ EMA_FAN_MIN = 0.0            # >0: EMA20 ile EMA100 arası en az bu kadar ATR (E
 LEG_COUNTER_MAX = 1.0        # <1: bacaktaki ters mumların oranı en fazla bu kadar (0.2 = 5 mumda en fazla 1 ters mum)
 PULLBACK_MIN_BARS = 0        # >0: tepeden (LONG) / dipten (SHORT) temasa kadar en az bu kadar mum (düzeltme acele değil)
 LEG_ATR_MAX = 0.0            # >0: bacak boyu bu kadar ATR'den KISA olmalı (aşırı uzamış hareketten sonraki geri çekilme değil)
-ENTRY_MODE = "classic"       # "classic": temas EMA20'nin doğru tarafında kapatır, 3 mumda onay
+ENTRY_MODE = "classic"       # "both": temas mumu EMA20'nin doğru tarafında kapatırsa klasik, öbür tarafında kapatırsa dönüş
+                             # "classic": temas EMA20'nin doğru tarafında kapatır, 3 mumda onay
                              # "reclaim" (dönüş varyasyonu): temas EMA20'nin YANLIŞ tarafında kapatır, sonraki mum
                              # EMA20'nin doğru tarafında kapatır, ondan sonraki mum o mumun tepesini (LONG) kapanışla geçer = onay
 RR = 2.0               # hedef: riskin kaç katı
@@ -387,6 +388,10 @@ def simulate(df, i, side, tick, mode=None):
             return res
 
     E20 = df["EMA20"].values
+    if mode == "both":
+        # İki varyasyon birlikte: temas mumunun kapanışı hangisi olduğunu belirler (ikisi aynı mumda olamaz)
+        mode = "classic" if touch_closes_right_side(df, i, side) else "reclaim"
+    res["mode"] = mode
     if mode == "reclaim":
         # Dönüş varyasyonu: temas mumu EMA20'yi gövdeyle geçip YANLIŞ tarafta kapatmalı
         if (C[i] >= E20[i]) if long else (C[i] <= E20[i]):

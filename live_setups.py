@@ -1,7 +1,7 @@
 """
 CANLI SETUP BİLDİRİMLERİ
 
-Her 15 dakikalık mum kapanışında hacmi en yüksek coinleri tarar. Bütün kuralları
+Her mum kapanışında (LIVE_TF, varsayılan 5m) hacmi en yüksek coinleri tarar. Bütün kuralları
 geçen bir setup'ta onay mumu kapanır kapanmaz "EMİR HAZIR" bildirimi gönderir
 (giriş, stop, TP, pozisyon büyüklüğü, grafik, TradingView linki).
 Sonra o setup'ı takip edip giriş / iptal / TP / stop olduğunda haber verir.
@@ -53,7 +53,10 @@ LIVE_RULES = dict(
     TOUCH_WICK_MIN=1.0,         # 5: fitil temas mumu
     PIVOT_WICK_MAX=2.0,         # 6: tepe/dip iğnesi uzun değil
     QUIET_UTC=(0, 4),           # 03:00-07:00 TR arası temaslar dikkate alınmaz
+    ENTRY_MODE="both",          # klasik + dönüş varyasyonu birlikte (14.10): temas mumu EMA20'nin öbür tarafında
+                                # kapatırsa dönüş (sonraki mum geri alır, ondan sonraki onay), doğru tarafında kapatırsa klasik
 )
+MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
 
 FINAL = ("win", "loss", "be", "cancel_confirm", "no_entry")
 STATUS_MSG = {
@@ -93,6 +96,7 @@ def rules_summary():
         (f"{tr.QUIET_UTC[0] + 3:02d}-{tr.QUIET_UTC[1] + 3:02d} TR yok"
          if tr.QUIET_UTC[0] < tr.QUIET_UTC[1] else None),
         "⚠️ ESKİ FİLTRELER AÇIK" if tr.FILTERS else None,
+        "klasik + dönüş varyasyonu" if tr.ENTRY_MODE == "both" else ("dönüş varyasyonu" if tr.ENTRY_MODE == "reclaim" else None),
     ]
     return ", ".join(p for p in parts if p)
 
@@ -199,13 +203,16 @@ def setup_message(symbol, side, r, df):
     tv = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol}.P&interval={TF_MIN}"
     emoji = "🟢" if side == "LONG" else "🔴"
     order = "BUY STOP" if side == "LONG" else "SELL STOP"
+    mode = r.get("mode", "classic")
+    steps = (f"Temas {fmt(ts[r['touch']])}, dönüş {fmt(ts[r['reclaim']])}, onay {fmt(ts[r['confirm']])}"
+             if "reclaim" in r else f"Temas {fmt(ts[r['touch']])}, onay {fmt(ts[r['confirm']])}")
     return (
-        f"📋 <b>EMİR HAZIR</b>  {emoji} <b>{side} {html.escape(symbol)}</b> ({LIVE_TF})\n\n"
+        f"📋 <b>EMİR HAZIR</b>  {emoji} <b>{side} {html.escape(symbol)}</b> ({LIVE_TF}, {MODE_TR.get(mode, mode)})\n\n"
         f"Giriş ({order}): <code>{p(r['entry'])}</code>\n"
         f"Stop: <code>{p(r['stop'])}</code>  (%{100 * risk / r['entry']:.2f})\n"
         f"TP (1:{tr.RR:g}): <code>{p(r['tp'])}</code>\n"
         f"{tr.RISK_USD:g}$ risk için: ~{notional:,.0f} USDT pozisyon ({qty:.6g} adet)\n\n"
-        f"Temas {fmt(ts[r['touch']])}, onay {fmt(ts[r['confirm']])}\n"
+        f"{steps}\n"
         f"Emir {fmt(valid_until, '%H:%M')}'e kadar geçerli. Girişten önce fiyat onay mumunun "
         f"{'dibini' if side == 'LONG' else 'tepesini'} kırarsa iptal.\n"
         f'<a href="{tv}">TradingView\'da aç</a>'
@@ -216,7 +223,8 @@ def send_setup(symbol, side, r, df):
     caption = setup_message(symbol, side, r, df)
     touch_ts = int(df["timestamp"].values[r["touch"]])
     try:
-        journal.record_alert(symbol, touch_ts, side, float(r["entry"]), float(r["stop"]), float(r["tp"]))
+        journal.record_alert(symbol, touch_ts, side, float(r["entry"]), float(r["stop"]), float(r["tp"]),
+                             mode=r.get("mode"))
     except Exception as e:
         log.error("Günlüğe yazılamadı: %s", e)
     buttons = decision_buttons(journal.key_of(symbol, touch_ts))
@@ -227,6 +235,7 @@ def send_setup(symbol, side, r, df):
         trade = {
             "_ctx": charts.context(df, r), "coin": symbol, "zaman_dilimi": LIVE_TF, "yon": side,
             "durum": "pending", "giris": r["entry"], "stop": r["stop"], "tp": r["tp"],
+            "varyasyon": MODE_TR.get(r.get("mode", "classic")),
             "temas": fmt(ts[r["touch"]], "%d.%m.%Y %H:%M"),
             "temas_utc": pd.Timestamp(int(ts[r["touch"]]), unit="ms", tz="UTC").strftime("%H:%M"),
         }
@@ -399,7 +408,7 @@ def _safe_scan(symbol, keep_df=False, lookback=None):
 
 
 def maybe_run():
-    """Her 15 dakikalık mum kapandıktan ~10 sn sonra bir kez çalışır.
+    """Her mum (LIVE_TF) kapandıktan ~10 sn sonra bir kez çalışır.
     Sadece kapanıştan sonraki ilk 60 sn içinde başlar (backtest o sırada Binance'e yol verir);
     bot çeyreğin ortasında açılırsa ilk tarama bir sonraki kapanışta yapılır."""
     now = time.time()

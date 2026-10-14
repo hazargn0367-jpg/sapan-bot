@@ -144,6 +144,8 @@ def inspect(text, chart_path="/tmp/incele.png"):
     r = tr.simulate(df, i, side, tick, mode=mode)
     if mode:
         lines += ["", "<b>Dönüş varyasyonuyla değerlendirildi</b>"]
+    elif r.get("mode") == "reclaim":
+        lines += ["", "<b>Dönüş varyasyonu</b> (temas mumu EMA20'nin öbür tarafında kapattı)"]
     try:
         from backtest import STATUS_TR
         status_tr = STATUS_TR.get(r["status"], r["status"])

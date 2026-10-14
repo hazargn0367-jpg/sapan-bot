@@ -181,6 +181,12 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Fark analizi (dönüş): hiçbir ölçü şans payını geçmedi. Ölçüler kullanıcının gözüyle uyuşuyor: dördü birlikte HOME'u (TP)
   tutuyor; VIRTUAL (bacak tek kırmızı mum, gövde -0.82), TRUTH (gövde 0.27), HOLO (EMA açıklığı 1.0) eleniyor; TWT (TP) de
   eleniyor (3.3 ATR, gövde 0.31). Ama 6 ayda "temiz" görünen işlemler daha çok kazanmıyor. Canlıya bir şey eklenmedi.
+- 14.10 12:53 kullanıcı: "iki varyasyonu birleştir, 5 dklık canlı taramaya al, son 1 aylık backtest". CANLI DEĞİŞTİ:
+  LIVE_RULES ENTRY_MODE="both" (temas mumu EMA20'nin doğru tarafında kapatırsa klasik, öbür tarafında kapatırsa dönüş;
+  aynı mumda ikisi olamaz, sonuçlar ayrı ayrı çalıştırmanın birleşimiyle birebir aynı), config.LIVE_TF varsayılanı 5m.
+  EMİR HAZIR başlığında "(5m, klasik)" / "(5m, dönüş)", dönüşte "Temas, dönüş, onay" saatleri; günlükte "mode".
+  Backtest raporunda Klasik / Dönüş satırları, CSV'de varyasyon sütunu, grafik başlığında [klasik]/[dönüş].
+  Eski karşılaştırma setleri (_LIVE_NOW) klasikte sabitlendi. Komut: `/backtest 30 canlı 5m`.
 
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.

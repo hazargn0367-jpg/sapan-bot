@@ -38,11 +38,12 @@ def key_of(symbol, touch_ts):
     return f"{symbol}|{int(touch_ts)}"
 
 
-def record_alert(symbol, touch_ts, side, entry, stop, tp):
+def record_alert(symbol, touch_ts, side, entry, stop, tp, mode=None):
     with _lock:
         d = _load()
         d["setups"].setdefault(key_of(symbol, touch_ts), {
             "symbol": symbol, "touch": int(touch_ts), "side": side, "entry": entry, "stop": stop, "tp": tp,
+            "mode": mode,
             "sent": time.time(), "decision": None, "status": "pending", "r": None,
         })
         _save(d)

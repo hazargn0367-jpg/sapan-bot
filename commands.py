@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                                önceki2 = iki dönem önceki 90 gün (hiç bakmadığımız dönem)
   /backtest 90 dönüş kural -> dönüş varyasyonu + zaman stopu (8 saat) / kural 11 (temiz yükseliş) / kural 7, ay ay
   /backtest 14 dönüş -> dönüş varyasyonu: temas EMA20'nin öbür tarafında kapatır, sonraki mum geri alır, ondan sonraki onay
+  /backtest 30 canlı 5m -> canlı ayarın aynısı (klasik + dönüş birlikte, 5 dakikalık grafik)
   /backtest 90 canlı -> canlı bildirimlerdeki ayarın aynısı, tüm işlemlerin grafikleri PDF
   /backtest 90 dip -> canlı ayar + önceki tepe/dibe mesafe (0.5/1/1.5/2.2R), ay ay
   /backtest 90 yapı -> kural 7 (önünde yer) ve kural 8 (yapı bozulmamış), ay ay + grafik PDF

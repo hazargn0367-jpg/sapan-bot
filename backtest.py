@@ -341,6 +341,8 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
             "_touch_ts": int(ts[i]),
             "sonuc": STATUS_TR[r["status"]],
         }
+        if tr.ENTRY_MODE == "both" and "mode" in r:
+            row["varyasyon"] = "dönüş" if r["mode"] == "reclaim" else "klasik"
         if "entry" in r:
             row.update(onay=fmt_time(ts[r["confirm"]]), giris=r["entry"], stop=r["stop"],
                        tp=r["tp"], atr=r["atr"], risk_atr=r["risk"] / r["atr"])
@@ -497,6 +499,8 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
         f_txt = ", canlı ayar: 6 kural + toplu + 03-07 yok"
     if tr.ENTRY_MODE == "reclaim":
         f_txt = ", DÖNÜŞ VARYASYONU: temas EMA20'nin öbür tarafında kapatır, sonraki mum geri alır, sonraki onay"
+    if tr.ENTRY_MODE == "both":
+        f_txt = ", CANLI AYAR: KLASİK + DÖNÜŞ birlikte (6 kural + toplu + 03-07 yok + en fazla 2 işlem)"
     msg = [f"📊 <b>BACKTEST SONUCU (TP 1:{tr.RR:g}{be_txt}{f_txt})</b>",
            f"{period_txt}, {n_coins} coin ({minutes:.0f} dk sürdü)", ""]
     msg.append("<b>Huni</b>")
@@ -504,10 +508,13 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
     if tr.ENTRY_MODE == "reclaim":
         msg.append(f"  ↳ Temas mumu EMA20'nin öbür tarafında kapatmadı: {c('no_close_below')}")
         msg.append(f"  ↳ Sonraki mum EMA20'yi geri almadı: {c('no_reclaim')}")
+    elif tr.ENTRY_MODE == "both":
+        msg.append(f"  ↳ Dönüş: sonraki mum EMA20'yi geri almadı: {c('no_reclaim')}")
     else:
         msg.append(f"  ↳ EMA20 yanlış tarafta kapanış: {c('no_close')}")
     msg.append(f"  ↳ Onaydan önce iptal: {c('cancel_touch')}")
     msg.append(f"  ↳ Onay mumu dönüş mumunun ucunu geçmedi: {c('no_confirm')}" if tr.ENTRY_MODE == "reclaim"
+               else f"  ↳ Onay yok (klasik 3 mumda / dönüşte onay mumu): {c('no_confirm')}" if tr.ENTRY_MODE == "both"
                else f"  ↳ 3 mumda onay yok: {c('no_confirm')}")
     msg.append(f"  ↳ ATR filtresine takıldı: {c('atr')}")
     if tr.MIN_ATR_MULT > 0:
@@ -561,6 +568,9 @@ def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, da
             msg.append(line(tf, stats(trades[trades["zaman_dilimi"] == tf])))
         for side in ("LONG", "SHORT"):
             msg.append(line(side, stats(trades[trades["yon"] == side])))
+        if "varyasyon" in trades:
+            for v in ("klasik", "dönüş"):
+                msg.append(line(v.capitalize(), stats(trades[trades["varyasyon"] == v])))
         if p0 is not None and days > 30:
             msg += ["", "<b>Ay ay</b>"]
             months = trades["_touch_ts"].apply(lambda t: month_label(t, p0))
@@ -664,7 +674,9 @@ COMPARE_SETS["tp"] = [
     C("Canlı kurallar 1:2.5", **_LIVE, RR=2.5),
     C("Canlı kurallar 1:1.5", **_LIVE, RR=1.5),
 ]
-_LIVE_NOW = dict(live_setups.LIVE_RULES, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)
+# Karşılaştırma setleri klasik sistemde sabit (canlı 14.10'dan beri klasik + dönüş; o: --preset canli)
+_LIVE_NOW = dict(live_setups.LIVE_RULES, ENTRY_MODE="classic", cluster_max=live_setups.CLUSTER_MAX,
+                 max_open=live_setups.MAX_OPEN)
 COMPARE_SETS["dip"] = [
     C("Canlı ayar (1:2.2)", **_LIVE_NOW),
     C("+ önünde en az 0.5R yer", **_LIVE_NOW, ROOM_MIN_R=0.5),
@@ -742,7 +754,7 @@ COMPARE_SETS["temiz_donus"] = _temiz_set(_DONUS) + [
     C(f"+ düzeltme en az {_A['PULLBACK_MIN_BARS']} mum", **_DONUS, PULLBACK_MIN_BARS=_A["PULLBACK_MIN_BARS"]),
     C(f"+ bacak {_A['LEG_ATR_MAX']:g} ATR'den kısa", **_DONUS, LEG_ATR_MAX=_A["LEG_ATR_MAX"]),
 ]
-_LIVE_NO_CLUSTER = dict(live_setups.LIVE_RULES)
+_LIVE_NO_CLUSTER = dict(live_setups.LIVE_RULES, ENTRY_MODE="classic")
 COMPARE_SETS["toplu"] = [
     C("Canlı ayar (aynı mumda 5+ coin varsa girme)", **_LIVE_NOW),
     C("Toplu sinyal sınırı 8 coin", **_LIVE_NO_CLUSTER, cluster_max=8),
