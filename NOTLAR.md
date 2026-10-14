@@ -175,6 +175,12 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   `/backtest 90 aday önceki2` (Ocak-Nisan, bakılmamış dönem) ile klasikte sınanabilir.
 - Kullanıcı (12:38): temiz testlerini DÖNÜŞ varyasyonunda istiyordu ("ayrı test edicez"), ben klasikte çalıştırdım.
   `/backtest 180 dönüş temiz`: dönüş 6 ay, temiz filtreleri + 3 aday + fark analizi (dönüş işlemleri) tek testte.
+- Dönüş temiz 180 gün (17.04-14.10, 500 coin): dönüş 101 işlem %30 -16.2R (-0.16/iş, 6 ayın 2'si artı; klasik aynı
+  6 ayda ~-0.02/iş) · gövde≥0.4 37 işlem -5.4R · ≥4 ATR -7.7R · tek mum -15.9R · EMA≥2 72 işlem -3.1R (en iyisi, 2/6 ay) ·
+  dördü 12 işlem 3 TP -3.4R · klasik adaylar dönüşte tutmadı: ters mum≤%20 -11.9R, düzeltme≥5 -6.4R, bacak<4 ATR -8.5R.
+  Fark analizi (dönüş): hiçbir ölçü şans payını geçmedi. Ölçüler kullanıcının gözüyle uyuşuyor: dördü birlikte HOME'u (TP)
+  tutuyor; VIRTUAL (bacak tek kırmızı mum, gövde -0.82), TRUTH (gövde 0.27), HOLO (EMA açıklığı 1.0) eleniyor; TWT (TP) de
+  eleniyor (3.3 ATR, gövde 0.31). Ama 6 ayda "temiz" görünen işlemler daha çok kazanmıyor. Canlıya bir şey eklenmedi.
 
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
