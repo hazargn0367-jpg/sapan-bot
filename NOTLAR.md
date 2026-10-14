@@ -191,6 +191,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   %0.68). Klasik 128 işlem %36 +1.2R (brüt +19.0) · dönüş 58 işlem %29 -12.3R (brüt -3.8). 208 işlem toplu sinyal
   filtresine takıldı. Grafik aşamasında bellek 458/512MB → bekçi durdurdu, grafik gelmedi. Düzeltme: grafikler
   sample_charts.py'de temiz süreçte (backtest sonunda os.execv, aynı PID; çizim süreci ~195MB).
+- Birleşik 15m 30 gün (14.09-14.10): 62 işlem %32, brüt +2.0R, net -3.1R (komisyon 0.08R/iş, stop ortanca %1.1).
+  Klasik 47 işlem +0.4R · dönüş 15 işlem -3.5R · LONG +0.6R, SHORT -3.7R. 5m ile işlem başı aynı (~-0.05/-0.07R),
+  5m sadece 3 kat işlem + komisyon. Kullanıcı (17:02): "5 dklığı boşver, backtestlere 15'ten devam". Backtest
+  varsayılanı zaten 15m. Canlı hâlâ 5m (klasik + dönüş) — kullanıcı canlı için ayrıca bir şey demedi.
 
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
