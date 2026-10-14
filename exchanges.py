@@ -24,8 +24,9 @@ log = logging.getLogger("bot")
 BASE_URL = "https://fapi.binance.com"
 KLINE_LIMIT = 499  # Binance'te 100-499 arası mum = 2 ağırlık (rate limit dostu)
 WEIGHT_LIMIT = 2400
-WEIGHT_SOFT_LIMIT = 2000  # buna yaklaşınca dakika dolana kadar beklenir (backtest bunu 1200'e indirir)
-BACKTEST_SOFT_LIMIT = 1000  # backtest en fazla bu kadar kullanır: canlı 5dk taraması (~1000) + backtest < 2400
+WEIGHT_SOFT_LIMIT = 1200  # buna gelince dakika dolana kadar beklenir. IP (Render'da başka uygulamalarla da
+                          # paylaşılıyor olabilir) 2400'e dayanınca 429, sonra 418 engeli geliyordu (14.10: 19:25 ve 21:31)
+BACKTEST_SOFT_LIMIT = 600  # backtest artık API'yi neredeyse hiç kullanmıyor (veri arşivden, bugünün mumları yok)
 PAUSE_FILE = "/tmp/binance_pause"
 import config  # noqa: E402
 

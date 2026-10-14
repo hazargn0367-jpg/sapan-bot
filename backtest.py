@@ -174,7 +174,7 @@ def set_base_tf(tf):
 
 def _fetch_range(symbol, start_ms, end_ms):
     if USE_ARCHIVE:
-        return archive.get_range(symbol, BASE_TF, start_ms, end_ms, api_max_wait=BAN_WAIT)
+        return archive.get_range(symbol, BASE_TF, start_ms, end_ms, api_max_wait=BAN_WAIT, api_recent=False)
     return get_klines_range(symbol, BASE_TF, start_ms, end_ms, max_wait=BAN_WAIT)
 
 

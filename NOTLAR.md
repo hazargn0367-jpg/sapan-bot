@@ -272,3 +272,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   karşılaştırmada her ayar için "✅ TP · ❌ Stop · ↩️ Erken çıkış" + kâr/zarar (R ve $); tekli raporda aynısı + klasik/dönüş.
   Huni, aylar, düşüş, örnekler, veri satırı mesajdan çıktı (CSV'de/logda var). Fark analizi sadece "fark" yazılınca.
   Ayar adları Telegram HTML için escape ediliyor ("<" içeren BTC ayarları mesajı bozabiliyordu).
+- 14.10 22:27 /durum: canlı 5m tarama 19:25'ten beri Binance IP engelinde (418), 21:31'de yeniden engel (00:33'e kadar);
+  IP kullanımı 2017/2400 görülmüş. Sebep: yeniden başlatma sonrası tam veri çekişi (500 coin x 2 ağırlık) + backtest'in
+  bugünkü mumlar için API kullanımı + Render IP'si paylaşılıyor olabilir. Düzeltme: backtest son 1-2 gün için API'ye hiç
+  gitmez (archive.get_range api_recent=False, test bugünün mumları olmadan çalışır), WEIGHT_SOFT_LIMIT 2000→1200,
+  BACKTEST_SOFT_LIMIT 1000→600. Kalıcı çözüm adayı: canlı veriyi WebSocket'ten almak (REST ağırlığı yok).
+  Aynı /durum: erken önceki karşılaştırma mesajı Telegram 400 (ayar adındaki "<") ile gelmemişti; 22:19 yüklemesinde
+  düzeltildi ama bot 22:27'de hâlâ 20:57'den beri açıktı (o yükleme henüz devreye girmemişti).

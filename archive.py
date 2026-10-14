@@ -148,8 +148,10 @@ def _gaps(start, end, covered):
     return [(a, b) for a, b in out if b > a]
 
 
-def get_range(symbol, interval, start_ms, end_ms, api_max_wait=None, now_ms=None):
-    """start_ms..end_ms arası kapanmış mumlar (DataFrame: timestamp, Open, High, Low, Close)."""
+def get_range(symbol, interval, start_ms, end_ms, api_max_wait=None, now_ms=None, api_recent=True):
+    """start_ms..end_ms arası kapanmış mumlar (DataFrame: timestamp, Open, High, Low, Close).
+    api_recent=False: arşivde henüz olmayan son 1-2 günün mumları için Binance API'ye hiç gidilmez
+    (backtest canlı taramayla aynı IP'yi kullanıyor; IP engeli canlı bildirimleri de durduruyordu)."""
     now_ms = now_ms or int(time.time() * 1000)
     end_ms = min(end_ms, now_ms)
     today0 = now_ms // DAY_MS * DAY_MS
@@ -201,6 +203,9 @@ def get_range(symbol, interval, start_ms, end_ms, api_max_wait=None, now_ms=None
     # Arşivde olmayan kısımlar API'den (bugün dahil)
     first_covered = min((x for x, _ in covered), default=None)
     for a, b in _gaps(start_ms, end_ms, covered):
+        if not api_recent and a >= today0 - DAY_MS:
+            _add("skipped_recent")
+            continue
         try:
             # API engelliyse hiç deneme (engel uzamasın): hemen aşağıdaki karara düş
             if exchanges.blocked_for() > 60:
@@ -236,7 +241,7 @@ def summary():
     s = dict(stats)
     txt = f"Veri: {s['files']} arşiv dosyası ({s['mb']:.0f}MB), {s['api_ranges']} API parçası"
     if s["skipped_recent"]:
-        txt += f", {s['skipped_recent']} coinde son 1-2 günün mumları alınamadı (Binance engeli)"
+        txt += f", {s['skipped_recent']} coinde son 1-2 günün mumları yok (arşive henüz eklenmemiş; API kullanılmadı)"
     return txt
 
 
