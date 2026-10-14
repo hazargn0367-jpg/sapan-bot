@@ -268,3 +268,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +45.2R (+0.061/iş, ayda +3.8R, 8/12 ay artı, en kötü ay -10.3, düşüş -14.3; TP %22, tam stop %16, erken çıkış %62) ·
   BTC<0.6 +2.4R (iki dönemde de canlıdan iyi, küçük) · erken1+BTC<0.6 +38.2R. Kullanıcıya canlıya alma önerildi
   (15m + erken çıkış 2 mum, bot "ÇIK" bildirimi), karar bekleniyor.
+- 14.10 22:17 kullanıcı: "çok detay var, TP stop kaç, kâr zarar ne onu göstersin". Raporlar sadeleştirildi:
+  karşılaştırmada her ayar için "✅ TP · ❌ Stop · ↩️ Erken çıkış" + kâr/zarar (R ve $); tekli raporda aynısı + klasik/dönüş.
+  Huni, aylar, düşüş, örnekler, veri satırı mesajdan çıktı (CSV'de/logda var). Fark analizi sadece "fark" yazılınca.
+  Ayar adları Telegram HTML için escape ediliyor ("<" içeren BTC ayarları mesajı bozabiliyordu).

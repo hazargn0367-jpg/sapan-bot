@@ -87,18 +87,18 @@ def start_backtest(text):
         args += ["--ago", str(days)]
     donus = any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon"))
     if "erken" in low:
-        args += ["--compare", "erken", "--fark"]
+        args += ["--compare", "erken"]
     elif any(w in low for w in ("btc", "bitcoin", "korelasyon")):
-        args += ["--compare", "btc", "--fark"]
+        args += ["--compare", "btc"]
     elif "tarama" in low:
         args += ["--compare", "tarama", "--tf", "15m,30m,1h,4h"]
         tf_m = None   # zaman dilimleri taramanın kendisi
     elif any(w in low for w in ("temiz", "fark", "aday")) and donus:
-        args += ["--compare", "temiz_donus", "--fark"]   # dönüş: temiz trend + adaylar tek testte
+        args += ["--compare", "temiz_donus"]   # dönüş: temiz trend + adaylar tek testte
     elif "aday" in low:
-        args += ["--compare", "aday", "--fark"]
-    elif any(w in low for w in ("temiz", "fark")):
-        args += ["--compare", "temiz_donus" if donus else "temiz", "--fark"]
+        args += ["--compare", "aday"]
+    elif "temiz" in low:
+        args += ["--compare", "temiz_donus" if donus else "temiz"]
     elif "iğne" in low or "igne" in low:
         args += ["--compare", "igne"]
     elif "toplu" in low:
@@ -130,6 +130,8 @@ def start_backtest(text):
         args += ["--compare", "yeni"]
     elif any(w in low for w in ("hepsi", "karşılaştır", "karsilastir")):
         args += ["--compare", "hepsi"]
+    if "fark" in low:
+        args += ["--fark"]   # TP / stop arasındaki farkların ayrıntılı analizi (uzun mesaj), sadece istenince
     if "filtresiz" in low:
         args += ["--no-filters"]
     if tf_m:

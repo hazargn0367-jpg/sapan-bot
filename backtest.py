@@ -509,6 +509,23 @@ def month_label(touch_ts, p0):
 
 
 def build_report(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, days=30, status_counts=None):
+    """Sade rapor: TP / stop / erken çıkış ve kâr-zarar (ayrıntı CSV'de)."""
+    trades = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
+    mode = {"both": "klasik + dönüş", "reclaim": "dönüş", "classic": "klasik"}.get(tr.ENTRY_MODE, tr.ENTRY_MODE)
+    msg = [f"📊 <b>BACKTEST SONUCU</b> (TP 1:{tr.RR:g}, {mode})",
+           f"{period_txt}, {n_coins} coin, 1R = {tr.RISK_USD:g}$ (komisyon dahil)", ""]
+    if trades.empty:
+        return "\n".join(msg + ["Hiç işlem oluşmadı."])
+    msg.append(tp_stop_line(trades))
+    if "varyasyon" in trades:
+        for v in ("klasik", "dönüş"):
+            tv = trades[trades["varyasyon"] == v]
+            if not tv.empty:
+                msg += ["", f"<b>{v.capitalize()}</b>", "  " + tp_stop_line(tv)]
+    return "\n".join(msg)
+
+
+def build_report_detailed(df_all, period_txt, n_coins, minutes, examples_txt, p0=None, days=30, status_counts=None):
     trades = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
     s = stats(trades)
     funnel = df_all["durum"].value_counts().to_dict() if not df_all.empty else {}
@@ -879,33 +896,39 @@ def build_sweep(frames, tfs, period_txt, p0, days):
     return msgs
 
 
+def tp_stop_line(t):
+    """Sade sonuç: TP / stop / erken çıkış sayıları ve kâr-zarar (R ve $). t: sonuçlanan işlemler."""
+    if t is None or t.empty:
+        return "işlem yok"
+    wins = int((t["durum"] == "win").sum())
+    stops = int((t["durum"] == "loss").sum())
+    early = int((t["cikis_turu"] == "erken çıkış").sum()) if "cikis_turu" in t else 0
+    other = int((t["durum"] == "be").sum()) - early
+    net = float(t["R_net"].sum())
+    parts = [f"✅ TP {wins}", f"❌ Stop {stops}"]
+    if early:
+        parts.append(f"↩️ Erken çıkış {early}")
+    if other:
+        parts.append(f"⚪ Başabaş {other}")
+    return " · ".join(parts) + f"\n  {'🟢' if net > 0 else '🔴'} <b>{net:+.1f}R ({usd(net)})</b>"
+
+
 def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
-    msg = ["📊 <b>KARŞILAŞTIRMA</b>", f"{period_txt}, {n_coins} coin ({minutes:.0f} dk sürdü)",
-           f"1R = {tr.RISK_USD:g}$, komisyon dahil", ""]
-    scored = []
+    msg = ["📊 <b>KARŞILAŞTIRMA</b>", f"{period_txt}, {n_coins} coin, 1R = {tr.RISK_USD:g}$ (komisyon dahil)", ""]
+    best, best_net = None, None
     for name, df_all in results.items():
         t = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
-        scored.append((name, stats(t)))
-    best = max((x for x in scored if x[1]), key=lambda x: x[1]["net"], default=None)
-    for no, (name, s) in enumerate(scored, 1):
-        star = " ⭐" if best and name == best[0] else ""
-        if not s:
-            msg.append(f"<b>{no}) {name}</b>: işlem yok")
-            continue
-        bep = f", {s['be']} başabaş/erken çıkış" if s["be"] > 0 else ""
-        msg.append(f"<b>{no}) {name}</b>{star}")
-        msg.append(f"  {s['n']} işlem, %{s['wr']:.0f} TP{bep}, işlem başı {s['avg']:+.2f}R")
-        msg.append(f"  <b>{s['net']:+.1f}R ({usd(s['net'])})</b>, düşüş {s['dd']:.1f}R, "
-                   f"en uzun stop serisi {s['streak']}")
-        if p0 is not None and days > 30:
-            t = results[name]
-            t = t[t["durum"].isin(["win", "loss", "be"])]
-            months = t["_touch_ts"].apply(lambda x: month_label(x, p0))
-            parts = []
-            for m in range(1, (days + 29) // 30 + 1):
-                tm = t[months == m]
-                parts.append(f"{m}.ay {tm['R_net'].sum():+.1f}R ({len(tm)})")
-            msg.append("  " + " | ".join(parts))
+        if not t.empty and (best_net is None or t["R_net"].sum() > best_net):
+            best, best_net = name, t["R_net"].sum()
+    for no, (name, df_all) in enumerate(results.items(), 1):
+        t = df_all[df_all["durum"].isin(["win", "loss", "be"])] if not df_all.empty else df_all
+        star = " ⭐" if name == best else ""
+        msg.append(f"<b>{no}) {html.escape(name, quote=False)}</b>{star}")
+        msg.append("  " + tp_stop_line(t))
+    return "\n".join(msg)
+
+
+def _old_examples(results):
     checks = []
     for coin, when, note in CHECK_TRADES:
         cells = []
@@ -920,9 +943,7 @@ def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
                 cells.append(f"{no}) elendi")  # karşılaştırmada sadece işlemler saklanır
         if cells and any("elendi" not in c for c in cells):
             checks.append(f"• {coin} {when} ({note})\n   " + "  ".join(cells))
-    if checks:
-        msg += ["", "<b>Senin örneklerin</b>"] + checks
-    return "\n".join(msg)
+    return checks
 
 
 # TP ile stop olan işlemleri ayıran ölçüler: (sütun, ad, ondalık)
@@ -1279,8 +1300,7 @@ def main():
         report = build_compare(frames_all, period_txt, coins_txt, minutes, p0=p0, days=args.days)
         if args.compare == "tarama":
             fark_msgs = build_sweep(frames_all, tfs, period_txt, p0, args.days) + fark_msgs
-        report += "\n\n" + (archive.summary() if USE_ARCHIVE else f"Veri: {html.escape(source)}")
-        log.info("\n%s", report)
+        log.info("\n%s\n%s", report, archive.summary() if USE_ARCHIVE else source)
         send_message(report)
         for m in fark_msgs:
             send_message(m)
@@ -1312,8 +1332,7 @@ def main():
     df_all = pd.DataFrame(rows)
     report = build_report(df_all, period_txt, coins_txt, minutes, examples_txt, p0=p0, days=args.days,
                           status_counts=status_counts)
-    report += "\n\n" + (archive.summary() if USE_ARCHIVE else f"Veri: {html.escape(source)}")
-    log.info("\n%s", report)
+    log.info("\n%s\n%s", report, archive.summary() if USE_ARCHIVE else source)
     send_message(report)
     for m in fark_msgs:
         send_message(m)
