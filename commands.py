@@ -18,6 +18,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 başabaş -> fiyat 1R / 1.5R'ye gelince stopu girişe çekme testi (erken çıkış üstüne)
   /backtest 180 örnek -> PDF örneklerinden kurallar (dip tabanı, önünde yer, büyük onay mumu, temas mumu) erken çıkış üstüne
   /backtest 180 erken -> giriş mumu girişin gerisinde kapatırsa çık (1 / 2 mum) + BTC'ye benzerlik filtresi, ay ay + PDF
   /backtest 180 btc -> BTC'ye benzer hareket eden coinlere girmeme filtresi (canlı ayar, 0.8 / 0.6 / 0.4) + fark analizi
@@ -92,7 +93,9 @@ def start_backtest(text):
     elif "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
     donus = any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon"))
-    if ("canlı" in low or "canli" in low) and "erken" in low:
+    if any(w in low for w in ("başabaş", "basabas", "başabas", "basabaş")):
+        args += ["--compare", "basabas"]
+    elif ("canlı" in low or "canli" in low) and "erken" in low:
         args += ["--preset", "canli_erken"]
     elif any(w in low for w in ("örnek", "ornek", "pdf")):
         args += ["--compare", "ornek"]

@@ -299,3 +299,17 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   trade_rules.mfe_r: girişten sonra ilk stopa kadar (TP/erken çıkış yokmuş gibi, en fazla 96 mum) lehte en uzak nokta (R),
   CSV'de mfe_r. COMPARE_SETS["tp"] yeni: erken çıkış 2 mum + TP 1.5/2.2/3/4/5 + erken çıkışsız TP 3; raporun sonunda MFE
   dağılımı (1R+/2R+/3R+… oranları). Eski tp seti tp_eski oldu. `/backtest 30 tp`, doğrulama `/backtest 180 tp` (+ önceki).
+- 14.10 23:3x–15.10 00:25 Render arızası ("Builds, deploys, and queued deploys are not starting in all regions", 22:32–
+  ~00:25 TR): 8aec1d0 deploy'ları "Building / Awaiting logs"ta kaldı (Events'te hiç "Deploy started" yok). Aynı sırada
+  çalışan bot 23:45'ten itibaren api.telegram.org'dan cevap alamadı (getUpdates Read timed out 40 sn, her yeni bağlantıda).
+  Kullanıcı Restart service + arıza bitince 8aec1d0 canlıya geçti, Telegram düzeldi. Render notu: ücretli de olsa build
+  arızası herkesi etkiler. Öneri (yapılmadı): Telegram 10 dk ulaşılamazsa bot kendini yeniden başlatsın.
+- TP testi 30 gün (15.09-14.10, 500 coin, 15m, erken çıkış 2 mum, 66 işlem): TP 1.5 -13.5R · 2.2 -9.1R (10 TP, 14 stop,
+  42 erken) · 3 -17.2R · 4 -9.9R · 5 -16.0R · erken çıkışsız TP 3 -14.9R (58 işlem). MFE (stop öncesi en uzak): ortalama
+  2.1R ama ortanca 1.0R; 1R+ %52, 1.5R+ %39, 2.2R+ %32, 3R+ %20, 4R+ %17, 5R+ %14. TP büyütmek işe yaramıyor.
+  Erken çıkışlar ort -0.36R (toplam -14.9R); 42'sinin 11'i çıkmasa stopsuz 2.2R'ye gidecekti (bu ay ~4R kaybettirdi;
+  12 ayda +73R kazandırmıştı). Stop olan 14 işlemin 7'si önce 1R+ kâra gitmiş → başabaş testi.
+- 15.10 00:32 kullanıcı: "1R'de stopu girişe çeki ekle, test bitince". COMPARE_SETS["basabas"]: şu anki (erken 2 mum,
+  TP 2.2) · +1R'de stop girişe · +1.5R · +1R ve TP 3 · erken çıkışsız +1R. Var olan BE_TRIGGER kullanılır (1R'ye gelen
+  mumdan SONRAKİ mumdan itibaren stop = giriş). CSV cikis_turu "başabaş stop". Komut `/backtest 180 başabaş` (+ önceki).
+  `/backtest 180 tp` çalışırken yüklenmedi (yükleme botu yeniden başlatır, testi öldürür).

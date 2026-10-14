@@ -390,6 +390,8 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
             if r["status"] in ("win", "loss", "be"):
                 if r.get("early_exit") or r.get("time_exit"):
                     row["cikis_turu"] = "erken çıkış" if r.get("early_exit") else "zaman stopu"
+                elif r["status"] == "be":
+                    row["cikis_turu"] = "başabaş stop"   # 1R'ye gelip stop girişe çekildikten sonra girişten çıktı
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
                            R_brut=round(r["r_gross"], 3), R_net=round(r["r_net"], 3),
                            dolar=round(r["r_net"] * tr.RISK_USD, 2),
@@ -841,6 +843,15 @@ COMPARE_SETS["tp"] = [
     C("Erken çıkış (2 mum), TP 1:5", **dict(_EB0, RR=5.0)),
     C("Erken çıkış yok, TP 1:3", **dict(_CANLI, RR=3.0)),
 ]
+# Başabaş (kullanıcı, 15.10 00:32): TP testinde stop olan 14 işlemin 7'si önce 1R+ kâra gitmişti. Fiyat 1R'ye gelince
+# stop girişe çekilir (bir sonraki mumdan itibaren). Eski taban sistemde (erken çıkışsız) başabaş kötüleştirmişti.
+COMPARE_SETS["basabas"] = [
+    C("Erken çıkış (2 mum), TP 1:2.2 (şu anki)", **_EB0),
+    C("+ 1R'de stop girişe", **dict(_EB0, BE_TRIGGER=1.0)),
+    C("+ 1.5R'de stop girişe", **dict(_EB0, BE_TRIGGER=1.5)),
+    C("+ 1R'de stop girişe, TP 1:3", **dict(_EB0, BE_TRIGGER=1.0, RR=3.0)),
+    C("Erken çıkış yok, 1R'de stop girişe", **dict(_CANLI, BE_TRIGGER=1.0)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -870,7 +881,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
