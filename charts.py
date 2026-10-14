@@ -109,10 +109,12 @@ def draw(trade, path=None, pdf=None):
 
     closed = trade["durum"] in ("win", "loss", "be")
     if closed:
-        res = {"win": "TP ✓", "be": "BAŞABAŞ"}.get(trade["durum"], "STOP ✗")
+        res = {"win": "TP ✓", "be": "ERKEN ÇIKIŞ" if trade.get("cikis_turu") == "erken çıkış" else "BAŞABAŞ"}.get(
+            trade["durum"], "STOP ✗")
         title = (f"{trade['coin']}  {trade['zaman_dilimi']}  {trade['yon']}   {res}   "
                  f"{trade['R_net']:+.2f}R ({trade['dolar']:+.0f}$)   temas: {trade['temas']} TR / {trade['temas_utc']} UTC")
-        badge = {"win": ("✓ TP", UP), "be": ("BAŞABAŞ", "#9e9e9e")}.get(trade["durum"], ("✗ STOP", DOWN))
+        be_txt = "ERKEN ÇIKIŞ" if trade.get("cikis_turu") == "erken çıkış" else "BAŞABAŞ"
+        badge = {"win": ("✓ TP", UP), "be": (be_txt, "#9e9e9e")}.get(trade["durum"], ("✗ STOP", DOWN))
         badge_txt = f"{badge[0]}  {trade['R_net']:+.2f}R"
     else:
         title = (f"{trade['coin']}  {trade['zaman_dilimi']}  {trade['yon']}   "

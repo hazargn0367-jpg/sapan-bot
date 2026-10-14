@@ -90,7 +90,7 @@ STATUS_TR = {
     "no_entry": "2 mumda girişe gelmedi",
     "win": "TP",
     "loss": "Stop",
-    "be": "Başabaş (girişte stop)",
+    "be": "Başabaş / erken çıkış",
     "open": "Açık (veri bitti)",
     "pending": "Beklemede (veri bitti)",
 }
@@ -378,6 +378,8 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
             f = tr.trend_features(df, i, side, entry=r["entry"], risk=r["risk"])
             row.update({k: (round(v, 3) if isinstance(v, float) else v) for k, v in f.items() if not k.startswith("_")})
             if r["status"] in ("win", "loss", "be"):
+                if r.get("early_exit") or r.get("time_exit"):
+                    row["cikis_turu"] = "erken çıkış" if r.get("early_exit") else "zaman stopu"
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
                            R_brut=round(r["r_gross"], 3), R_net=round(r["r_net"], 3),
                            dolar=round(r["r_net"] * tr.RISK_USD, 2),
@@ -618,7 +620,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "SUPPORT_N", "SUPPORT_MIN", "SUPPORT_WICK_BODY", "SUPPORT_WICK_ATR",
               "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE", "PIVOT_LEG_MIN", "TIME_STOP_BARS",
               "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN",
-              "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS", "LEG_ATR_MAX", "BTC_CORR_MAX", "BTC_CORR_BARS"]
+              "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS", "LEG_ATR_MAX", "BTC_CORR_MAX", "BTC_CORR_BARS",
+              "FAILED_ENTRY_BARS"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -790,6 +793,16 @@ COMPARE_SETS["btc"] = [
     C("+ BTC'ye benzerlik < 0.4 (son 24 saat)", **_CANLI, BTC_CORR_MAX=0.4),
     C("+ BTC'ye benzerlik < 0.6 (son 12 saat)", **_CANLI, BTC_CORR_MAX=0.6, BTC_CORR_BARS=48),
 ]
+# Erken çıkış (giriş mumu girişin gerisinde kapatırsa çık) + BTC'ye benzerlik, tek testte (kullanıcı, 14.10)
+COMPARE_SETS["erken"] = [
+    C("Canlı ayar (klasik + dönüş)", **_CANLI),
+    C("+ giriş mumu girişin gerisinde kapatırsa çık", **_CANLI, FAILED_ENTRY_BARS=1),
+    C("+ ilk 2 mumdan biri girişin gerisinde kapatırsa çık", **_CANLI, FAILED_ENTRY_BARS=2),
+    C("+ BTC'ye benzerlik < 0.8", **_CANLI, BTC_CORR_MAX=0.8),
+    C("+ BTC'ye benzerlik < 0.6", **_CANLI, BTC_CORR_MAX=0.6),
+    C("+ BTC'ye benzerlik < 0.4", **_CANLI, BTC_CORR_MAX=0.4),
+    C("+ giriş mumu çıkışı + BTC < 0.6", **_CANLI, FAILED_ENTRY_BARS=1, BTC_CORR_MAX=0.6),
+]
 # Zaman dilimi / coin büyüklüğü taraması: TP 1:2, aynı anda işlem sınırı ve toplu filtre yok (sistemin kendisi ölçülür)
 COMPARE_SETS["tarama"] = [
     C("Orijinal kurallar (taban)", FILTERS=False, RR=2.0),
@@ -803,7 +816,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -822,11 +835,12 @@ CHECK_TRADES = [
     ("VIRTUALUSDT", "05.10.2026 09:30", "dönüş: tepe tek mumda, temiz trend yok"),
     ("HOLOUSDT", "12.10.2026 07:00", "dönüş: giriş önceki tepenin dibinde (kural 7)"),
     ("HOMEUSDT", "18.09.2026 20:15", "dönüş: 10/10 temiz trend (TP)"),
+    ("BSVUSDT", "15.09.2026 19:45", "giriş sadece iğneyle, sonraki mum stop (erken çıkış)"),
     ("TWTUSDT", "15.08.2026 16:45", "dönüş: 10/10 temiz trend (TP)"),
     ("AXSUSDT", "01.08.2026 02:00", "girmezdim (yapı)"),
     ("ADAUSDT", "01.08.2026 13:30", "iyi işlem"),
 ]
-SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ/ZAMAN", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
+SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ/ERKEN", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
                 "touch_tail": "elendi(ters iğne)", "not_clean": "elendi(temiz değil)", "btc_corr": "elendi(BTC'ye benzer)",
                 "no_room": "elendi(yer)", "open": "açık"}
 
@@ -878,7 +892,7 @@ def build_compare(results, period_txt, n_coins, minutes, p0=None, days=30):
         if not s:
             msg.append(f"<b>{no}) {name}</b>: işlem yok")
             continue
-        bep = f", {s['be']} başabaş" if s["be"] > 0 else ""
+        bep = f", {s['be']} başabaş/erken çıkış" if s["be"] > 0 else ""
         msg.append(f"<b>{no}) {name}</b>{star}")
         msg.append(f"  {s['n']} işlem, %{s['wr']:.0f} TP{bep}, işlem başı {s['avg']:+.2f}R")
         msg.append(f"  <b>{s['net']:+.1f}R ({usd(s['net'])})</b>, düşüş {s['dd']:.1f}R, "

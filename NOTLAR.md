@@ -249,3 +249,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 14.10 18:58 PDF örneği BSVUSDT 15.09 19:45 SHORT: giriş mumu girişe sadece iğneyle değip üstünde kapatmış, sonraki mum
   stop. "Buna girmezdim". Aday kural: (1) kapanışla giriş ya da (2) giriş mumu girişin gerisine kapatırsa kapanışta çık.
   Kullanıcı daha örnek gönderecek, "kodla" deyince yapılacak.
+- 14.10 19:02 kullanıcı 2. seçeneği seçti (kapanışla giriş geç kalır). FAILED_ENTRY_BARS: giriş mumu dahil ilk N mumdan
+  biri girişin gerisinde kapatırsa o mumun kapanışında çık ("be" durumu, early_exit, CSV'de cikis_turu=erken çıkış,
+  grafikte ERKEN ÇIKIŞ). `/backtest 180 erken`: canlı ayar, +erken çıkış 1/2 mum, +BTC <0.8/0.6/0.4, +erken+BTC<0.6;
+  PDF erken çıkış (1 mum) ayarından. BTC filtresiyle birlikte yüklendi.

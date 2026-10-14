@@ -70,6 +70,9 @@ EMA_FAN_MIN = 0.0            # >0: EMA20 ile EMA100 arası en az bu kadar ATR (E
 LEG_COUNTER_MAX = 1.0        # <1: bacaktaki ters mumların oranı en fazla bu kadar (0.2 = 5 mumda en fazla 1 ters mum)
 PULLBACK_MIN_BARS = 0        # >0: tepeden (LONG) / dipten (SHORT) temasa kadar en az bu kadar mum (düzeltme acele değil)
 LEG_ATR_MAX = 0.0            # >0: bacak boyu bu kadar ATR'den KISA olmalı (aşırı uzamış hareketten sonraki geri çekilme değil)
+FAILED_ENTRY_BARS = 0        # >0: giriş mumu dahil ilk bu kadar mumdan biri girişin gerisinde kapatırsa (LONG'da altında)
+                             # o mumun kapanışında çıkılır: kırılım tutmadı, fiyat girişe sadece iğneyle değdi (kullanıcı,
+                             # 14.10, BSV 15.09 19:45). Erken çıkış "be" durumuyla sayılır, res["early_exit"] = True
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
 BTC_CORR_BARS = 96           # benzerlik penceresi (15dk'da 96 mum = 24 saat)
@@ -564,9 +567,17 @@ def simulate(df, i, side, tick, mode=None):
     def reached_be(bar):
         return BE_TRIGGER > 0 and ((H[bar] >= be_level) if long else (L[bar] <= be_level))
 
+    def failed(bar):
+        # Kırılım tutmadı: mum girişin gerisinde kapattı (giriş sadece iğneyle olmuş)
+        return FAILED_ENTRY_BARS > 0 and bar - k_in < FAILED_ENTRY_BARS and \
+            ((C[bar] < entry) if long else (C[bar] > entry))
+
     # Giriş mumunda TP (stop bu mumda olamaz: olsaydı giriş iptal edilirdi)
     if (H[k_in] >= tp) if long else (L[k_in] <= tp):
         return close_trade(k_in, tp, "win")
+    if failed(k_in):
+        res["early_exit"] = True
+        return close_trade(k_in, C[k_in], "be")
     if reached_be(k_in):
         cur_stop, be_on = fill, True
 
@@ -586,6 +597,9 @@ def simulate(df, i, side, tick, mode=None):
             return close_trade(m, price, "be" if be_on else "loss")
         if hit_tp:
             return close_trade(m, tp, "win")
+        if failed(m):
+            res["early_exit"] = True
+            return close_trade(m, C[m], "be")
         if not be_on and reached_be(m):
             cur_stop, be_on = fill, True
 
