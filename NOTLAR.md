@@ -369,3 +369,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   106-133 işlem/ay)** · stop ≥%0.5 + TP 2.5 +9.8 / -3.0 · stop ≥%0.5 + sivri -1.9 / +0.8. Stop filtresi tabana göre
   -4.4 / +17.1. Brüt (komisyonsuz) 5m ayda +18…+34R; 15m +6…+19R. Sıradaki: `/backtest 30 komisyon 5m önceki2`
   (17.07-16.08, bakılmamış 3. ay).
+- Komisyon testi 5m önceki2 (17.07-16.08, 184 coin): taban (onay ≤2) -18.3R (brüt +9.3) · TP 2.5 -21.5 · stop ≥%0.5
+  -10.4R (brüt +0.4!) · stop+TP 2.5 -14.7 · stop+sivri -4.3. 5m stop ≥%0.5 üç ay: +3.2 / +4.5 / -10.4 = -2.7R (Binance);
+  BNB+referans +4.5; +%0.02 kayma -9.9; MEXC +20.5; MEXC+kayma +6.2. → 5m 3. ayda tutmadı (brüt ~0).
+- Komisyon/kayma senaryoları (CSV'den yeniden hesap; Binance oranlarıyla backtest sonucunu birebir veriyor). 15m erken
+  çıkış (TP 2.2) 12 ay: Binance +45.9R · +kayma (%0.02/piyasa emri) +17.4 · BNB+referans +60.1 · BNB+ref+kayma +31.6 ·
+  MEXC (%0.02/%0) +92.2 · MEXC+kayma +63.7 (ayda ~5.3R, en kötü ay -7.2, 13 ayın 10'u artı). 15m her senaryoda artı;
+  ayda R olarak da 5m'den iyi (5m MEXC+kayma ~2R/ay). Backtest'te kayma YOK → gerçek sonuç daha düşük.
