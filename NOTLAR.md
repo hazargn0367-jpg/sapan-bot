@@ -151,6 +151,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   = onay. Giriş/stop/TP/ATR/diğer kurallar aynı; kural 5 (fitil temas) uygulanmaz. trade_rules.ENTRY_MODE="reclaim",
   `/backtest 14 dönüş` (grafiklerde "Dönüş" mumu işaretli), `/incele COIN tarih saat dönüş`. Klasik mod eski kodla birebir aynı.
 
+- Dönüş 14 gün (500 coin, 15m): 6 işlem, 2 TP, -0.1R. Kullanıcı stopları inceledi: TRUTH 02.10 10:45 (tepeye yakın, saatlerce
+  yatay → 7-8 saatte sonuç yoksa stop girişe), VIRTUAL 05.10 09:30 (tepe tek mumda, temiz trend yok), HOLO 12.10 07:00 (giriş
+  önceki tepenin dibinde). Eklenenler: TIME_STOP_BARS (32 mum=8 saat; fiyat gerideyse piyasadan çıkış, "be" sayılır),
+  kural 11 PIVOT_LEG_MIN (tepe eski zirveyi kırdıktan sonra en az N mumla yapılmış). `/backtest 90 dönüş kural`.
+
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
 - Gerçek parayla otomatik işlem yok. Önce bildirimlerin canlı sonuçları izlenecek.

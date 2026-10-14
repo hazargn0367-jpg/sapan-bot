@@ -76,6 +76,7 @@ STATUS_TR = {
     "touch_tail": "Temas mumunun ters iğnesi uzun (EMA20'den dönüş zayıf)",
     "no_close_below": "Temas mumu EMA20'nin öbür tarafında kapatmadı (dönüş varyasyonu)",
     "no_reclaim": "Sonraki mum EMA20'nin doğru tarafında kapatmadı (dönüş varyasyonu)",
+    "pivot_leg": "Tepe/dip tek mumluk fırlamayla yapılmış (temiz trend yok)",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
     "skip_open": "Açık işlem sınırı dolu (portföy koruması)",
@@ -541,7 +542,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR",
               "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R", "STRUCTURE_BREAK",
               "SUPPORT_N", "SUPPORT_MIN", "SUPPORT_WICK_BODY", "SUPPORT_WICK_ATR",
-              "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE"]
+              "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE", "PIVOT_LEG_MIN", "TIME_STOP_BARS"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -656,6 +657,15 @@ COMPARE_SETS["igne"] = [
     C("+ 7: önünde en az 1R yer", **_LIVE_NOW, ROOM_MIN_R=1.0),
     C("+ 7 (1R) + 10 (≤ EMA iğnesi)", **_LIVE_NOW, ROOM_MIN_R=1.0, TOUCH_TAIL_MAX=1.0, TOUCH_TAIL_REF="wick"),
 ]
+_DONUS = dict(_LIVE_NOW, ENTRY_MODE="reclaim")
+COMPARE_SETS["donus"] = [
+    C("Dönüş varyasyonu", **_DONUS),
+    C("+ 8 saatte sonuç yoksa stop girişe", **_DONUS, TIME_STOP_BARS=32),
+    C("+ 11: tepe en az 2 mumla yapılmış", **_DONUS, PIVOT_LEG_MIN=2),
+    C("+ 11: tepe en az 3 mumla yapılmış", **_DONUS, PIVOT_LEG_MIN=3),
+    C("+ 7: önünde en az 1R yer", **_DONUS, ROOM_MIN_R=1.0),
+    C("+ 8 saat + 11 (2 mum) + 7 (1R)", **_DONUS, TIME_STOP_BARS=32, PIVOT_LEG_MIN=2, ROOM_MIN_R=1.0),
+]
 _LIVE_NO_CLUSTER = dict(live_setups.LIVE_RULES)
 COMPARE_SETS["toplu"] = [
     C("Canlı ayar (aynı mumda 5+ coin varsa girme)", **_LIVE_NOW),
@@ -664,7 +674,7 @@ COMPARE_SETS["toplu"] = [
     C("Toplu sinyal filtresi kapalı", **_LIVE_NO_CLUSTER),
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
-             "destek": 2, "toplu": 3, "igne": 1}  # grafikleri çizilecek ayar (listedeki sırası)
+             "destek": 2, "toplu": 3, "igne": 1, "donus": 5}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -679,10 +689,13 @@ def cfg_name(cfg):
 # Kullanıcının grafikten gösterdiği örnek işlemler (TR saati): hangi ayarda ne olduğu raporda gösterilir
 CHECK_TRADES = [
     ("NILUSDT", "31.07.2026 23:30", "girmezdim: dipten sonra 2 iğneli mum (destek)"),
+    ("TRUTHUSDT", "02.10.2026 10:45", "dönüş: tepeye yakın, saatlerce yatay (zaman stopu)"),
+    ("VIRTUALUSDT", "05.10.2026 09:30", "dönüş: tepe tek mumda, temiz trend yok"),
+    ("HOLOUSDT", "12.10.2026 07:00", "dönüş: giriş önceki tepenin dibinde (kural 7)"),
     ("AXSUSDT", "01.08.2026 02:00", "girmezdim (yapı)"),
     ("ADAUSDT", "01.08.2026 13:30", "iyi işlem"),
 ]
-SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
+SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ/ZAMAN", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
                 "touch_tail": "elendi(ters iğne)",
                 "no_room": "elendi(yer)", "open": "açık"}
 

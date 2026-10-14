@@ -56,6 +56,10 @@ SUPPORT_N = 0                # >0: son dipten (SHORT) / tepeden (LONG) sonraki b
 SUPPORT_MIN = 2              # bunların en az bu kadarı dibe (tepeye) doğru iğneliyse destek (direnç) oluşmuş: işlem yok
 SUPPORT_WICK_BODY = 1.0      # "iğneli" mum: dibe (tepeye) doğru iğne >= gövdenin bu katı
 SUPPORT_WICK_ATR = 0.1       # ve iğne >= bu kadar ATR (minik mumların iğnesi sayılmasın)
+PIVOT_LEG_MIN = 0            # >0: tepe (LONG) eski zirveyi kırdıktan sonra en az bu kadar mumla yapılmış olmalı (kural 11,
+                             # tek mumluk fırlamayla yapılan tepe = temiz trend yükselişi değil)
+TIME_STOP_BARS = 0           # >0: girişten bu kadar mum sonra TP/stop olmadıysa stop girişe çekilir; fiyat girişin
+                             # gerisindeyse o mumun açılışında çıkılır (zaman stopu, "be" sayılır)
 ENTRY_MODE = "classic"       # "classic": temas EMA20'nin doğru tarafında kapatır, 3 mumda onay
                              # "reclaim" (dönüş varyasyonu): temas EMA20'nin YANLIŞ tarafında kapatır, sonraki mum
                              # EMA20'nin doğru tarafında kapatır, ondan sonraki mum o mumun tepesini (LONG) kapanışla geçer = onay
@@ -233,6 +237,24 @@ def touch_tail_ok(df, i, side, max_mult=None, ref=None):
     return tail <= max_mult * base
 
 
+def pivot_leg(df, i, side):
+    """Kural 11: son tepe (LONG) eski zirveyi kapanışla kırdıktan sonra kaç mumda yapıldı.
+    1 = tepe, eski zirveyi kıran mumun kendisi (tek mumluk fırlama); 0 = kırılım tepeden sonra geldi."""
+    long = side == "LONG"
+    H, L, C = df["High"].values, df["Low"].values, df["Close"].values
+    start = max(0, i - st.LOOKBACK)
+    p = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    past_end = p - st.PEAK_GAP
+    if past_end <= start:
+        return 0
+    old = H[start:past_end].max() if long else L[start:past_end].min()
+    seg = C[past_end:p + 1]
+    above = np.flatnonzero(seg > old) if long else np.flatnonzero(seg < old)
+    if len(above) == 0:
+        return 0
+    return p - (past_end + int(above[0])) + 1
+
+
 def touch_closes_right_side(df, i, side):
     c, e = df["Close"].values[i], df["EMA20"].values[i]
     return c > e if side == "LONG" else c < e
@@ -240,7 +262,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
-    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -296,6 +318,9 @@ def simulate(df, i, side, tick, mode=None):
         return res
     if SUPPORT_N > 0 and support_details(df, i, side)["support"]:
         res["status"] = "support"
+        return res
+    if PIVOT_LEG_MIN > 0 and pivot_leg(df, i, side) < PIVOT_LEG_MIN:
+        res["status"] = "pivot_leg"
         return res
 
     # --- Onay ---
@@ -410,7 +435,15 @@ def simulate(df, i, side, tick, mode=None):
     if reached_be(k_in):
         cur_stop, be_on = fill, True
 
+    time_moved = False
     for m in range(k_in + 1, n):
+        if TIME_STOP_BARS > 0 and not time_moved and m - k_in >= TIME_STOP_BARS:
+            # Zaman stopu: süre doldu, stop girişe; fiyat girişin gerisindeyse bu mumun açılışında çık
+            time_moved = True
+            if (O[m] < fill) if long else (O[m] > fill):
+                res["time_exit"] = True
+                return close_trade(m, O[m], "be")
+            cur_stop, be_on = fill, True
         hit_stop = (L[m] <= cur_stop) if long else (H[m] >= cur_stop)
         hit_tp = (H[m] >= tp) if long else (L[m] <= tp)
         if hit_stop:

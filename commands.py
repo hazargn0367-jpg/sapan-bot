@@ -14,6 +14,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 30 son2 önceki -> 6 kural + toplu sinyal filtresi
   /backtest 30 saat önceki -> 03-07 TR saat filtresinin etkisi
   /backtest 30 tp önceki -> canlı kurallarla 1:1.5 / 1:2 / 1:2.2 / 1:2.5
+  /backtest 90 dönüş kural -> dönüş varyasyonu + zaman stopu (8 saat) / kural 11 (temiz yükseliş) / kural 7, ay ay
   /backtest 14 dönüş -> dönüş varyasyonu: temas EMA20'nin öbür tarafında kapatır, sonraki mum geri alır, ondan sonraki onay
   /backtest 90 canlı -> canlı bildirimlerdeki ayarın aynısı, tüm işlemlerin grafikleri PDF
   /backtest 90 dip -> canlı ayar + önceki tepe/dibe mesafe (0.5/1/1.5/2.2R), ay ay
@@ -83,7 +84,10 @@ def start_backtest(text):
     elif re.search(r"\bdip\b", low):
         args += ["--compare", "dip"]
     elif any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon")):
-        args += ["--preset", "donus"]
+        if any(w in low for w in ("kural", "hepsi", "karşılaştır", "karsilastir")):
+            args += ["--compare", "donus"]
+        else:
+            args += ["--preset", "donus"]
     elif "canlı" in low or "canli" in low:
         args += ["--preset", "canli"]
     elif re.search(r"\btp\b", low):
