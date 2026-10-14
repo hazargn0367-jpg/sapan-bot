@@ -322,3 +322,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   ort -0.35R (toplam -86.5R), 43'ü çıkmasa 2.2R'ye gidecekti.
 - basabas seti güncellendi (yüklenmeden önce): 2.2 · 2.2+1R BE · 2.2+1.5R BE · TP 4 · TP 4+1R BE · TP 4+2R BE.
   `/backtest 180 başabaş` + `/backtest 180 başabaş önceki` hem başabaşı hem TP 4'ü önceki dönemde sınar.
+- Başabaş + TP 4 testi (500 coin, 15m, erken çıkış 2 mum), iki dönem (18.04-14.10 / 20.10.2025-17.04.2026):
+  şu anki TP 2.2 +12.8R / **+33.0R** (12 ayda +45.8R, 736 işlem, +0.062/iş; ikinci dönem ay ay +4.9/+3.4/+6.1/+6.2/
+  +3.2/+11.7/-2.4) · 2.2+1R BE -19.9 / +21.5 (eşleşik -31.5 / -11.4) · 2.2+1.5R BE +0.9 / +24.8 (-11.9 / -8.0) ·
+  TP 4 +36.5 / +13.6 (eşleşik +16.2 / -17.7; Kasım -22.4, Şubat -15.8) · TP 4+1R BE -12.7 / +16.0 · TP 4+2R BE
+  +23.7 / +23.3 (eşleşik +3.6 / -6.9). Başabaş iki dönemde de kötüleştirdi: 1R'de 31 stop kurtarıyor ama 29 TP'yi
+  girişten çıkarıyor (fiyat 1R'den girişe dönüp sonra TP'ye gidiyor). TP 4 tutarsız (bir dönem iyi, bir dönem kötü).
+  KARAR: erken çıkış 2 mum + TP 2.2 kalır, başabaş yok. En kötü ay -9.6R (Ağustos), 14 ay parçasının 10'u artı.
