@@ -236,3 +236,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   deseni zaman dilimleri arasında tutarsız (1h ilk50 %28) → muhtemelen şans. Zaman dilimi deseni tutarlı: 15m en kötü,
   büyüdükçe iyileşiyor (stop genişliyor, komisyon payı düşüyor: 15m brüt +0.04 net -0.09). Sıradaki: `/backtest 180
   tarama önceki` (Ekim 2025-Nisan 2026, bakılmamış dönem). 1h orada da tutarsa canlı 1h'e alınabilir.
+- TARAMA ÖNCEKİ (19.10.2025-17.04.2026, bakılmamış dönem): canlı 1h TUTMADI: 92 işlem %33.7 -0.04R/iş, 6 ayın 4'ü eksi
+  (ilk dönemdeki %42/+0.20 şanstı). Canlı 4h 21 işlem %43 +0.26 (iki dönem 41 işlem ~%44, örnek çok küçük).
+  Taban 4h 158 işlem %38.6 +0.13 (ilk dönem %39.5 +0.15): iki dönemde de tutan tek şey, ama ince (12 ayda ~310 işlem,
+  ayda ~+3.6R, en kötü ay -10.9R). Taban 30m %39 +0.08 (ilk +0.04), aylar çok dalgalı. 15m iki dönemde de eksi.
+  Sonuç: 12 ayda hiçbir ayar sürekli %40+ değil; 6 kural 30m/1h'de dönem dışı işe yaramıyor. Kullanıcıya dürüstçe
+  söylendi: kısa vadeli (scalp) ve ayda 10R hedefi bu sistemle verilerde yok.
