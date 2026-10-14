@@ -924,7 +924,28 @@ def build_fark(rows, p0, days, title):
 
 
 def send_samples(recs, name, n_each=15):
-    """3 aya yayılmış 15 TP ve 15 stop grafiği, 10'arlı albümler halinde (PDF yok: bellek)."""
+    """Dönem boyunca eşit aralıklı 15 TP ve 15 stop grafiği, 10'arlı albümler halinde.
+    Grafikler temiz bir süreçte çizilir: bu süreç sample_charts.py'ye dönüşür (os.execv), veri işlerken tutulan
+    bellek bırakılır. Bu yüzden en son adım olarak çağrılır; execv başarılı olursa geri dönmez."""
+    import pickle
+    import sys
+    path = f"/tmp/bt_samples_{os.getpid()}.pkl"
+    try:
+        with open(path, "wb") as f:
+            pickle.dump(recs, f, protocol=pickle.HIGHEST_PROTOCOL)
+        log.info("Grafikler ayrı süreçte çizilecek (%d işlem)", len(recs))
+        for h in logging.getLogger().handlers:
+            h.flush()
+        sys.stdout.flush()
+        sys.stderr.flush()
+        here = os.path.dirname(os.path.abspath(__file__))
+        os.execv(sys.executable, [sys.executable, "-u", os.path.join(here, "sample_charts.py"), path, name or ""])
+    except (OSError, pickle.PicklingError) as e:
+        log.warning("Grafik süreci başlatılamadı (%s), burada çiziliyor", e)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
     gc.collect()
     _trim_memory()  # matplotlib yüklenmeden önce boşalan belleği geri ver
     folder = "/tmp/bt_charts"

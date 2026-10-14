@@ -187,6 +187,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   EMİR HAZIR başlığında "(5m, klasik)" / "(5m, dönüş)", dönüşte "Temas, dönüş, onay" saatleri; günlükte "mode".
   Backtest raporunda Klasik / Dönüş satırları, CSV'de varyasyon sütunu, grafik başlığında [klasik]/[dönüş].
   Eski karşılaştırma setleri (_LIVE_NOW) klasikte sabitlendi. Komut: `/backtest 30 canlı 5m`.
+- Birleşik 5m 30 gün (14.09-14.10): 186 işlem %34, brüt +15.3R, net -11.2R (komisyon 26.5R = 0.14R/işlem, stop ort.
+  %0.68). Klasik 128 işlem %36 +1.2R (brüt +19.0) · dönüş 58 işlem %29 -12.3R (brüt -3.8). 208 işlem toplu sinyal
+  filtresine takıldı. Grafik aşamasında bellek 458/512MB → bekçi durdurdu, grafik gelmedi. Düzeltme: grafikler
+  sample_charts.py'de temiz süreçte (backtest sonunda os.execv, aynı PID; çizim süreci ~195MB).
 
 ## Çalışma kuralları
 - Her yeni kural **iki ayrı ayda** test edilir (`/backtest 30 <set>` ve `/backtest 30 <set> önceki`); sadece ikisinde de iyileştirenler tutulur.
