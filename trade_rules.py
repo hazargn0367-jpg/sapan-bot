@@ -78,6 +78,8 @@ FAILED_ENTRY_BARS = 0        # >0: giriş mumu dahil ilk bu kadar mumdan biri gi
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
 BTC_CORR_BARS = 96           # benzerlik penceresi (15dk'da 96 mum = 24 saat)
+SPIKE_TOP_ATR = 0.0          # >0: tepeyi (LONG) / dibi (SHORT) yapan son 2 mumun boyu, tepeden önceki ATR'nin bu
+                             # katı ya da fazlasıysa girme (sivri tepe: düz giderken 2 dev mumla yapılan tepe)
 ENTRY_MODE = "classic"       # "both": temas mumu EMA20'nin doğru tarafında kapatırsa klasik, öbür tarafında kapatırsa dönüş
                              # "classic": temas EMA20'nin doğru tarafında kapatır, 3 mumda onay
                              # "reclaim" (dönüş varyasyonu): temas EMA20'nin YANLIŞ tarafında kapatır, sonraki mum
@@ -363,6 +365,23 @@ def clean_trend_ok(f, limits=None):
     return True
 
 
+def spike_top(df, i, side):
+    """Sivri tepe ölçüsü: tepeyi (LONG) / dibi (SHORT) yapan mum ile ondan önceki mumun toplam boyu, tepeden 2 mum
+    önceki ATR cinsinden (ATR o iki mumdan etkilenmesin diye). Kullanıcı örneği: SQDUSDT 5m 05.10.2026 00:50."""
+    long = side == "LONG"
+    H, L, A = df["High"].values, df["Low"].values, df["ATR"].values
+    start = max(0, i - st.LOOKBACK)
+    if i - start < 1:
+        return 0.0
+    p = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    q = max(0, p - 1)
+    a = A[max(0, p - 2)]
+    if not a > 0:
+        return 0.0
+    move = (H[p] - min(L[q], L[p])) if long else (max(H[q], H[p]) - L[p])
+    return float(move / a)
+
+
 def btc_corr(df, i, bars=None):
     """Coinin son `bars` mumdaki getirilerinin BTC getirileriyle korelasyonu (1 = birebir aynı hareket, 0 = ilgisiz).
     Tabloda BTC_Close sütunu yoksa (BTC'nin kendisi ya da BTC verisi alınamadı) NaN."""
@@ -405,7 +424,7 @@ def touch_closes_right_side(df, i, side):
 
 def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
-    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | spike_top | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
             no_entry | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -481,6 +500,9 @@ def simulate(df, i, side, tick, mode=None):
         if k == k and k >= BTC_CORR_MAX:   # NaN (BTC'nin kendisi / veri yok) filtrelenmez
             res["status"] = "btc_corr"
             return res
+    if SPIKE_TOP_ATR > 0 and spike_top(df, i, side) >= SPIKE_TOP_ATR:
+        res["status"] = "spike_top"
+        return res
 
     # --- Onay ---
     conf = None

@@ -81,6 +81,7 @@ STATUS_TR = {
     "not_clean": "Trend temiz değil (bacak / EMA açılımı şartı tutmadı)",
     "btc_corr": "Coin BTC'ye çok benzer hareket ediyor (korelasyon)",
     "touch_prev": "Temas mumu önceki mumun dibini (SHORT) / tepesini (LONG) geçti",
+    "spike_top": "Sivri tepe: tepe / dip 2 dev mumla yapılmış",
     "skip_btc": "BTC ters yönde (portföy koruması)",
     "skip_cluster": "Aynı mumda çok sayıda sinyal (portföy koruması)",
     "skip_open": "Açık işlem sınırı dolu (portföy koruması)",
@@ -385,6 +386,7 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
                 k = tr.btc_corr(df, i)
                 row["btc_kor"] = round(k, 3) if k == k else None
             row["mfe_r"] = round(tr.mfe_r(df, r, side), 2)
+            row["sivri_atr"] = round(tr.spike_top(df, i, side), 2)
             f = tr.trend_features(df, i, side, entry=r["entry"], risk=r["risk"])
             row.update({k: (round(v, 3) if isinstance(v, float) else v) for k, v in f.items() if not k.startswith("_")})
             if r["status"] in ("win", "loss", "be"):
@@ -650,7 +652,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE", "PIVOT_LEG_MIN", "TIME_STOP_BARS",
               "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN",
               "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS", "LEG_ATR_MAX", "BTC_CORR_MAX", "BTC_CORR_BARS",
-              "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT"]
+              "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT", "CONFIRM_WINDOW", "SPIKE_TOP_ATR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -855,6 +857,16 @@ COMPARE_SETS["basabas"] = [
     C("TP 1:4 + 1R'de stop girişe", **dict(_EB0, RR=4.0, BE_TRIGGER=1.0)),
     C("TP 1:4 + 2R'de stop girişe", **dict(_EB0, RR=4.0, BE_TRIGGER=2.0)),
 ]
+# 5m PDF incelemesi (kullanıcı, 15.10 01:13-01:14): SQDUSDT 05.10 00:50 LONG (düz giderken 2 dev mumla yapılan
+# tepe, erken çıkış -0.13R) → sivri tepeye girme; SHORT 07.10 21:50 (onay temastan sonra 3. mumda, -0.24R) →
+# onay en geç 2. mumda gelmeli (CONFIRM_WINDOW 3 → 2; dönüşte onay zaten 2. mumda).
+COMPARE_SETS["sivri"] = [
+    C("Canlı ayar + erken çıkış (2 mum)", **_EB0),
+    C("+ onay en geç 2. mumda", **dict(_EB0, CONFIRM_WINDOW=2)),
+    C("+ sivri tepe yok (2 mum ≥ 3 ATR)", **dict(_EB0, SPIKE_TOP_ATR=3.0)),
+    C("+ sivri tepe yok (2 mum ≥ 4 ATR)", **dict(_EB0, SPIKE_TOP_ATR=4.0)),
+    C("+ onay ≤ 2. mum + sivri tepe yok (3 ATR)", **dict(_EB0, CONFIRM_WINDOW=2, SPIKE_TOP_ATR=3.0)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -884,7 +896,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -912,7 +924,7 @@ CHECK_TRADES = [
     ("ADAUSDT", "01.08.2026 13:30", "iyi işlem"),
 ]
 SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ/ERKEN", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
-                "touch_tail": "elendi(ters iğne)", "not_clean": "elendi(temiz değil)", "btc_corr": "elendi(BTC'ye benzer)",
+                "touch_tail": "elendi(ters iğne)", "not_clean": "elendi(temiz değil)", "btc_corr": "elendi(BTC'ye benzer)", "spike_top": "elendi(sivri tepe)",
                 "no_room": "elendi(yer)", "open": "açık"}
 
 

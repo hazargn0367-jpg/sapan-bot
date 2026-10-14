@@ -335,3 +335,16 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Klasik 123 işlem +0.3R · dönüş 59 işlem +1.5R. Ay içi en büyük düşüş -20.1R, en kötü hafta -17.0R.
   Aynı ay: 15m erken çıkışla -9.1R (66 işlem), 5m erken çıkışsız -12.2R (184 işlem) → erken çıkış 5m'de de ~+13R.
   MFE ortanca 1.0R (15m ile aynı). Doğrulama: `/backtest 30 canlı erken 5m önceki`.
+- 5m önceki ay (16.08-15.09, canlı + erken 2 mum): 211 işlem, TP 40 (%19), stop 42, erken 129, **-19.8R** (-494$), brüt
+  +13.5R, komisyon 33.3R (0.16R/iş). Klasik 148 -12.0R · dönüş 63 -7.8R. Max düşüş -21.2R. 5m iki ay toplam -18.0R:
+  brüt iki ayda da artı (+28.7 / +13.5) ama komisyon yiyor.
+- 15.10 01:13-01:14 kullanıcı 5m PDF'ten: SQDUSDT 05.10 00:50 LONG ("böyle 2 yüksek mumdaki tepelerdeki işlemlere
+  girmesin", erken çıkış -0.13R; bacak_mum 1, bacak 6.1 ATR) ve SHORT 07.10 21:50 ("max 2. mumda onay mumu vermezse
+  işleme girilmeyecek"; onay temastan sonra 3. mumda, -0.24R).
+  CSV'den onay mesafesi (onay - temas): onay 3. mumda gelen klasik işlemler 5m Eyl-Eki 18 işlem -7.1R (TP %6),
+  5m Ağu-Eyl 14 işlem -6.9R (hiç TP yok); 15m Nis-Eki 36 işlem +13.6R (TP %31), 15m Eki-Nis 24 işlem -4.1R.
+  → 5m'de iki ayda da işe yarıyor, 15m'de karışık. Dönüşte onay zaten 2. mumda.
+  Kod: CONFIRM_WINDOW PARAM_KEYS'te; trade_rules.spike_top (tepeyi yapan mum + önceki mumun boyu / tepeden 2 mum
+  önceki ATR), SPIKE_TOP_ATR (status spike_top), CSV'de sivri_atr (bütün işlemlerde, eşik sonradan ayarlanabilsin).
+  Rastgele veride ortalama ~2 ATR. COMPARE_SETS["sivri"] (5m için): canlı+erken · +onay ≤2. mum · +sivri ≥3 ATR ·
+  +sivri ≥4 ATR · ikisi (PDF). Komut `/backtest 30 sivri 5m` (+ önceki).
