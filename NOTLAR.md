@@ -229,3 +229,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   sınırı yok) 15m/30m/1h/4h x hacim sırası (ilk 50 / 51-150 / 151+), dönemin iki yarısı ayrı; ✅ = iki yarıda %40+
   (her yarıda ≥20 işlem). resample_tf (15m→30m/1h/4h), WARMUP_FACTOR (4s için 50 gün ısınma), dönem başından önceki
   temaslar sayılmaz, satırlarda hacim_sirasi. Taramada grafik/PDF yok.
+- TARAMA 180 gün (17.04-14.10, 500 coin, 1:2, portföy sınırı yok), "tümü" satırları (işlem, %TP 1./2. yarı, R/iş):
+  Taban: 15m 2455 %34.7 (34/35) -0.09 · 30m 1253 %37.8 (37/39) +0.04 · 1h 608 %37.3 (33/42) +0.05 · 4h 152 %39.5 (41/38) +0.15
+  Canlı(klasik): 15m 516 %33.3 -0.11 · 30m 238 %32.8 -0.09 · 1h 115 %41.7 (38/49) +0.20 · 4h 20 %45 +0.33
+  ✅ (iki yarıda %40+): taban 30m ilk50 (146, %44), taban 4h 151+ (116, %41), canlı 1h 151+ (76, %46). Coin grubu
+  deseni zaman dilimleri arasında tutarsız (1h ilk50 %28) → muhtemelen şans. Zaman dilimi deseni tutarlı: 15m en kötü,
+  büyüdükçe iyileşiyor (stop genişliyor, komisyon payı düşüyor: 15m brüt +0.04 net -0.09). Sıradaki: `/backtest 180
+  tarama önceki` (Ekim 2025-Nisan 2026, bakılmamış dönem). 1h orada da tutarsa canlı 1h'e alınabilir.
