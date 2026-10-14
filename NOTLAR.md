@@ -356,3 +356,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 5m stop mesafesi: <%0.5 olanlar komisyon 0.21-0.28R/iş; Eyl-Eki 62 işlem +1.5R, Ağu-Eyl 66 işlem -19.2R.
   COMPARE_SETS["komisyon"] (5m): onay ≤2 tabanı · +TP 2.5 · +stop ≥%0.5 (BASE_MIN_RISK_PCT, PARAM_KEYS'e eklendi) ·
   ikisi. `/backtest 30 komisyon 5m` (+ önceki). Sivri önceki testi bitmeden yüklenmedi.
+- Sivri testi 5m önceki (16.08-15.09): taban -19.8R · onay ≤2 -12.9R (+6.9) · sivri ≥3 -7.9R (+11.9) · sivri ≥4 -9.1R
+  (+10.7) · ikisi -5.2R (+14.6). İki ay toplam: taban -18.0 · **onay ≤2 -5.3 (iki ayda da iyi: +5.8 / +6.9)** · sivri ≥3
+  -7.6 (-1.5 / +11.9) · sivri ≥4 -13.5 · ikisi -2.5 (+0.9 / +14.6; onay ≤2'nin üstüne sivri: -4.9 / +7.7 → karışık).
+  Bu ay sivri ≥6 ATR 12 işlem hiç TP yok -6.7R; önceki ayda 14 işlem 4 TP +3.6R.
+- Kullanıcı: "2 ayda fark bu kadar olmamalı" (+1.8 / -19.8). İşlem başı R std 1.14 → 200 işlemlik ayda şans payı ±16R;
+  aynı sistemden rastgele aylar %5-%95: -35R … +18R; iki ay arası ≥21R fark %35 olasılıkla. İşlem başı fark 0.1R.
+  Ağu-Eyl: TP %19 (Eyl-Eki %23), erken çıkış %61 (%55, ort -0.42R), SHORT -13.1R.
+- komisyon setine 5. ayar: onay ≤2 + stop ≥%0.5 + sivri ≥3 ATR.

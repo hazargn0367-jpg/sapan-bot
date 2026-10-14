@@ -877,6 +877,7 @@ COMPARE_SETS["komisyon"] = [
     C("+ TP 1:2.5", **dict(_EB2, RR=2.5)),
     C("+ stop en az %0.5", **dict(_EB2, BASE_MIN_RISK_PCT=0.5)),
     C("+ stop en az %0.5 + TP 1:2.5", **dict(_EB2, BASE_MIN_RISK_PCT=0.5, RR=2.5)),
+    C("+ stop en az %0.5 + sivri tepe yok (3 ATR)", **dict(_EB2, BASE_MIN_RISK_PCT=0.5, SPIKE_TOP_ATR=3.0)),
 ]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
