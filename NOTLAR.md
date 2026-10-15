@@ -572,3 +572,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   kötü ay -7.4) · 0.5 ATR +32.9 / +38.8 / +15.7 · 1 ATR +35.5 / +40.7 / +20.3 · **1.5 ATR +45.1 / +41.0 / +17.2 (18 ay
   +103.4, 298 iş ~17/ay, ay ort 6.3, eksi ay 3/17, en kötü ay -3.2, düşüş 11.7)**. 2. dönemde eşik büyüdükçe iyileşiyor.
   LIVE_RULES PRIOR_TOUCH_SEP_ATR=1.5 → 15.10 19:01 kullanıcı "kuralı yükleyelim" → canlıda.
+- 15.10 akşam: tüm coinler (525) testi +43.2 vs 500 coin +45.1 → 500'de kalındı. Aynı anda en fazla 2 işlem sınırı 18 ayda
+  hiç işlem engellemedi (skip_open 0/0/0). Toplu sinyal (≥5) filtresi 87 / 183 / 122 kurulum eledi; tahmini değeri
+  -16.5 / +9.9 / -7.8 (toplam -14.4R; erken -0.3, mfe≥2.2 → +2.1, değilse -1.1) → filtre kalıyor. Daha çok coin = filtre
+  daha sık devreye giriyor, 525'in fayda etmemesinin sebebi bu.
