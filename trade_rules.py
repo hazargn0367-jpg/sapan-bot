@@ -100,6 +100,9 @@ RECLAIM_BODY_MAX_ATR = 0.0   # >0: dönüş varyasyonunda temas mumunun gövdesi
 # Kullanıcı 15.10 13:41-13:43 (ETHFI 19.04 04:00 SHORT erken -0.53R sonra TP; BLUR 19.04 19:00 LONG stop %4.4 uzakta):
 # "erken çıkışı esnetmek lazım" + "stop çok aşağıda, biraz yükseltsek TP mesafesi kısalır"
 # Gemini kodundan (kullanıcı 15.10 17:07 "kodla"): EMA100 > EMA200 sıralaması ve "son N mumda son ~24 saatin zirvesi"
+ZIGZAG_MAX = 0.0             # >0: tepeden (LONG) / dipten (SHORT) temasa kadarki düzeltmede trend yönlü mumların (LONG'da
+ZIGZAG_MIN_BARS = 3          # yeşil) oranı bundan büyükse girme: zigzag yaparak inen düzeltme (kullanıcı 15.10 17:22, AXLUSDT
+                             # 04.10 01:15). Düzeltme en az ZIGZAG_MIN_BARS mumsa uygulanır
 EMA200_ORDER = False         # True: temasta EMA100 > EMA200 × 1.001 (LONG) / EMA100 < EMA200 × 0.999 (SHORT)
 NEW_HIGH_BARS = 0            # >0: temastan önceki bu kadar mumun tepesi (LONG) / dibi (SHORT), ondan önceki NEW_HIGH_LOOKBACK
 NEW_HIGH_LOOKBACK = 92       # mumun en yükseğini (en düşüğünü) geçmiş olmalı (yeni zirve yakın zamanda yapılmış)
@@ -328,6 +331,25 @@ def wickiness(df, a, b):
     return 1.0 - float(np.abs(C - O).sum()) / rng if rng > 0 else float("nan")
 
 
+def zigzag(df, i, side):
+    """Tepe/dipten temasa kadarki düzeltme mumları (temas hariç): (trend yönlü mum oranı, renk değişimi sayısı, mum sayısı)."""
+    long = side == "LONG"
+    H, L = df["High"].values, df["Low"].values
+    start = max(0, i - st.LOOKBACK)
+    if i <= start:
+        return float("nan"), 0, 0
+    p = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    O, C = df["Open"].values[p + 1:i], df["Close"].values[p + 1:i]
+    n = len(C)
+    if n == 0:
+        return float("nan"), 0, 0
+    up = C > O if long else C < O          # trend yönlü (düzeltmeye ters) mumlar
+    color = np.sign(C - O)
+    color = color[color != 0]
+    flips = int((color[1:] != color[:-1]).sum()) if len(color) > 1 else 0
+    return float(up.mean()), flips, n
+
+
 def trend_features(df, i, side, entry=None, risk=None):
     """Temiz trend ölçüleri (i: temas mumu). TP ile stop olan işlemleri karşılaştırmak ve filtre için.
     Bacak: son tepeden (LONG) / dipten (SHORT) önceki son EMA20 temasından sonraki mumlar, tepe mumu dahil."""
@@ -358,6 +380,7 @@ def trend_features(df, i, side, entry=None, risk=None):
     while m >= 0 and age < TREND_AGE_MAX and ((E20[m] > E50[m] > E100[m]) if long else (E20[m] < E50[m] < E100[m])):
         age += 1
         m -= 1
+    zz = zigzag(df, i, side)
     f = {
         "bacak_mum": int(p - s),
         "bacak_atr": leg / a,
@@ -374,6 +397,8 @@ def trend_features(df, i, side, entry=None, risk=None):
         "temas_govde_atr": abs(C[i] - O[i]) / a,
         "pivot_bant_05": pivot_touches(df, i, side, atr_mult=0.5),
         "pivot_bant_1": pivot_touches(df, i, side, atr_mult=1.0),
+        "duz_zigzag": zz[0],                                       # düzeltmede trend yönlü mum oranı
+        "duz_donus": zz[1],                                        # düzeltmede renk değişimi sayısı
         "_p": int(p), "_s": int(s),
     }
     if entry is not None and risk:
@@ -479,7 +504,7 @@ def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
     status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | spike_top | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
-            no_entry | chase | no_ema200 | no_new_high | wicky | big_touch | wide_pivot | win | loss | be | open | pending"""
+            no_entry | chase | zigzag | no_ema200 | no_new_high | wicky | big_touch | wide_pivot | win | loss | be | open | pending"""
     O = df["Open"].values
     H = df["High"].values
     L = df["Low"].values
@@ -559,6 +584,11 @@ def simulate(df, i, side, tick, mode=None):
     if SPIKE_TOP_ATR > 0 and spike_top(df, i, side) >= SPIKE_TOP_ATR:
         res["status"] = "spike_top"
         return res
+    if ZIGZAG_MAX > 0:
+        zz, _, zn = zigzag(df, i, side)
+        if zn >= ZIGZAG_MIN_BARS and zz > ZIGZAG_MAX:
+            res["status"] = "zigzag"
+            return res
     if EMA200_ORDER and "EMA200" in df.columns:
         e100, e200 = df["EMA100"].values[i], df["EMA200"].values[i]
         if not ((e100 > e200 * 1.001) if long else (e100 < e200 * 0.999)):

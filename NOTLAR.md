@@ -556,3 +556,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   iğneli, 14 saat yatay sonra stop): sivri ≥5/6/8 ATR ve genç trend kombinasyonları 18 ayda başa baş (TP %22 ama toplam
   -2..+5R), iğneli bacak (gövde <0.3) +9.5 / +20.0 / +2.5 → kural yok. "Tamam": COMPARE_SETS["yatay2"] = şimdiki canlı +
   4 / 8 / 12 saatte stop girişe; `/backtest 180 yatay` artık bu sete gidiyor.
+- 17:22-17:24 kullanıcı AXLUSDT 04.10 01:15 LONG stop ("tepeden sonra zigzag yaparak inmiş, temiz düzeltme değil"; düz_iğne
+  0.31 → iğne kuralı yakalamıyor), "kodla, yatayın içinde olsun": zigzag(df,i,side) = düzeltme mumlarında (tepe+1..temas-1)
+  trend yönlü mum oranı + renk değişimi sayısı; ZIGZAG_MAX / ZIGZAG_MIN_BARS=3. yatay2 setine 2 ayar eklendi (> %50, > %34).
+  CSV'de duz_zigzag, duz_donus; /incele de gösteriyor.

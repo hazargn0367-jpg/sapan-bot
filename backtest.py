@@ -95,6 +95,7 @@ STATUS_TR = {
     "big_touch": "Dönüşte temas mumunun gövdesi çok büyük",
     "wide_pivot": "Dip/tepenin 1 ATR yakınında çok mum (taban)",
     "no_ema200": "EMA100 ile EMA200 sıralı değil",
+    "zigzag": "Düzeltme zigzag yaparak gelmiş (temiz değil)",
     "no_new_high": "Yakın zamanda yeni zirve/dip yok",
     "win": "TP",
     "loss": "Stop",
@@ -667,7 +668,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "EARLY_STOP_R", "EARLY_STOP_BARS", "CLOSE_ENTRY", "CLOSE_ENTRY_MAX_R", "CLOSE_ENTRY_KEEP_TP",
               "WICKY_MAX", "WICKY_BARS", "RECLAIM_BODY_MAX_ATR", "PIVOT_BAND2_ATR", "PIVOT_BAND2_MAX",
               "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR", "ENTRY_BUFFER_ATR",
-              "EMA200_ORDER", "NEW_HIGH_BARS", "NEW_HIGH_LOOKBACK"]
+              "EMA200_ORDER", "NEW_HIGH_BARS", "NEW_HIGH_LOOKBACK",
+              "ZIGZAG_MAX", "ZIGZAG_MIN_BARS"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1024,6 +1026,10 @@ COMPARE_SETS["yatay2"] = [
     C("+ 4 saatte sonuç yoksa stop girişe", **dict(_CANLI_SON, TIME_STOP_BARS=16)),
     C("+ 8 saatte sonuç yoksa stop girişe", **dict(_CANLI_SON, TIME_STOP_BARS=32)),
     C("+ 12 saatte sonuç yoksa stop girişe", **dict(_CANLI_SON, TIME_STOP_BARS=48)),
+    # Zigzag düzeltme (kullanıcı 15.10 17:22-17:24, AXLUSDT 04.10 01:15: "tepeden sonra zigzag yaparak inmiş", "yatayın
+    # içinde olsun"). Düzeltmede (≥3 mum) trend yönlü mum oranı > eşik ise girme. CSV'de duz_zigzag, duz_donus.
+    C("+ zigzag düzeltme yok (ters mum > %50)", **dict(_CANLI_SON, ZIGZAG_MAX=0.5)),
+    C("+ zigzag düzeltme yok (ters mum > %34)", **dict(_CANLI_SON, ZIGZAG_MAX=0.34)),
 ]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
