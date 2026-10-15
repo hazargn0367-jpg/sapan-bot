@@ -624,3 +624,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +7.2 / -1.2 / -5.2 / -0.6 (toplam ~0, işlem +3/ay). Esnet A+B önceki3 +5.7 ama önceki4 -5.6 → RED (veri madenciliği
   ezberi). Canlı sistem dönem dışında başa baş: önceki3 -0.5 (49 iş), önceki4 +0.6 (44 iş). İşlem sayısını kârlı artıran
   yol bulunamadı; canlı değişmedi.
+- 15.10 22:19 "bak": 2024 neden çalışmadı (5 dönem, canlı ayar işlemleri; scratchpad/an/regime_load.py, eqfilter.py,
+  mktcorr.py). 2024: TP oranı ~%20 (2026 ~%37), coinlerin BTC korelasyonu ort. 0.5-0.6 (2026 ~0.3), 155-220 coin.
+  Hacim sırasına göre (bugünkü sıra) R, P5/P4/P3/P2/P1: 1-100 -2.6/-1.6/+2.1/+12.5/+2.5 · 401-500 +8.2/+4.2/+2.4/+10.0/
+  +18.1 (5 dönemde artı tek grup). Aylık R ile korelasyon: btc_kor -0.39, ema_acilim -0.40, bacak_atr -0.36, sıra +0.35.
+  Önceden bilinebilir rejim filtresi aranıp BULUNAMADI (hepsi 5 dönemde tutarsız): son 5/10/20 işlem toplamı, aynı yönde
+  son 5/10, son 7/14/30 gün, coinin BTC korelasyonu < 0.5/0.6/0.7, piyasa ort. korelasyonu (3/7/14 gün) < 0.4/0.45/0.5,
+  EMA açılımı, bacak ATR. Sonuç: sistem altcoinlerin kendi trendleriyle gittiği dönemde kazanıyor (Eyl 2025'ten beri
+  neredeyse her ay artı), BTC ile birlikte hareket edilen dönemde başa baş; bunu önceden ayıran işaret verimizde yok.
