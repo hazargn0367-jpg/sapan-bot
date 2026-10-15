@@ -680,3 +680,5 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   STO 币安人生 gibi o anki popüler coinler, QNT yok): ana +1.7R (314 iş, düşüş 7.3) · sadece LONG +4.7 · N=20 +8.1 (düşüş
   14.2) · ilk 60 -6.4 · 4 saatlik +10.3 (düşüş 47.6) · en fazla 5R +3.7. SHORT -3.0. Önceki +31.1R'nin neredeyse tamamı
   seçim yanlılığıydı. Diğer 4 dönem bekleniyor.
+- 16.10 01:28 kullanıcı: trend takibini bırak, kendi sistemle (EMA20 geri çekilme) devam. Diğer trend dönemleri
+  çalıştırılmadı; trend_bt.py repoda duruyor (canlıyı etkilemiyor, /backtest 180 trend ile çalışır).
