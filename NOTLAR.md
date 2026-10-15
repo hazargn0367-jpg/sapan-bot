@@ -499,3 +499,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 11:46 "kodla": PIVOT_BAND2_ATR / PIVOT_BAND2_MAX (kural 4'ün 0.3 ATR bandı kalır, ek olarak dip/tepenin 1 ATR yakınında
   ≥5 mum varsa "wide_pivot") + WICKY_MAX=0.58. COMPARE_SETS["grafik2"]: canlı · iğne ≤%58 · 1 ATR bant ≤4 · ikisi · ikisi
   gevşek (≤%60, ≤5). `/backtest 180 eleme` + önceki + önceki2 (anahtar kelimede rakam olmasın: "grafik2" → --rr 2 oluyordu).
+- Eleme testi (gerçek ayar, 3 dönem: Nis-Eki 26 / Eki 25-Nis 26 / Nis-Eki 25):
+  canlı +22.5 / +27.5 / -19.0 (18 ay +31.0, 599 iş) · iğne ≤%58 +26.3 / +34.0 / -16.3 (+44.0) · 1 ATR bant ≤4 +25.0 /
+  +31.1 / -5.4 (+50.7) · **ikisi birden +27.1 / +32.3 / -1.5 (+57.9, 415 iş, R/iş 0.052 → 0.14)** · gevşek (≤%60, ≤5)
+  +16.5 / +33.4 / -10.0 (+39.9). İkisi birden ve ikisi ayrı ayrı 3 dönemde de canlıdan iyi; eşikler 1.-2. dönemden seçilip
+  3. dönemde sınandı. Gevşek eşik 1. dönemde kötü → eşik hassas, %58 / ≤4 mum korunmalı. 2025 ortası hâlâ zayıf (ikisiyle
+  Haz -6.8, Tem -6.0, Ağu -4.8). LIVE_RULES'a WICKY_MAX=0.58 + PIVOT_BAND2 1 ATR/5 sonraki dalında hazır, "yükle" bekliyor.

@@ -68,6 +68,10 @@ LIVE_RULES = dict(
     # EMA_FAN_MIN=2.0 denendi (15.10): 5m Tem-Eki +20.3R ama Nis-Tem -23.3R → tutmadı; 15m'de de karışık. Kullanılmıyor.
     QUIET_UTC=(0, 0),           # 03-07 TR saat filtresi kaldırıldı (kullanıcı 15.10 04:14 "yarın kaldırırsın"): kaldırınca
                                 # eklenen işlemler Nis-Eki +7.2R (38 işlem, TP %32), Eki-Nis -1.2R (38 işlem) → 12 ayda +6R
+    # Grafik örneklerinden (RESOLV, NIL; kullanıcı 15.10). 3 dönem (Nis-Eki 26 / Eki-Nis / Nis-Eki 25), canlı +22.5 / +27.5 /
+    # -19.0 → ikisi birden +27.1 / +32.3 / -1.5 (18 ay +31.0 → +57.9R, işlem ~%30 az). Ayrı ayrı da 3 dönemde iyi.
+    WICKY_MAX=0.58,             # temastan önceki 12 mumda iğne oranı > %58 ise girme (git-gel yapan piyasa)
+    PIVOT_BAND2_ATR=1.0, PIVOT_BAND2_MAX=5,   # dip/tepenin 1 ATR yakınında ≥5 mum varsa girme (dipte/tepede taban)
 )
 MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
 # Bildirimlerde 1R kaç dolar (kullanıcı 15.10: "1R'ım 1 dolar olacak"). Backtest raporları 25$ ile kalır.
@@ -114,6 +118,9 @@ def rules_summary():
         f"stop ≥ %{tr.BASE_MIN_RISK_PCT:g}" if not tr.FILTERS and tr.BASE_MIN_RISK_PCT > 0.3 else None,
         f"önünde ≥ {tr.ROOM_MIN_R:g}R yer" if tr.ROOM_MIN_R > 0 else None,
         f"EMA20-EMA100 ≥ {tr.EMA_FAN_MIN:g} ATR" if tr.EMA_FAN_MIN > 0 else None,
+        f"iğneli git-gel yok (iğne ≤ %{100 * tr.WICKY_MAX:.0f})" if tr.WICKY_MAX > 0 else None,
+        (f"dip/tepe tabanı yok ({tr.PIVOT_BAND2_ATR:g} ATR bantta ≤ {tr.PIVOT_BAND2_MAX - 1} mum)"
+         if tr.PIVOT_BAND2_ATR > 0 else None),
         (f"erken çıkış uyarısı (giriş mumu / sonraki mum girişin gerisinde kapatırsa)"
          if tr.FAILED_ENTRY_BARS == 2 else (f"erken çıkış uyarısı ({tr.FAILED_ENTRY_BARS} mum)" if tr.FAILED_ENTRY_BARS else None)),
         "⚠️ ESKİ FİLTRELER AÇIK" if tr.FILTERS else None,
