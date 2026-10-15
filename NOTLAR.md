@@ -571,4 +571,4 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - Teyit testi 3 dönem (Nis-Eki 26 / Eki-Nis / Nis-Eki 25): canlı +36.5 / +37.0 / +13.0 (18 ay +86.4, 412 iş, düşüş 17.7, en
   kötü ay -7.4) · 0.5 ATR +32.9 / +38.8 / +15.7 · 1 ATR +35.5 / +40.7 / +20.3 · **1.5 ATR +45.1 / +41.0 / +17.2 (18 ay
   +103.4, 298 iş ~17/ay, ay ort 6.3, eksi ay 3/17, en kötü ay -3.2, düşüş 11.7)**. 2. dönemde eşik büyüdükçe iyileşiyor.
-  LIVE_RULES PRIOR_TOUCH_SEP_ATR=1.5 sonraki dalında hazır, "yükle" bekliyor.
+  LIVE_RULES PRIOR_TOUCH_SEP_ATR=1.5 → 15.10 19:01 kullanıcı "kuralı yükleyelim" → canlıda.
