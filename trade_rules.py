@@ -117,7 +117,7 @@ ENTRY_MODE = "classic"       # "both": temas mumu EMA20'nin doğru tarafında ka
                              # EMA20'nin doğru tarafında kapatır, ondan sonraki mum o mumun tepesini (LONG) kapanışla geçer = onay
 RR = 2.0               # hedef: riskin kaç katı
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
-RISK_USD = 25.0        # 1R = kaç dolar (işlem başı risk)
+RISK_USD = 15.0        # 1R = kaç dolar (backtest raporlarında; 15.10 14:24 canlı/oto 1R = 15$ ile aynı)
 FEE_TAKER = 0.0005     # Binance vadeli piyasa emri komisyonu (%0.05)
 FEE_MAKER = 0.0002     # Binance vadeli limit emri komisyonu (%0.02)
 

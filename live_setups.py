@@ -78,7 +78,7 @@ LIVE_RULES = dict(
 )
 MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
 # Bildirimlerde 1R kaç dolar (kullanıcı 15.10: "1R'ım 1 dolar olacak"). Backtest raporları 25$ ile kalır.
-ALERT_RISK_USD = float(os.environ.get("ALERT_RISK_USD", os.environ.get("AUTO_RISK_USD", "1")))
+ALERT_RISK_USD = float(os.environ.get("ALERT_RISK_USD", os.environ.get("AUTO_RISK_USD", "15")))  # 15.10 14:24: 15$
 
 FINAL = ("win", "loss", "be", "cancel_confirm", "no_entry")
 STATUS_MSG = {

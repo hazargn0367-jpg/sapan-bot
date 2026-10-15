@@ -524,3 +524,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +4.8 → stop yeri değişiklikleri tutarsız, RED. **Derin kapanışta erken çıkma 0.35 ATR +36.2 / +39.1 / +12.0 (18 ay +87.3,
   ay ort 5.4, son 12 ay 6.8, düşüş 17.7)** · 0.5 ATR +35.9 / +39.2 / +6.1 (+81.2) → 3 dönemde iyi, eşiğe hassas değil.
   LIVE_RULES EARLY_EXIT_MAX_ATR=0.35 sonraki dalında hazır (bildirimde çıkılmayacak kapanış seviyesi yazılıyor), "yükle" bekliyor.
+- 14:24 "yükle, 1R 15$ yap" → AskUserQuestion: bakiye ~225 USDT, 15$ = %6.7/işlem, test düşüşü 17.7R ≈ 265$ (bakiyeden
+  fazla), en kötü ay -7.4R ≈ -111$ söylendi; kullanıcı: "kaldıracı arttır, önemli olan 1R'ın 15 olması". CANLI:
+  EARLY_EXIT_MAX_ATR=0.35 + AUTO_RISK_USD varsayılanı 15 (ALERT_RISK_USD de 15) + işlem başı kaldıraç: likidasyon stopun
+  1.5 katından uzak kalacak en yüksek kaldıraç (leverageBracket'tan coin sınırı ve bakım marjini; alınamazsa en fazla 20x;
+  geçersizse 25/20/10/5 denenir), AUTO_LEVERAGE en fazla 50, AUTO_MAX_NOTIONAL 4000. Kayıtta risk_usd (eski kayıtlar 1$).
+  Stop %1 → 40x marjin ~38$, %4.4 → 13x ~26$, %0.5 → 50x ~60$. Backtest raporları da 1R = 15$.

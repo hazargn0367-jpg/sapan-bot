@@ -3,6 +3,9 @@ OTOMATİK İŞLEM (Binance USDⓈ-M vadeli)
 
 Canlı taramanın EMİR HAZIR verdiği setup'ları kullanıcının Binance hesabında açar ve yönetir.
 Kullanıcı isteği (15.10 02:52): "en iyi sistemle Binance otomatik işlem, 1R = 1 dolar".
+15.10 14:24: "1R 15 dolar olsun; kaldıracı arttır, önemli olan 1R'ın 15 olması". Kaldıraç işlem başına seçilir:
+likidasyon fiyatı stopun en az 1.5 katı uzakta kalacak en yüksek kaldıraç (coinin sınırı ve AUTO_LEVERAGE ile sınırlı),
+böylece marjin küçük kalır ama pozisyon stoptan önce likide olmaz.
 
 Akış (her setup için):
   1. EMİR HAZIR → girişe borsada STOP_MARKET (algo emri) konur. Miktar = AUTO_RISK_USD / |giriş - stop|.
@@ -17,7 +20,8 @@ Akış (her setup için):
 Güvenlik:
   - API anahtarı sadece Render Environment'ta (BINANCE_API_KEY / BINANCE_API_SECRET). Para çekme yetkisi KAPALI olmalı.
   - Otomatik işlem kapalı başlar; /oto aç ile açılır (durum kalıcı diskte).
-  - İzole marjin, AUTO_LEVERAGE kaldıraç; tek işlemde en fazla AUTO_MAX_NOTIONAL USDT pozisyon.
+  - İzole marjin, işlem başı otomatik kaldıraç (en fazla AUTO_LEVERAGE); tek işlemde en fazla AUTO_MAX_NOTIONAL USDT
+    pozisyon.
   - Aynı anda en fazla AUTO_MAX_OPEN işlem; gün içinde -AUTO_DAILY_LOSS_R R olursa o gün yeni işlem açılmaz.
   - Coinde bizim olmayan bir pozisyon varsa o coine girilmez; bilinmeyen pozisyonlara dokunulmaz.
 """
@@ -43,9 +47,11 @@ log = logging.getLogger("bot")
 
 API_KEY = os.environ.get("BINANCE_API_KEY", "").strip()
 API_SECRET = os.environ.get("BINANCE_API_SECRET", "").strip()
-RISK_USD = float(os.environ.get("AUTO_RISK_USD", "1"))          # 1R = kaç dolar (otomatik işlemde)
-LEVERAGE = int(os.environ.get("AUTO_LEVERAGE", "10"))
-MAX_NOTIONAL = float(os.environ.get("AUTO_MAX_NOTIONAL", "300"))  # tek işlemde en büyük pozisyon (USDT)
+RISK_USD = float(os.environ.get("AUTO_RISK_USD", "15"))         # 1R = kaç dolar (otomatik işlemde)
+LEVERAGE = int(os.environ.get("AUTO_LEVERAGE", "50"))             # en yüksek kaldıraç (işlem başı otomatik seçilir)
+MAX_NOTIONAL = float(os.environ.get("AUTO_MAX_NOTIONAL", "4000"))  # tek işlemde en büyük pozisyon (USDT); stop ≥ %0.5
+                                                                    # olduğu için 15$ riskte en fazla ~3000
+LIQ_BUFFER = 1.5          # likidasyon mesafesi en az stop mesafesinin bu katı (kaldıraç seçiminde)
 MAX_OPEN = int(os.environ.get("AUTO_MAX_OPEN", "2"))
 DAILY_LOSS_R = float(os.environ.get("AUTO_DAILY_LOSS_R", "5"))
 LATE_MAX_R = 0.3          # fiyat girişi en fazla bu kadar R geçmişse piyasa emriyle girilir, fazlasıysa girilmez
@@ -151,6 +157,9 @@ class BinanceAPI:
     # --- ayar
     def set_leverage(self, symbol, lev):
         return self.request("POST", "/fapi/v1/leverage", {"symbol": symbol, "leverage": lev})
+
+    def leverage_bracket(self, symbol):
+        return self.request("GET", "/fapi/v1/leverageBracket", {"symbol": symbol})
 
     def set_isolated(self, symbol):
         try:
@@ -331,6 +340,26 @@ def on_setup(symbol, side, entry, stop, tp, touch_ts, tf):  # noqa: C901
                  f"ulaşmış olabilir; bot takip ediyor, giriş olursa stop/TP konacak, olmazsa süre dolunca silinecek.")
 
 
+def _pick_leverage(symbol, notional, stop_frac):
+    """Likidasyon stopun LIQ_BUFFER katından daha uzakta kalacak en yüksek kaldıraç (coinin o pozisyon büyüklüğündeki
+    sınırı ve LEVERAGE ile sınırlı). İzole marjinde likidasyon mesafesi ≈ 1/kaldıraç - bakım marjini oranı."""
+    max_lev, mmr = LEVERAGE, 0.01
+    try:
+        b = api.leverage_bracket(symbol)
+        if isinstance(b, list):
+            b = next((x for x in b if x.get("symbol") == symbol), b[0] if b else {})
+        for x in b.get("brackets", []):
+            if float(x.get("notionalFloor", 0)) <= notional < float(x.get("notionalCap", float("inf"))):
+                max_lev = min(max_lev, int(x["initialLeverage"]))
+                mmr = float(x.get("maintMarginRatio", mmr))
+                break
+    except Exception as e:
+        log.warning("OTO %s kaldıraç sınırı alınamadı (%s), en fazla 20x varsayılıyor", symbol, e)
+        max_lev = min(max_lev, 20)
+    safe = int(1.0 / (LIQ_BUFFER * stop_frac + mmr))
+    return max(1, min(max_lev, safe))
+
+
 def _open_setup(key, symbol, side, entry, stop, tp, tf, touch_ts):
     t = trades()
     if key in t:
@@ -362,21 +391,36 @@ def _open_setup(key, symbol, side, entry, stop, tp, tf, touch_ts):
     if notional > MAX_NOTIONAL:
         _say(f"{html.escape(symbol)}: pozisyon {notional:.0f} USDT, sınır {MAX_NOTIONAL:g}; girilmedi")
         return
+    lev = _pick_leverage(symbol, notional, risk / entry)
     avail, _ = api.usdt_balance()
-    if avail < notional / LEVERAGE * 1.2:
-        _say(f"{html.escape(symbol)}: bakiye yetersiz (kullanılabilir {avail:.2f} USDT, gereken ~{notional / LEVERAGE * 1.2:.2f})")
+    if avail < notional / lev * 1.2:
+        _say(f"{html.escape(symbol)}: bakiye yetersiz (kullanılabilir {avail:.2f} USDT, gereken ~{notional / lev * 1.2:.2f}"
+             f" {lev}x ile), girilmedi")
         return
     try:
         api.set_isolated(symbol)
     except BinanceError as e:
         log.warning("OTO %s izole marjin ayarlanamadı: %s", symbol, e)
-    api.set_leverage(symbol, LEVERAGE)
+    for cand in [lev] + [x for x in (25, 20, 10, 5) if x < lev]:
+        try:
+            api.set_leverage(symbol, cand)
+            lev = cand
+            break
+        except BinanceError as e:
+            log.warning("OTO %s %dx kaldıraç ayarlanamadı: %s", symbol, cand, e)
+    else:
+        _say(f"⚠️ {html.escape(symbol)}: kaldıraç ayarlanamadı, girilmedi")
+        return
+    if avail < notional / lev * 1.2:
+        _say(f"{html.escape(symbol)}: bakiye yetersiz ({lev}x ile gereken ~{notional / lev * 1.2:.2f}), girilmedi")
+        return
 
     base = f"{symbol[:18]}{int(touch_ts) // 1000 % 10**9}"
     rec = {"key": key, "symbol": symbol, "side": side, "entry": entry, "stop": stop, "tp": tp, "tf": tf,
            "qty": format(qty.normalize(), "f"), "status": "pending", "created": time.time(),
            "entry_cid": f"se{base}", "sl_cid": f"ss{base}", "tp_cid": f"st{base}",
-           "entry_algo": None, "sl_algo": None, "tp_order": None, "fill": None, "opened": None}
+           "entry_algo": None, "sl_algo": None, "tp_order": None, "fill": None, "opened": None, "lev": lev,
+           "risk_usd": RISK_USD}
     # Emir gönderilmeden ÖNCE kaydedilir: cevap gelmeden bağlantı koparsa bile izleme döngüsü pozisyonu bulup korur
     t[key] = rec
     _save_trades(t)
@@ -402,7 +446,7 @@ def _open_setup(key, symbol, side, entry, stop, tp, tf, touch_ts):
         how = f"fiyat girişi geçmişti, piyasa emriyle ({_fmt(px)})"
     _save_trades(t)
     _say(f"{'🟢' if side == 'LONG' else '🔴'} <b>{side} {html.escape(symbol)}</b> ({tf}): giriş emri kondu: {how}, "
-         f"{rec['qty']} adet (~{notional:,.0f} USDT, {LEVERAGE}x izole), risk {RISK_USD:g}$.\n"
+         f"{rec['qty']} adet (~{notional:,.0f} USDT, {lev}x izole, marjin ~{notional / lev:,.0f} USDT), risk {RISK_USD:g}$.\n"
          f"Stop {_fmt(stop)} / TP {_fmt(tp)} giriş dolunca borsaya konacak.")
 
 
@@ -541,7 +585,8 @@ def _finish(rec):
     except Exception as e:
         log.warning("OTO %s kâr-zarar okunamadı: %s", sym, e)
     net = pnl - fee
-    r = net / RISK_USD if RISK_USD else 0.0
+    risk_usd = float(rec.get("risk_usd", 1.0))   # 15.10 14:24'ten önceki kayıtlar 1$ riskle açıldı
+    r = net / risk_usd if risk_usd else 0.0
     rec.update(status="closed", closed=time.time(), pnl=round(net, 4), r=round(r, 3))
     day = _add_day_r(r)
     kind = rec.get("exit_kind", "kapandı")
@@ -707,7 +752,8 @@ def status_text():
                 "BINANCE_API_SECRET eklenmeli (para çekme yetkisi KAPALI, sadece Reading + Futures).")
     s = state()
     lines = [f"🤖 Otomatik işlem: <b>{'AÇIK' if s.get('enabled') else 'KAPALI'}</b> "
-             f"(1R = {RISK_USD:g}$, {LEVERAGE}x izole, en fazla {MAX_OPEN} işlem, günlük sınır -{DAILY_LOSS_R:g}R)"]
+             f"(1R = {RISK_USD:g}$, izole, kaldıraç işlem başı otomatik en fazla {LEVERAGE}x, en fazla {MAX_OPEN} işlem, "
+             f"günlük sınır -{DAILY_LOSS_R:g}R = -{DAILY_LOSS_R * RISK_USD:g}$)"]
     try:
         with _lock:
             avail, total = api.usdt_balance()
