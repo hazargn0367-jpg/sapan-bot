@@ -435,3 +435,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 15.10 03:37 kullanıcı IP'yi (74.220.51.142) ekledi; /oto bakiye okuyor (225 USDT, tek yön). Futures yetkisi bakiye
   okumakla anlaşılmıyor → /oto ve /oto aç artık /sapi/v1/account/apiRestrictions ile Futures / IP kısıtı / para çekme
   bayraklarını gösteriyor; Futures kapalıysa, IP kısıtı yoksa ya da PARA ÇEKME açıksa /oto aç reddedilir.
+- 15.10 03:44 kullanıcı: 30m de test (`/backtest 180 yer 30m` + önceki; bakılacak satır "+ önünde en az 1R yer" = canlı).
+- 15.10 03:50 kullanıcı (SLX 14.10 23:00, saatlerce yatay): "girerdim ama saatlerce kalmazdım; aşırı yataya bağlarsa
+  girişe gelince stop etsin, ufak kârda bile çıkabilir". TIME_STOP_LOCK_R eklendi (zaman stopunda stop giriş+kilit R;
+  fiyat gerisindeyse o mum açılışında çık). COMPARE_SETS["yatay"]: canlı 15m · 2 / 4 / 8 saat stop girişe · 4 saat
+  0.2R kâra. `/backtest 180 yatay` (+ önceki). 30m testleri bitince yüklenecek (henüz yüklenmedi).
+  Not: hacim sırasına göre canlı 15m ayar: 300-500. coinler Nis-Eki +18.8R, Eki-Nis +5.8R → küçük coin filtresi yok.

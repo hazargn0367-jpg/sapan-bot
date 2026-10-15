@@ -60,6 +60,9 @@ PIVOT_LEG_MIN = 0            # >0: tepe (LONG) eski zirveyi kırdıktan sonra en
                              # tek mumluk fırlamayla yapılan tepe = temiz trend yükselişi değil)
 TIME_STOP_BARS = 0           # >0: girişten bu kadar mum sonra TP/stop olmadıysa stop girişe çekilir; fiyat girişin
                              # gerisindeyse o mumun açılışında çıkılır (zaman stopu, "be" sayılır)
+TIME_STOP_LOCK_R = 0.0       # zaman stopunda stop girişe değil girişin bu kadar R kârına çekilir; fiyat o seviyenin
+                             # gerisindeyse o mumun açılışında çıkılır (kullanıcı 15.10: "aşırı yataya bağlarsa girişe
+                             # gelince çıksın, hatta ufak kârda bile çıkabilir")
 # Temiz trend (testte). Bacak: tepeden (LONG) / dipten (SHORT) önceki son EMA20 temasından tepeye/dibe kadar olan hareket
 LEG_BODY_MIN = 0.0           # >0: bacaktaki mumların yön gövdeleri toplamı / mum boyları toplamı en az bu kadar
                              # (1 = hepsi iğnesiz düz gövde, ters mumlar ve iğneler düşürür)
@@ -632,10 +635,11 @@ def simulate(df, i, side, tick, mode=None):
         if TIME_STOP_BARS > 0 and not time_moved and m - k_in >= TIME_STOP_BARS:
             # Zaman stopu: süre doldu, stop girişe; fiyat girişin gerisindeyse bu mumun açılışında çık
             time_moved = True
-            if (O[m] < fill) if long else (O[m] > fill):
+            level = (fill + TIME_STOP_LOCK_R * risk) if long else (fill - TIME_STOP_LOCK_R * risk)
+            if (O[m] < level) if long else (O[m] > level):
                 res["time_exit"] = True
                 return close_trade(m, O[m], "be")
-            cur_stop, be_on = fill, True
+            cur_stop, be_on = level, True
         hit_stop = (L[m] <= cur_stop) if long else (H[m] >= cur_stop)
         hit_tp = (H[m] >= tp) if long else (L[m] <= tp)
         if hit_stop:

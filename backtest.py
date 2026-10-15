@@ -653,7 +653,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN",
               "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS", "LEG_ATR_MAX", "BTC_CORR_MAX", "BTC_CORR_BARS",
               "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT", "CONFIRM_WINDOW", "SPIKE_TOP_ATR",
-              "BASE_MIN_RISK_PCT", "FAILED_ENTRY_RED"]
+              "BASE_MIN_RISK_PCT", "FAILED_ENTRY_RED", "TIME_STOP_LOCK_R"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -905,6 +905,15 @@ COMPARE_SETS["yer"] = [
     C("+ 1R yer + EMA açıklığı ≥ 2 ATR", **dict(_EBY, EMA_FAN_MIN=2.0)),
     C("+ 1R yer + EMA açıklığı ≥ 1.5 ATR", **dict(_EBY, EMA_FAN_MIN=1.5)),
 ]
+# Yatay giden işlem (kullanıcı 15.10 03:50, SLXUSDT 14.10 23:00 SHORT: "girerdim ama saatlerce kalmazdım; aşırı yataya
+# bağlarsa girişe gelince stop etsin, ufak kârda bile çıkabilir"). Taban = canlı 15m ayar (_EBY). 15m: 8 mum = 2 saat.
+COMPARE_SETS["yatay"] = [
+    C("Canlı ayar (onay ≤2 + stop ≥%0.5 + 1R yer + erken çıkış)", **_EBY),
+    C("+ 2 saatte sonuç yoksa stop girişe", **dict(_EBY, TIME_STOP_BARS=8)),
+    C("+ 4 saatte sonuç yoksa stop girişe", **dict(_EBY, TIME_STOP_BARS=16)),
+    C("+ 8 saatte sonuç yoksa stop girişe", **dict(_EBY, TIME_STOP_BARS=32)),
+    C("+ 4 saatte sonuç yoksa stop girişin 0.2R kârına", **dict(_EBY, TIME_STOP_BARS=16, TIME_STOP_LOCK_R=0.2)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -934,7 +943,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
