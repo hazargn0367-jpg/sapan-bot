@@ -693,3 +693,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   onay pencere 2. mumdan sonra yeniden 2 mum, onay = iki mumun en tepesinin üstünde kapanış; dönüşte uygulanmaz.
   CSV'de iki_mum. COMPARE_SETS["ikimum"]: canlı / + 2 mumlu. `/backtest 180 iki mum` (+ önceki ... önceki4, + bybit).
   Not: dibi kırmayan 2. mum zaten eskisi gibi; 2. mumun kendisi de ayrıca temas sinyali olarak değerlendiriliyordu.
+- 01:39 kullanıcı: "mumlar bu şekilde olacak, gövdeleri büyük olmayacak". TWO_BAR_BODY_ATR: iki mumun gövdesi en fazla X
+  ATR. ikimum seti: canlı · 2 mumlu gövde ≤ 0.3 ATR · ≤ 0.5 ATR · sınırsız. (İlk 2 mumlu commit main'e birleşmiş ama
+  gönderilmemişti; gövde şartıyla birlikte yüklendi.)

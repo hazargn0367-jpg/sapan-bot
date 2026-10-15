@@ -678,7 +678,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR", "ENTRY_BUFFER_ATR",
               "EMA200_ORDER", "NEW_HIGH_BARS", "NEW_HIGH_LOOKBACK",
               "ZIGZAG_MAX", "ZIGZAG_MIN_BARS", "PRIOR_TOUCH_SEP_ATR",
-              "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH"]
+              "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1118,7 +1118,9 @@ COMPARE_SETS["bybit"] = [
 # `/backtest 180 iki mum` (+ önceki ... önceki4), Bybit verisiyle: `/backtest 180 iki mum bybit`.
 COMPARE_SETS["ikimum"] = [
     C("Canlı ayar", **_CANLI_SON),
-    C("+ 2 mumlu temas", **dict(_CANLI_SON, TWO_BAR_TOUCH=True)),
+    C("+ 2 mumlu temas, gövdeler ≤ 0.3 ATR", **dict(_CANLI_SON, TWO_BAR_TOUCH=True, TWO_BAR_BODY_ATR=0.3)),
+    C("+ 2 mumlu temas, gövdeler ≤ 0.5 ATR", **dict(_CANLI_SON, TWO_BAR_TOUCH=True, TWO_BAR_BODY_ATR=0.5)),
+    C("+ 2 mumlu temas, gövde sınırı yok", **dict(_CANLI_SON, TWO_BAR_TOUCH=True)),
 ]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
