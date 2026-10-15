@@ -41,6 +41,9 @@ SESSION_START_UTC = 8    # temas mumu 00:00-08:00 UTC (03:00-11:00 TR) arasında
 # ---- Grafik incelemesinden gelen kurallar (varsayılan kapalı, backtest'te açılır) ----
 WICK_MAX_BODY = 0.0          # >0: onay mumunun ters iğnesi (LONG'da üst) gövdenin bu katından uzunsa işlem yok
 REQUIRE_PRIOR_TOUCH = False  # trend başladıktan sonra, tepeden önce en az bir EMA20 teması olmalı
+PRIOR_TOUCH_SEP_ATR = 0.0    # >0: kural 2'de "kalkış" = fiyatın EMA20'den bu kadar ATR ayrıldığı ilk mum (0: tamamen
+                             # üstünde olduğu ilk mum). Yataydan tek dev mumla başlayan trendde yataydaki temaslar sayılmaz
+                             # (kullanıcı 15.10 17:28, CARVUSDT 05.10 07:45)
 STOP_BUFFER_ATR = 0.0        # stop onay mumunun ucundan bu kadar ATR daha uzağa konur
 CLEAN_PIVOT_MAX = 0          # >0: son tepe/dip seviyesine bu kadar veya daha fazla mum dokunduysa (destek/direnç) işlem yok
 CLEAN_PIVOT_ATR = 0.3        # "seviyeye dokundu" sayılma mesafesi (ATR)
@@ -143,7 +146,7 @@ def add_atr(df):
     return df
 
 
-def prior_touch_ok(df, i, side):
+def prior_touch_ok(df, i, side, sep_atr=None):
     """Trend teyidi: trend başladıktan ve fiyat EMA20'den ayrıldıktan sonra,
     son tepeden (LONG) / dipten (SHORT) önce en az bir kez EMA20'ye temas edilmiş mi?"""
     long = side == "LONG"
@@ -158,8 +161,11 @@ def prior_touch_ok(df, i, side):
     while s - 1 >= max(0, i - 600) and aligned(s - 1):
         s -= 1
     # Kalkış: fiyatın EMA20'den tamamen ayrıldığı ilk mum (kesişme anındaki temaslar sayılmaz)
+    x = PRIOR_TOUCH_SEP_ATR if sep_atr is None else sep_atr
+    A = df["ATR"].values if x > 0 else None
     k = s
-    while k < i and not ((L[k] > E20[k]) if long else (H[k] < E20[k])):
+    while k < i and not ((L[k] > E20[k] + (x * A[k] if x > 0 else 0.0)) if long
+                         else (H[k] < E20[k] - (x * A[k] if x > 0 else 0.0))):
         k += 1
     # Son tepe/dip (strategy.py ile aynı tanım)
     start = max(0, i - st.LOOKBACK)
@@ -399,6 +405,8 @@ def trend_features(df, i, side, entry=None, risk=None):
         "pivot_bant_1": pivot_touches(df, i, side, atr_mult=1.0),
         "duz_zigzag": zz[0],                                       # düzeltmede trend yönlü mum oranı
         "duz_donus": zz[1],                                        # düzeltmede renk değişimi sayısı
+        "teyit_05": int(prior_touch_ok(df, i, side, sep_atr=0.5)),  # kural 2, kalkış 0.5 ATR ile
+        "teyit_1": int(prior_touch_ok(df, i, side, sep_atr=1.0)),   # kural 2, kalkış 1 ATR ile
         "_p": int(p), "_s": int(s),
     }
     if entry is not None and risk:

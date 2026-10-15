@@ -564,3 +564,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   girilebilirdi". Kural 2 (prior_touch_ok) yataydaki EMA'ların hafif sıralı olmasıyla trend başlangıcını yatay bölge sanıp
   oradaki temasları sayıyor. ÖNERİ (kodlanmadı, kullanıcı: "önceki testler bitsin buna geçeriz"): kalkış k = fiyatın EMA20'nin
   0.5 / 1 ATR üstüne çıktığı ilk mum (şimdi L > E20), temas k'dan sonra ve tepeden önce olmalı. Yatay testleri bitince.
+- Yatay+zigzag (Nis-Eki 26): canlı +36.5 · 4s +26.5 · 8s +34.9 · 12s +38.2 (1 zaman stopu) · zigzag >%50 +35.5 · >%34 +36.1
+  (AXL düz_zigzag 0.25 → yakalanmadı) → red. 17:32 "kodla": PRIOR_TOUCH_SEP_ATR (kural 2 kalkışı = fiyat EMA20'den X ATR
+  ayrıldığı ilk mum). Sentetik testte yataydan dev mumla başlayan trendde 0 ATR "temas var" (hata), 1 ATR "yok" (doğru).
+  COMPARE_SETS["teyit"]: canlı · 0.5 / 1 / 1.5 ATR. CSV'de teyit_05, teyit_1. `/backtest 180 teyit` (+ önceki, önceki2).

@@ -669,7 +669,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "WICKY_MAX", "WICKY_BARS", "RECLAIM_BODY_MAX_ATR", "PIVOT_BAND2_ATR", "PIVOT_BAND2_MAX",
               "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR", "ENTRY_BUFFER_ATR",
               "EMA200_ORDER", "NEW_HIGH_BARS", "NEW_HIGH_LOOKBACK",
-              "ZIGZAG_MAX", "ZIGZAG_MIN_BARS"]
+              "ZIGZAG_MAX", "ZIGZAG_MIN_BARS", "PRIOR_TOUCH_SEP_ATR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1031,6 +1031,15 @@ COMPARE_SETS["yatay2"] = [
     C("+ zigzag düzeltme yok (ters mum > %50)", **dict(_CANLI_SON, ZIGZAG_MAX=0.5)),
     C("+ zigzag düzeltme yok (ters mum > %34)", **dict(_CANLI_SON, ZIGZAG_MAX=0.34)),
 ]
+# Yatay+zigzag sonucu (15.10 17:31, Nis-Eki 26): canlı +36.5 · 4s -10.0 · 8s -1.6 · 12s +1.7 (1 işlem) · zigzag >%50 -1.0
+# · >%34 -0.4 (AXL düz_zigzag 0.25 yakalanmadı) → red, önceki dönemler çalıştırılmadı.
+# Kural 2 düzeltmesi (kullanıcı 15.10 17:28-17:32, CARVUSDT 05.10 07:45): kalkış = fiyat EMA20'den X ATR ayrıldığı ilk mum.
+COMPARE_SETS["teyit"] = [
+    C("Canlı ayar", **_CANLI_SON),
+    C("+ kural 2: kalkış 0.5 ATR ayrılınca", **dict(_CANLI_SON, PRIOR_TOUCH_SEP_ATR=0.5)),
+    C("+ kural 2: kalkış 1 ATR ayrılınca", **dict(_CANLI_SON, PRIOR_TOUCH_SEP_ATR=1.0)),
+    C("+ kural 2: kalkış 1.5 ATR ayrılınca", **dict(_CANLI_SON, PRIOR_TOUCH_SEP_ATR=1.5)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1073,7 +1082,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
