@@ -1,7 +1,7 @@
 """
 CANLI SETUP BİLDİRİMLERİ
 
-Her mum kapanışında (LIVE_TF, varsayılan 5m) hacmi en yüksek coinleri tarar. Bütün kuralları
+Her mum kapanışında (LIVE_TF, varsayılan 15m) hacmi en yüksek coinleri tarar. Bütün kuralları
 geçen bir setup'ta onay mumu kapanır kapanmaz "EMİR HAZIR" bildirimi gönderir
 (giriş, stop, TP, pozisyon büyüklüğü, grafik, TradingView linki).
 Sonra o setup'ı takip edip giriş / iptal / TP / stop olduğunda haber verir.
@@ -36,7 +36,7 @@ CLUSTER_MAX = 5         # aynı mumda bu kadar coin aynı yönde temas verirse g
 MAX_OPEN = 2            # aynı anda en fazla bu kadar işlem (giriş bekleyen + açık); doluysa yeni EMİR HAZIR gönderilmez
 SCAN_THREADS = 6
 RECOVER_BARS = 60   # yeniden başlarken son 60 mumdaki (5m'de 5 saat) bildirilmiş setup'lar takibe geri alınır
-LIVE_TF = config.LIVE_TF                 # canlı tarama zaman dilimi (varsayılan 5m)
+LIVE_TF = config.LIVE_TF                 # canlı tarama zaman dilimi (varsayılan 15m)
 TF_MIN = config.tf_minutes(LIVE_TF)
 TF_SEC = TF_MIN * 60
 TZ = "Europe/Istanbul"
@@ -65,8 +65,7 @@ LIVE_RULES = dict(
     BASE_MIN_RISK_PCT=0.5,      # stop en az %0.5 (daha darında komisyon + kayma R'nin büyük kısmını yiyor)
     ROOM_MIN_R=1.0,             # giriş ile önceki tepe (LONG) / dip (SHORT) arası en az 1R ("tepenin hizasından girme")
     FAILED_ENTRY_BARS=2,        # erken çıkış: giriş mumu ya da sonraki mum girişin gerisinde kapatırsa "ERKEN ÇIK" bildirimi
-    EMA_FAN_MIN=2.0,            # 15.10 03:00: EMA20-EMA100 arası en az 2 ATR (5m 3 ayda her ay artı: +4.5/+6.6/+9.1R,
-                                # kaymayla +13.3R; canlı 5m'ye geçti). 15m'de bu filtre karışıktı (Eki-Nis'te kötü).
+    # EMA_FAN_MIN=2.0 denendi (15.10): 5m Tem-Eki +20.3R ama Nis-Tem -23.3R → tutmadı; 15m'de de karışık. Kullanılmıyor.
 )
 MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
 # Bildirimlerde 1R kaç dolar (kullanıcı 15.10: "1R'ım 1 dolar olacak"). Backtest raporları 25$ ile kalır.

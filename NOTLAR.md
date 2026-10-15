@@ -419,3 +419,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   AUTO_MAX_OPEN=2, AUTO_DAILY_LOSS_R=5). Bildirimler 1R = 1$ (ALERT_RISK_USD). Taklit Binance ile test edildi
   (TP +2.09R, stop -1.14R, erken çıkış -0.30R, hedge modu, stop konamazsa kapatma, geç giriş, günlük sınır).
   CANLI: 5m + LIVE_RULES'a EMA_FAN_MIN=2.0 (config.LIVE_TF varsayılanı 5m).
+- 5m yer önceki (18.04-17.07): taban -40.2 · +1R yer -23.7 · **+1R yer +EMA≥2 +11.4/-19.9/-14.9 = -23.3R (düşüş -36)** ·
+  +EMA≥1.5 -28.3. 5m 6 ay toplam -3R → TUTMADI. 5m'ye geçiş iptal; EMA_FAN_MIN canlıdan çıkarıldı.
+  KARAR (15.10 03:10): otomatik işlem ve canlı 15m: onay ≤2 + stop ≥%0.5 + 1R yer + erken çıkış (12 ay +48.6R).
+  autotrade sağlamlaştırıldı: emir göndermeden önce kayıt; istemci kimlikleri (se/ss/st + coin + temas sn): cevap
+  kaybolursa izleme döngüsü pozisyonu bulup korur, tekrar denemede "duplicate" = konmuş sayılır; stop/TP eksikse her
+  döngüde yeniden denenir (TP en fazla 5 kez). Taklit Binance testleri: tek yön + hedge, TP/stop/erken/iptal/SHORT,
+  giriş/stop/TP cevabı kaybolması, stop reddi → kapatma.

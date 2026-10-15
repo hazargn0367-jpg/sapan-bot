@@ -160,20 +160,17 @@ class BinanceAPI:
     def new_algo(self, **p):
         return self.request("POST", "/fapi/v1/algoOrder", dict(algoType="CONDITIONAL", **p))
 
-    def cancel_algo(self, symbol, algo_id):
-        return self.request("DELETE", "/fapi/v1/algoOrder", {"symbol": symbol, "algoId": algo_id})
-
-    def get_algo(self, symbol, algo_id):
-        return self.request("GET", "/fapi/v1/algoOrder", {"symbol": symbol, "algoId": algo_id})
+    def cancel_algo(self, symbol, cid):
+        return self.request("DELETE", "/fapi/v1/algoOrder", {"symbol": symbol, "clientAlgoId": cid})
 
     def new_order(self, **p):
         return self.request("POST", "/fapi/v1/order", p)
 
-    def cancel_order(self, symbol, order_id):
-        return self.request("DELETE", "/fapi/v1/order", {"symbol": symbol, "orderId": order_id})
+    def cancel_order(self, symbol, cid):
+        return self.request("DELETE", "/fapi/v1/order", {"symbol": symbol, "origClientOrderId": cid})
 
-    def get_order(self, symbol, order_id):
-        return self.request("GET", "/fapi/v1/order", {"symbol": symbol, "orderId": order_id})
+    def get_order(self, symbol, cid):
+        return self.request("GET", "/fapi/v1/order", {"symbol": symbol, "origClientOrderId": cid})
 
     def user_trades(self, symbol, start_ms):
         return self.request("GET", "/fapi/v1/userTrades", {"symbol": symbol, "startTime": int(start_ms), "limit": 100})
@@ -311,20 +308,24 @@ def ready():
     return api is not None and enabled()
 
 
-def on_setup(symbol, side, entry, stop, tp, touch_ts, tf):
+def on_setup(symbol, side, entry, stop, tp, touch_ts, tf):  # noqa: C901
     """EMİR HAZIR gönderildi: otomatik işlem açıksa girişe stop emri koy."""
     if not ready():
         return
     key = f"{symbol}|{int(touch_ts)}"
     with _lock:
         try:
-            _open_setup(key, symbol, side, float(entry), float(stop), float(tp), tf)
+            _open_setup(key, symbol, side, float(entry), float(stop), float(tp), tf, touch_ts)
+        except BinanceError as e:
+            log.warning("OTO giriş emri reddedildi: %s", e)
+            _say(f"⚠️ {html.escape(symbol)} {side}: giriş emri konamadı ({html.escape(str(e))[:200]})")
         except Exception as e:
             log.exception("OTO giriş emri hatası")
-            _say(f"⚠️ {html.escape(symbol)} {side}: giriş emri konamadı ({html.escape(str(e))[:200]})")
+            _say(f"⚠️ {html.escape(symbol)} {side}: Binance cevap vermedi ({html.escape(str(e))[:120]}). Emir borsaya "
+                 f"ulaşmış olabilir; bot takip ediyor, giriş olursa stop/TP konacak, olmazsa süre dolunca silinecek.")
 
 
-def _open_setup(key, symbol, side, entry, stop, tp, tf):
+def _open_setup(key, symbol, side, entry, stop, tp, tf, touch_ts):
     t = trades()
     if key in t:
         return
@@ -365,26 +366,34 @@ def _open_setup(key, symbol, side, entry, stop, tp, tf):
         log.warning("OTO %s izole marjin ayarlanamadı: %s", symbol, e)
     api.set_leverage(symbol, LEVERAGE)
 
+    base = f"{symbol[:18]}{int(touch_ts) // 1000 % 10**9}"
     rec = {"key": key, "symbol": symbol, "side": side, "entry": entry, "stop": stop, "tp": tp, "tf": tf,
            "qty": format(qty.normalize(), "f"), "status": "pending", "created": time.time(),
+           "entry_cid": f"se{base}", "sl_cid": f"ss{base}", "tp_cid": f"st{base}",
            "entry_algo": None, "sl_algo": None, "tp_order": None, "fill": None, "opened": None}
+    # Emir gönderilmeden ÖNCE kaydedilir: cevap gelmeden bağlantı koparsa bile izleme döngüsü pozisyonu bulup korur
+    t[key] = rec
+    _save_trades(t)
     trig = _px(entry, f["tick"])
     try:
-        res = api.new_algo(symbol=symbol, type="STOP_MARKET", triggerPrice=trig, quantity=rec["qty"],
-                           workingType="CONTRACT_PRICE", **_side_params(side, closing=False))
-        rec["entry_algo"] = res.get("algoId")
+        api.new_algo(symbol=symbol, type="STOP_MARKET", triggerPrice=trig, quantity=rec["qty"],
+                     workingType="CONTRACT_PRICE", clientAlgoId=rec["entry_cid"], **_side_params(side, closing=False))
+        rec["entry_algo"] = rec["entry_cid"]
         how = f"{'BUY' if side == 'LONG' else 'SELL'} STOP {trig}"
     except BinanceError as e:
         if e.code != -2021:  # -2021: emir hemen tetiklenirdi (fiyat girişi geçmiş)
+            rec["status"] = "failed"
+            _save_trades(t)
             raise
         px = api.price(symbol)
         late = ((px - entry) if side == "LONG" else (entry - px)) / risk
         if late > LATE_MAX_R:
+            rec["status"] = "skipped"
+            _save_trades(t)
             _say(f"{html.escape(symbol)} {side}: fiyat girişi {late:.2f}R geçmiş ({_fmt(px)}), girilmedi")
             return
         api.new_order(symbol=symbol, type="MARKET", quantity=_q(float(qty), f["mstep"]), **_side_params(side, closing=False))
         how = f"fiyat girişi geçmişti, piyasa emriyle ({_fmt(px)})"
-    t[key] = rec
     _save_trades(t)
     _say(f"{'🟢' if side == 'LONG' else '🔴'} <b>{side} {html.escape(symbol)}</b> ({tf}): giriş emri kondu: {how}, "
          f"{rec['qty']} adet (~{notional:,.0f} USDT, {LEVERAGE}x izole), risk {RISK_USD:g}$.\n"
@@ -421,7 +430,7 @@ def _cancel_entry(rec, why):
             _protect(rec, qty)
             return
         try:
-            api.cancel_algo(sym, rec["entry_algo"])
+            api.cancel_algo(sym, rec["entry_cid"])
         except BinanceError as e:
             log.info("OTO giriş emri silinemedi (zaten yok olabilir): %s", e)
         qty, _ = _our_position(sym, side)
@@ -448,41 +457,63 @@ def _early_exit(rec):
 
 def _cleanup_orders(rec):
     sym = rec["symbol"]
-    for kind, fn in (("sl_algo", api.cancel_algo), ("tp_order", api.cancel_order), ("entry_algo", api.cancel_algo)):
-        oid = rec.get(kind)
-        if oid:
+    for kind, fn in (("sl_cid", api.cancel_algo), ("tp_cid", api.cancel_order), ("entry_cid", api.cancel_algo)):
+        cid = rec.get(kind)
+        if cid:
             try:
-                fn(sym, oid)
+                fn(sym, cid)
             except BinanceError as e:
                 log.info("OTO %s %s silinemedi (zaten yok olabilir): %s", sym, kind, e)
 
 
+def _dup(e):
+    return e.code in (-4116, -4015) or "duplicate" in (e.msg or "").lower()
+
+
 def _protect(rec, qty):
-    """Giriş doldu: borsaya stop ve TP koy. Stop konamazsa pozisyonu hemen kapat."""
+    """Giriş doldu: borsaya stop ve TP koy (eksik olanı; her döngüde tekrar denenir).
+    Stop kesin reddedilirse pozisyon hemen kapatılır; bağlantı hatasında sonraki döngüde yeniden denenir."""
     sym, side = rec["symbol"], rec["side"]
     f = _filters(sym)
-    _, fill = _our_position(sym, side)
-    rec.update(status="open", fill=fill, opened=time.time(), qty=_q(qty, f["step"]))
-    try:
-        res = api.new_algo(symbol=sym, type="STOP_MARKET", triggerPrice=_px(rec["stop"], f["tick"]),
-                           quantity=rec["qty"], workingType="CONTRACT_PRICE", **_side_params(side, closing=True))
-        rec["sl_algo"] = res.get("algoId")
-    except BinanceError as e:
-        api.new_order(symbol=sym, type="MARKET", quantity=_q(qty, f["mstep"]), **_side_params(side, closing=True))
-        _cleanup_orders(rec)
-        rec["exit_kind"] = "stop konamadı, hemen kapatıldı"
-        _finish(rec)
-        _say(f"⚠️ {html.escape(sym)}: stop emri konamadı ({html.escape(str(e))[:150]}), pozisyon güvenlik için kapatıldı")
-        return
-    try:
-        res = api.new_order(symbol=sym, type="LIMIT", timeInForce="GTC", price=_px(rec["tp"], f["tick"]),
-                            quantity=rec["qty"], **_side_params(side, closing=True))
-        rec["tp_order"] = res.get("orderId")
-        tp_txt = f"TP {_fmt(rec['tp'])} (limit)"
-    except BinanceError as e:
-        tp_txt = f"⚠️ TP konamadı ({html.escape(str(e))[:120]}), stop borsada duruyor"
-    _say(f"{'🟢' if side == 'LONG' else '🔴'} <b>{side} {html.escape(sym)}</b>: giriş doldu {_fmt(fill)}, "
-         f"{rec['qty']} adet. Borsaya stop {_fmt(rec['stop'])} ve {tp_txt} kondu.")
+    first = rec["status"] == "pending"
+    if first:
+        _, fill = _our_position(sym, side)
+        rec.update(status="open", fill=fill, opened=time.time(), qty=_q(qty, f["step"]))
+    elif rec["qty"] != _q(qty, f["step"]):
+        rec["qty"] = _q(qty, f["step"])
+    if not rec.get("sl_algo"):
+        try:
+            api.new_algo(symbol=sym, type="STOP_MARKET", triggerPrice=_px(rec["stop"], f["tick"]), quantity=rec["qty"],
+                         workingType="CONTRACT_PRICE", clientAlgoId=rec["sl_cid"], **_side_params(side, closing=True))
+            rec["sl_algo"] = rec["sl_cid"]
+        except BinanceError as e:
+            if _dup(e):
+                rec["sl_algo"] = rec["sl_cid"]
+            else:
+                api.new_order(symbol=sym, type="MARKET", quantity=_q(qty, f["mstep"]), **_side_params(side, closing=True))
+                _cleanup_orders(rec)
+                rec["exit_kind"] = "stop konamadı, hemen kapatıldı"
+                _finish(rec)
+                _say(f"⚠️ {html.escape(sym)}: stop emri konamadı ({html.escape(str(e))[:150]}), "
+                     f"pozisyon güvenlik için kapatıldı")
+                return
+    tp_txt = f"TP {_fmt(rec['tp'])} (limit)"
+    if not rec.get("tp_order") and rec.get("tp_tries", 0) < 5:
+        try:
+            api.new_order(symbol=sym, type="LIMIT", timeInForce="GTC", price=_px(rec["tp"], f["tick"]),
+                          quantity=rec["qty"], newClientOrderId=rec["tp_cid"], **_side_params(side, closing=True))
+            rec["tp_order"] = rec["tp_cid"]
+        except BinanceError as e:
+            if _dup(e):
+                rec["tp_order"] = rec["tp_cid"]
+            else:
+                rec["tp_tries"] = rec.get("tp_tries", 0) + 1
+                tp_txt = f"⚠️ TP konamadı ({html.escape(str(e))[:120]}), stop borsada duruyor"
+                if not first:
+                    _say(f"{html.escape(sym)}: {tp_txt}")
+    if first:
+        _say(f"{'🟢' if side == 'LONG' else '🔴'} <b>{side} {html.escape(sym)}</b>: giriş doldu {_fmt(rec['fill'])}, "
+             f"{rec['qty']} adet. Borsaya stop {_fmt(rec['stop'])} ve {tp_txt} kondu.")
 
 
 def _finish(rec):
@@ -531,16 +562,19 @@ def check_once():
                 qty, _ = _our_position(sym, side)
                 if rec["status"] == "pending":
                     if qty > 0:
-                        _protect(rec, qty)
                         changed = True
+                        _protect(rec, qty)
                     elif time.time() - rec["created"] > 4 * config.tf_minutes(rec.get("tf", "15m")) * 60 + 120:
                         _cancel_entry(rec, "giriş penceresi doldu")   # canlı takip kaçırırsa yedek
                         changed = True
+                elif qty > 0 and (not rec.get("sl_algo") or (not rec.get("tp_order") and rec.get("tp_tries", 0) < 5)):
+                    changed = True
+                    _protect(rec, qty)      # önceki deneme bağlantı hatasıyla yarım kaldı
                 elif qty <= 0:
                     kind = "stop"
                     if rec.get("tp_order"):
                         try:
-                            if api.get_order(sym, rec["tp_order"]).get("status") == "FILLED":
+                            if api.get_order(sym, rec["tp_cid"]).get("status") == "FILLED":
                                 kind = "TP"
                         except BinanceError:
                             pass
@@ -555,7 +589,7 @@ def check_once():
             except Exception as e:
                 log.exception("OTO kontrol hatası %s: %s", key, e)
         if changed:
-            _save_trades(t)
+            _save_trades(t)   # hata olsa bile yarım kalan adımlar kaydedilir, sonraki döngü tamamlar
 
 
 def _loop():
@@ -585,7 +619,8 @@ def status_text():
     lines = [f"🤖 Otomatik işlem: <b>{'AÇIK' if s.get('enabled') else 'KAPALI'}</b> "
              f"(1R = {RISK_USD:g}$, {LEVERAGE}x izole, en fazla {MAX_OPEN} işlem, günlük sınır -{DAILY_LOSS_R:g}R)"]
     try:
-        avail, total = api.usdt_balance()
+        with _lock:
+            avail, total = api.usdt_balance()
         lines.append(f"Bakiye: {total:.2f} USDT (kullanılabilir {avail:.2f})")
         lines.append("Pozisyon modu: " + ("çift yön (hedge)" if _dual() else "tek yön"))
     except Exception as e:
