@@ -579,3 +579,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 19:14 kullanıcı "işlem sayısını 5 yapıp test etsek" → "kodla": COMPARE_SETS["toplu2"] (şimdiki canlı sistem, 1.5 ATR
   dahil): canlı (toplu 5+, en fazla 2) · toplu 8 · toplu 10 · toplu kapalı · toplu kapalı + en fazla 5 işlem.
   `/backtest 180 toplu` artık bu sete gidiyor (eski set: toplu, 14.10 kuralları). Canlı ayar değişmedi.
+- Toplu testi (Nis-Eki 26): canlı (5+) +44.8 (116 iş, düşüş 11.9) · 8 coin +40.2 · 10 coin +44.6 (137 iş) · filtre kapalı
+  +33.8 (190 iş, 11 işlem 2 sınırına takıldı) · kapalı + en fazla 5 işlem +33.4 (200 iş, düşüş 12.9). Canlıda elenen 85
+  kurulum filtre kapalıyken: 13 TP / 25 stop / 46 erken = -11.4R (tahmin -16.5 idi) → filtre ve 2 işlem sınırı kalıyor,
+  önceki dönemler çalıştırılmadı.
