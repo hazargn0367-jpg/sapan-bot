@@ -508,3 +508,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 13:21 "hazırla": COMPARE_SETS["dilim"] = yeni canlı ayar (LIVE_RULES) / iki kural kapalı, aynı zaman diliminde.
   `/backtest 180 dilim 30m` (+ önceki), `/backtest 90 dilim 5m` (+ önceki). WICKY_BARS 12 mum (30m'de 6 saat, 5m'de 1 saat).
   Kullanıcının `/backtest 90 canlı önceki` testi çalışıyor olabilir → bitince yüklenecek.
+- Dilim testi (yeni canlı ayar / iki kural yok): 30m Nis-Eki 26 +0.2 / -15.3 · 30m Eki-Nis +10.7 / +12.2 → 30m 12 ay
+  +10.9 (150 iş) / -3.1 (15m yeni +59.4). 5m Tem-Eki +5.8 / +8.7 (kom 20R) · 5m Nis-Tem -22.9 / -32.5 → 5m 6 ay -17.1 /
+  -23.8 (15m aynı dönemler +8.5 +18.7 = +27.2). KARAR: canlı/oto 15m kalır; 5m ve 30m eklenmez. Yeni kurallar 30m ve
+  5m'de de toplamda iyileştiriyor (+14.0 / +6.7) → kurallar 15m'ye özgü tesadüf değil.
