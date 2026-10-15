@@ -533,3 +533,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 15:19 kullanıcı "1R kârdan sonra girişe gelirse stop girişte" → sabahki sonuç anlatıldı (eski sistemde 1R BE -31.5 /
   -11.4), "kodla deneyelim": COMPARE_SETS["basabas2"] = şimdiki canlı (LIVE_RULES) · +1R / +1.5R / +2R BE.
   `/backtest 180 başabaş` artık bu sete gidiyor (+ önceki + önceki2).
+- 15:25 kullanıcı: "PDF'e bak, TP ve stop arasındaki farkları yakala". 82 grafiğe (son 90 gün, son sistem) baktım:
+  TP'ler çoğunlukla merdiven gibi düzenli trend (EMA'lar açık; FUSDT, NXPC, ASTR, BANANA...) ve güçlü düşüşte SHORT; stoplar
+  çoğunlukla 1-3 dev mumla yapılmış tepe (pompa) sonrası geri çekilme (JUP, SUPER, SUI, TNSR, BEAMX, JOE) ve sert V dönüşü
+  sonrası SHORT (HOLO x2, SKR, UNI); 18.09-04.10 arası LONG stop kümesi (14 stop). 18 ay CSV (415 iş, 3 dönem) ile sınandı:
+  sivri tepe ≥3.5 ATR çıkan işlemler +1.8 / +13.2 / +0.2 (tutarsız), sivri & genç trend kombinasyonları 2. dönemde hep artı,
+  tek mum ≥0.5 -7.0 / +6.1 / -5.3; trend yaşı R/iş farkı tutarlı (yaşlı trend TP %34, genç %26) ama genç trend işlemleri
+  toplamda artı (filtre toplam R'yi düşürür); yön, gün, seri-zarar molası tutarsız. Yeni kural bulunamadı.
