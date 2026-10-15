@@ -704,3 +704,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   ve iki gövde küçükse, dip hangisinde olursa olsun iki mum birlikte temas; onay iki mumun en tepesinin üstünde kapanış,
   bekleme 2. mumdan sonra 2 mum. _two_bar_ok() ortak kontrol. COMPARE_SETS["ikimum2"] (gövde ≤ 0.3 / 0.5 / sınırsız);
   "iki mum" komutu artık ikimum2'ye gider.
+- 02:08 kullanıcı: onay kaçıncı mumda gelirse daha iyi? 6 görünüm (canlı ayar 493 iş): klasik onay 1. mum 248 iş TP %32
+  +0.27R/iş, 6/6 artı (+0.5/+2.5/+12.3/+23.4/+25.6/+3.1) · klasik onay 2. mum 103 iş TP %28 +0.07R/iş (+3.8/-4.0/-0.7/
+  +1.9/+7.4/-1.2) · dönüş (hep 2. mum) 142 iş +0.26R/iş · onay 3. mum (artır testi) +0.6/+2.4/-1.3 ~0. Sonuç: 1. mum en
+  güçlü; 2. mumu kaldırmak işlem sayısını ~%20 azaltır, toplam kârı az düşürür → değişiklik yok.
