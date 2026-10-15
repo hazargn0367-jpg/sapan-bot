@@ -682,3 +682,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   seçim yanlılığıydı. Diğer 4 dönem bekleniyor.
 - 16.10 01:28 kullanıcı: trend takibini bırak, kendi sistemle (EMA20 geri çekilme) devam. Diğer trend dönemleri
   çalıştırılmadı; trend_bt.py repoda duruyor (canlıyı etkilemiyor, /backtest 180 trend ile çalışır).
+- 16.10 01:29 "sisteme eklenecek bir şey var mı bak": 6 görünüm (Binance 5 dönem + Bybit, canlı ayar 493 iş +111.6R;
+  scratchpad an/load6.py). Kısmi TP (yarısı 1R'de / 1/3'ü 1R'de / yarısı 1.5R'de) 6'sında da eksi: -49 / -33 / -25R.
+  CSV'deki bütün özellikler x eşikler: elenen grup 6'nın ≥5'inde eksi ve toplam ≤ -5R olan YOK. En yakın: bacakta tek mum
+  payı > %48 (50 iş, -4.9R, 4/6 eksi, P2 +12.2) → zayıf. Yeni kural ancak henüz ölçülmeyen bir özellikten gelir
+  (kullanıcının grafik incelemesi). Kullanıcıya grafik için `/backtest 90 canlı` (bütün işlemler PDF) verildi.
