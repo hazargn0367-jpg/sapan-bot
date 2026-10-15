@@ -469,3 +469,16 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   EARLY_STOP_R / EARLY_STOP_BARS (ilk 2 mumda mum içi stop; giriş mumunda kötümser: mum girişin gerisinde kapatıp iğneyle
   seviyeyi geçtiyse tetiklendi sayılır). COMPARE_SETS["kapanis"], `/backtest 180 kapanış` (+ önceki). CSV'de erken_stop
   sütunu. Canlıya geçerse: kapanışla girişte oto işlem mum kapanışında piyasa emri verir (stop emri değil).
+- Kapanış testi 15m Nis-Eki (15.10 04:40): canlı +17.2R (201 iş) · +0.3R erken stop +12.3 (iğneyle 14 işlem daha erken
+  çıkışa düştü) · kapanışla giriş +6.9 (135 iş; sahte kırılımın 66 işlemi -21.4R elendi ama ortak 135 işlem +38.5 → +6.9:
+  giriş yukarıdan, stop ortancası %0.98 → %1.28, erken çıkış ort. -0.33 → -0.48) · ≤0.5R -2.3 · TP aynı -6.4 · erken
+  çıkışsız +13.1. Hepsi RED, önceki dönem çalıştırılmadı. Erken çıkış, stop emriyle en iyi fiyattan girmenin bedeli.
+- Grafik örnekleri (kullanıcı 15.10 04:37; "bugün bir şey yapma, yarın 'yükle' deyince toplu yap, ayrı ayrı test"):
+  RESOLVUSDT 20.08 02:15 LONG dönüş stop -1.16R ("düzeltme temiz görünse de çok iğneli mumlar, git-gel, stopa iğne"),
+  NILUSDT 25.08 19:15 SHORT klasik stop -1.09R ("temiz dip yok, düzeltme kötü"; sivri_atr 4.18, düzeltme 10 mum),
+  ESPUSDT 30.08 11:30 SHORT dönüş erken -0.37R ("EMA'nın üstünde kapatan temas mumunun gövdesi çok büyük").
+  10:13 "yükle": 03-07 saat filtresi canlıdan kaldırıldı (LIVE_RULES QUIET_UTC=(0,0)) + WICKY_MAX/WICKY_BARS (temastan
+  önceki 12 mumda 1 - Σgövde/Σboy), RECLAIM_BODY_MAX_ATR (dönüşte temas gövdesi), temiz dip/tepe bandı CLEAN_PIVOT_ATR
+  0.5 (≤2 mum) / 1 ATR (≤4 mum; 1 ATR bantta ≤2 neredeyse hepsini eler) (ornek setindeydi, hiç çalıştırılmamıştı). COMPARE_SETS["grafik"], taban = yeni canlı ayar. CSV'de igne_orani,
+  duz_igne, temas_govde_atr, pivot_bant_05, pivot_bant_1 → eşikler CSV'den taranabilir. /incele de gösteriyor.
+  `/backtest 180 grafik` (+ önceki).

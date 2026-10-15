@@ -166,6 +166,9 @@ def inspect(text, chart_path="/tmp/incele.png"):
               f"Düzeltme: bacağın %{100 * f['duzeltme']:.0f} kadarı geri verildi, {f['duzeltme_mum']} mum"]
     if "onu_r" in f:
         lines.append(f"Girişten önceki {'tepeye' if long else 'dibe'} mesafe: {f['onu_r']:.2f}R")
+    lines.append(f"Son 12 mum iğne oranı %{100 * f['igne_orani']:.0f} (düzeltmede {('%' + format(100 * f['duz_igne'], '.0f')) if f['duz_igne'] == f['duz_igne'] else '-'}) · "
+                 f"temas gövdesi {f['temas_govde_atr']:.2f} ATR · {'tepe' if long else 'dip'} bandında mum: "
+                 f"0.5 ATR {f['pivot_bant_05']}, 1 ATR {f['pivot_bant_1']}")
     t = tr.TEMIZ_TEST
     lines.append(f"{ok(tr.clean_trend_ok(f, t))} Testteki 'temiz trend' şartı (gövde oranı ≥ {t['LEG_BODY_MIN']:g}, "
                  f"bacak ≥ {t['LEG_ATR_MIN']:g} ATR, en büyük mum ≤ %{100 * t['SPIKE_MAX']:.0f}, "

@@ -91,6 +91,12 @@ CLOSE_ENTRY = False          # True: girişe stop emriyle değil, bir mum giriş
                              # kapanışında girilir (sahte kırılım mumuna girilmez). Risk = kapanış - stop, TP buna göre
 CLOSE_ENTRY_MAX_R = 0.0      # >0: kapanış giriş seviyesinden bu kadar R'den uzaksa girme (kovalamaca, durum "chase")
 CLOSE_ENTRY_KEEP_TP = False  # True: kapanışla girişte TP fiyatı değişmez (giriş seviyesi + RR·asıl risk)
+# Grafik örnekleri (kullanıcı 15.10 04:37): RESOLVUSDT 20.08 02:15 LONG (düzeltme temiz görünse de mumlar çok iğneli,
+# coin git-gel yapıyor, stopa iğneyle değdi), NILUSDT 25.08 19:15 SHORT (temiz dip yok: dipte taban, düzeltme kötü),
+# ESPUSDT 30.08 11:30 SHORT dönüş (EMA'nın öbür tarafında kapatan temas mumunun gövdesi çok büyük = ters sinyal)
+WICKY_MAX = 0.0              # >0: temastan önceki WICKY_BARS mumda iğne oranı (1 - gövdeler toplamı / mum boyları toplamı)
+WICKY_BARS = 12              # bundan büyükse girme (git-gel yapan, iğneli piyasa). 15m'de 12 mum = 3 saat
+RECLAIM_BODY_MAX_ATR = 0.0   # >0: dönüş varyasyonunda temas mumunun gövdesi bu kadar ATR'den büyükse girme
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
 BTC_CORR_BARS = 96           # benzerlik penceresi (15dk'da 96 mum = 24 saat)
@@ -145,14 +151,14 @@ def prior_touch_ok(df, i, side):
     return False
 
 
-def pivot_touches(df, i, side):
+def pivot_touches(df, i, side, atr_mult=None):
     """Son tepeye (LONG) / dibe (SHORT) yakın uç veren mum sayısı.
     Çok mum aynı seviyeye dokunduysa orada direnç/destek oluşmuş demektir."""
     long = side == "LONG"
     H, L, A = df["High"].values, df["Low"].values, df["ATR"].values
     start = max(0, i - st.LOOKBACK)
     pivot = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
-    tol = CLEAN_PIVOT_ATR * A[pivot]
+    tol = (CLEAN_PIVOT_ATR if atr_mult is None else atr_mult) * A[pivot]
     lo = max(0, pivot - CLEAN_PIVOT_BEFORE)
     if long:
         return int((H[lo:i] >= H[pivot] - tol).sum())
@@ -296,6 +302,16 @@ LEG_LOOK = 60      # bacağın başı (son EMA20 teması) tepeden en fazla bu ka
 TREND_AGE_MAX = 300
 
 
+def wickiness(df, a, b):
+    """[a, b) mumlarında iğne oranı: 1 - gövdeler toplamı / mum boyları toplamı (0 = hepsi düz gövde, 1 = hepsi iğne)."""
+    a = max(0, a)
+    if b <= a:
+        return float("nan")
+    O, H, L, C = (df[c].values[a:b] for c in ("Open", "High", "Low", "Close"))
+    rng = float((H - L).sum())
+    return 1.0 - float(np.abs(C - O).sum()) / rng if rng > 0 else float("nan")
+
+
 def trend_features(df, i, side, entry=None, risk=None):
     """Temiz trend ölçüleri (i: temas mumu). TP ile stop olan işlemleri karşılaştırmak ve filtre için.
     Bacak: son tepeden (LONG) / dipten (SHORT) önceki son EMA20 temasından sonraki mumlar, tepe mumu dahil."""
@@ -337,6 +353,11 @@ def trend_features(df, i, side, entry=None, risk=None):
         "trend_yasi": age,
         "duzeltme": ((H[p] - L[i]) if long else (H[i] - L[p])) / leg if leg > 0 else float("nan"),
         "duzeltme_mum": int(i - p),
+        "igne_orani": wickiness(df, i - WICKY_BARS, i),           # temastan önceki 12 mum
+        "duz_igne": wickiness(df, p + 1, i),                      # tepe/dipten temasa kadar (düzeltme)
+        "temas_govde_atr": abs(C[i] - O[i]) / a,
+        "pivot_bant_05": pivot_touches(df, i, side, atr_mult=0.5),
+        "pivot_bant_1": pivot_touches(df, i, side, atr_mult=1.0),
         "_p": int(p), "_s": int(s),
     }
     if entry is not None and risk:
@@ -442,7 +463,7 @@ def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
     status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | spike_top | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
-            no_entry | chase | win | loss | be | open | pending"""
+            no_entry | chase | wicky | big_touch | win | loss | be | open | pending"""
     O = df["Open"].values
     H = df["High"].values
     L = df["Low"].values
@@ -518,6 +539,12 @@ def simulate(df, i, side, tick, mode=None):
             return res
     if SPIKE_TOP_ATR > 0 and spike_top(df, i, side) >= SPIKE_TOP_ATR:
         res["status"] = "spike_top"
+        return res
+    if WICKY_MAX > 0 and wickiness(df, i - WICKY_BARS, i) > WICKY_MAX:
+        res["status"] = "wicky"
+        return res
+    if RECLAIM_BODY_MAX_ATR > 0 and mode == "reclaim" and abs(C[i] - O[i]) > RECLAIM_BODY_MAX_ATR * A[i]:
+        res["status"] = "big_touch"
         return res
 
     # --- Onay ---

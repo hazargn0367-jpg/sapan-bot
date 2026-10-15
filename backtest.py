@@ -91,6 +91,8 @@ STATUS_TR = {
     "cancel_confirm": "Girişten önce onay mumunun ucu kırıldı",
     "no_entry": "2 mumda girişe gelmedi",
     "chase": "Kapanış girişten çok uzakta (kovalamaca)",
+    "wicky": "Temastan önceki mumlar çok iğneli (git-gel)",
+    "big_touch": "Dönüşte temas mumunun gövdesi çok büyük",
     "win": "TP",
     "loss": "Stop",
     "be": "Başabaş / erken çıkış",
@@ -659,7 +661,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS", "LEG_ATR_MAX", "BTC_CORR_MAX", "BTC_CORR_BARS",
               "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT", "CONFIRM_WINDOW", "SPIKE_TOP_ATR",
               "BASE_MIN_RISK_PCT", "FAILED_ENTRY_RED", "TIME_STOP_LOCK_R",
-              "EARLY_STOP_R", "EARLY_STOP_BARS", "CLOSE_ENTRY", "CLOSE_ENTRY_MAX_R", "CLOSE_ENTRY_KEEP_TP"]
+              "EARLY_STOP_R", "EARLY_STOP_BARS", "CLOSE_ENTRY", "CLOSE_ENTRY_MAX_R", "CLOSE_ENTRY_KEEP_TP",
+              "WICKY_MAX", "WICKY_BARS", "RECLAIM_BODY_MAX_ATR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -944,6 +947,22 @@ COMPARE_SETS["kapanis"] = [
     C("Kapanışla giriş, TP aynı fiyatta kalır", **dict(_EBY, CLOSE_ENTRY=True, CLOSE_ENTRY_KEEP_TP=True)),
     C("Kapanışla giriş, erken çıkış yok", **dict(_EBY, CLOSE_ENTRY=True, FAILED_ENTRY_BARS=0)),
 ]
+# kapanış sonucu (15.10 04:40, Nis-Eki): canlı +17.2 · 0.3R erken stop +12.3 · kapanışla giriş +6.9 (sahte kırılımın 66
+# işlemi -21.4R elendi ama kalan 135 işlem +38.5 → +6.9: giriş yukarıdan, stop %0.98 → %1.28) → hepsi red.
+# Grafik örnekleri (kullanıcı 15.10 04:37, "yükle" 10:13; ayrı ayrı test). Taban = yeni canlı ayar (03-07 filtresi yok).
+# RESOLVUSDT 20.08 02:15 LONG dönüş -1.16R: çok iğneli git-gel mumlar · NILUSDT 25.08 19:15 SHORT -1.09R: temiz dip yok
+# (dipte taban), düzeltme kötü · ESPUSDT 30.08 11:30 SHORT dönüş erken -0.37R: temas mumu gövdesi çok büyük.
+# CSV'de igne_orani / duz_igne / temas_govde_atr / pivot_bant_05 / pivot_bant_1 sütunları: eşikler CSV'den de taranır.
+_CANLI15 = dict(_EBY, QUIET_UTC=(0, 0))
+COMPARE_SETS["grafik"] = [
+    C("Canlı ayar (03-07 filtresi yok)", **_CANLI15),
+    C("+ iğneli git-gel yok (son 12 mum iğne oranı ≤ %60)", **dict(_CANLI15, WICKY_MAX=0.60)),
+    C("+ iğneli git-gel yok (≤ %55)", **dict(_CANLI15, WICKY_MAX=0.55)),
+    C("+ temiz dip/tepe: 0.5 ATR bantta ≤ 2 mum", **dict(_CANLI15, CLEAN_PIVOT_ATR=0.5)),
+    C("+ temiz dip/tepe: 1 ATR bantta ≤ 4 mum", **dict(_CANLI15, CLEAN_PIVOT_ATR=1.0, CLEAN_PIVOT_MAX=5)),
+    C("+ dönüşte temas gövdesi ≤ 1 ATR", **dict(_CANLI15, RECLAIM_BODY_MAX_ATR=1.0)),
+    C("+ dönüşte temas gövdesi ≤ 0.7 ATR", **dict(_CANLI15, RECLAIM_BODY_MAX_ATR=0.7)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -973,7 +992,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
