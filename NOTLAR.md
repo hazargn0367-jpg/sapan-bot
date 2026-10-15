@@ -659,3 +659,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Bybit'i yeni coinler için ekleme: ŞİMDİLİK HAYIR (Bybit verisinde sistem zayıf; yeni coinler 6 ayda 44 iş +5.7).
   Not: Bybit mumları daha gürültülü olabilir (fiyat Binance'te oluşuyor) → Bybit testi sistemi cezalandırıyor olabilir;
   ama 2024 (Binance verisi) de ~0 → beklenti backtestten düşük tutulmalı.
+- 16.10 00:3x kullanıcı "araştır" (ikinci strateji). Öneri: trend takibi (Donchian kırılımı, birden çok N: 20/50/100 gün,
+  takip eden stop, en likit 20-50 coin, 4s/günlük; kaynak: "Catching Crypto Trends" SSRN 5209907, OOS Sharpe >1.5).
+  Günlük ters dönüş (küçük coin, likiditeye bağlı), BTC gün içi momentum, funding/OI uçları: zayıf/uygun değil.
+  Kullanıcı şüpheli ("kârlıysa herkes yapardı"); yayın sonrası getiri düşüşü ve dayanma zorluğu anlatıldı.
+  KODLANMADI, "kodla" bekleniyor. Canlı ay sonuna kadar aynı.
