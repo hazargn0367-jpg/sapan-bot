@@ -75,6 +75,9 @@ LIVE_RULES = dict(
     # Kullanıcı 15.10 (ETHFI örneği): derin geri kapanışta erken çıkma. 3 dönem: +26.8 / +32.3 / -1.6 → +36.2 / +39.1 / +12.0
     # (18 ay +57.5 → +87.3R; 0.5 ATR eşiği de 3'ünde iyi: +81.2)
     EARLY_EXIT_MAX_ATR=0.35,    # mum dolumun 0.35 ATR'den derin gerisinde kapatırsa erken çıkış yok, stop / TP beklenir
+    # Kullanıcı 15.10 (CARV örneği): kural 2'deki önceki temas, fiyat EMA20'den 1.5 ATR ayrıldıktan sonra olmalı.
+    # 3 dönem: +36.5 / +37.0 / +13.0 → +45.1 / +41.0 / +17.2 (18 ay +86.4 → +103.4R, düşüş 17.7 → 11.7R, işlem ~%28 az)
+    PRIOR_TOUCH_SEP_ATR=1.5,
 )
 MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
 # Bildirimlerde 1R kaç dolar (kullanıcı 15.10: "1R'ım 1 dolar olacak"). Backtest raporları 25$ ile kalır.
@@ -108,7 +111,8 @@ def rules_summary():
     parts = [
         f"TP 1:{tr.RR:g}",
         "onay iğnesi ≤ gövde" if tr.WICK_MAX_BODY else None,
-        "trend teyidi" if tr.REQUIRE_PRIOR_TOUCH else None,
+        (("trend teyidi" + (f" (EMA20'den {tr.PRIOR_TOUCH_SEP_ATR:g} ATR ayrıldıktan sonra)" if tr.PRIOR_TOUCH_SEP_ATR > 0 else ""))
+         if tr.REQUIRE_PRIOR_TOUCH else None),
         f"stop payı {tr.STOP_BUFFER_ATR:g} ATR" if tr.STOP_BUFFER_ATR else None,
         "temiz tepe/dip" if tr.CLEAN_PIVOT_MAX else None,
         "fitil temas" if tr.TOUCH_WICK_MIN else None,
