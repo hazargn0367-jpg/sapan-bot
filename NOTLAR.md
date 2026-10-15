@@ -696,3 +696,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 01:39 kullanıcı: "mumlar bu şekilde olacak, gövdeleri büyük olmayacak". TWO_BAR_BODY_ATR: iki mumun gövdesi en fazla X
   ATR. ikimum seti: canlı · 2 mumlu gövde ≤ 0.3 ATR · ≤ 0.5 ATR · sınırsız. (İlk 2 mumlu commit main'e birleşmiş ama
   gönderilmemişti; gövde şartıyla birlikte yüklendi.)
+- 2 MUMLU TEMAS 5 dönem (Nis-Eki 26 / Eki-Nis / Nis-Eki 25 / önceki3 / önceki4), canlıya göre fark: gövde ≤ 0.3 ATR
+  -2.3 / +0.7 / +1.9 / +1.0 / +0.2 (toplam +1.5, 15 ek işlem) · ≤ 0.5 ATR -3.6 / +0.3 / +3.7 / +1.0 / +0.2 (+1.6) ·
+  sınırsız -1.8 / +0.3 / +2.5 / +1.0 / +0.2 (+2.2, 24 ek işlem). 30 ayda ~20 işlem (ayda <1), etkisi sıfıra yakın →
+  canlıya değmez (canlı tarama tarafında da ayrıca kodlanması gerekirdi). Canlı değişmedi.
