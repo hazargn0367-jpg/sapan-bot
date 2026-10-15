@@ -664,3 +664,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Günlük ters dönüş (küçük coin, likiditeye bağlı), BTC gün içi momentum, funding/OI uçları: zayıf/uygun değil.
   Kullanıcı şüpheli ("kârlıysa herkes yapardı"); yayın sonrası getiri düşüşü ve dayanma zorluğu anlatıldı.
   KODLANMADI, "kodla" bekleniyor. Canlı ay sonuna kadar aynı.
+- 16.10 00:54 "kodla": trend_bt.py (ayrı simülasyon). Donchian kırılımı: kapanış önceki N mumun en yükseği/düşüğü dışında →
+  sonraki açılışta giriş; stop giriş ∓ 3 ATR(20) = 1R, takip eden stop (uç nokta ∓ 3 ATR, sadece lehte); N = 20/50/100 üç
+  alt sistem (her biri 1/3 R); maliyet taraf başına %0.07 (komisyon+kayma) + günde %0.03 funding; dönem sonu açıklar son
+  kapanıştan. 6 ayar: günlük 20/50/100 L+S top30 · sadece LONG · günlük 20 · top60 · 4 saatlik · en fazla 5R açık risk.
+  En likit 60 coin yüklenir (USDC/FDUSD vb. hariç), 130 gün ısınma. `/backtest 180 trend` (+ önceki ... önceki4).
+  backtest --trend → main'de coin listesi alındıktan sonra trend_bt.run. Sahte veride mantık testi: scratchpad trend_unit.py.

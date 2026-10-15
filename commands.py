@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 trend -> ikinci strateji adayı: trend takibi (Donchian kırılımı 20/50/100, en likit 30-60 coin, günlük/4s)
   /backtest 180 bybit -> canlı kurallar Bybit'teki bütün USDT vadeli coinlerde; Binance'te olmayanlar ayrı (yeni işlemler)
   /backtest 180 bybit gelişim -> herhangi bir test Bybit verisiyle (canlı botun Binance coinlerinde, aynı coinler başka borsa verisi)
   /backtest 180 gelişim önceki3 -> 15.10'da eklenen kurallar sırayla, hiç bakılmamış dönemde (önceki4 = bir öncesi)
@@ -122,7 +123,9 @@ def start_backtest(text):
     bybit_mode = "bybit" in low
     if bybit_mode:
         args += ["--exchange", "bybit"]   # veri Bybit'ten; başka set yazılmadıysa "bybit" seti (yeni / ortak coinler)
-    if any(w in low for w in ("gelişim", "gelisim")):
+    if re.search(r"\btrend\b", low) and "teyit" not in low:
+        args += ["--trend"]   # ikinci strateji adayı: trend takibi (Donchian kırılımı)
+    elif any(w in low for w in ("gelişim", "gelisim")):
         args += ["--compare", "gelisim"]   # bugün eklenen kurallar sırayla (dönem dışı sınama)
     elif "esnet" in low:
         args += ["--compare", "esnet"]   # artır testinden çıkan esnetmeler; önceki3 = hiç bakılmamış dönem

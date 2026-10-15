@@ -1427,6 +1427,7 @@ def main():
     ap.add_argument("--prior-touch", action="store_true", help="trend teyidi: önceden EMA20 teması")
     ap.add_argument("--stop-buf", type=float, default=0.0, help="stop payı (ATR)")
     ap.add_argument("--top", type=int, default=None, help="hacme göre ilk kaç coin (0 = hepsi; Binance 500, Bybit hepsi)")
+    ap.add_argument("--trend", action="store_true", help="trend takibi (Donchian kırılımı) testi")
     ap.add_argument("--exchange", default="binance", choices=["binance", "bybit"], help="veri kaynağı borsa")
     ap.add_argument("--coins", default=None, choices=["all", "binance", "new"],
                     help="Bybit testinde hangi coinler (varsayılan: bybit setinde ayara göre, diğerlerinde binance)")
@@ -1561,6 +1562,10 @@ def main():
         log.warning("Binance API engelli, %s", how)
     if not symbols:
         raise RuntimeError("Coin listesi alınamadı")
+    if args.trend:   # ikinci strateji adayı: trend takibi (ayrı simülasyon, trend_bt.py)
+        import trend_bt
+        trend_bt.run(symbols, args, load_15m, period, send_message, send_document, TZ)
+        return
     log.info("Backtest başlıyor: %d coin, %d gün, %s, %d ayar", len(symbols), args.days, tfs, len(configs))
     what = (f"{len(configs)} farklı ayar karşılaştırılacak" if args.compare else
             f"TP 1:{tr.RR:g}" + (f", başabaş {tr.BE_TRIGGER:g}R" if tr.BE_TRIGGER > 0 else ""))
