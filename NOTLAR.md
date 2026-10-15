@@ -651,3 +651,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Sonraki: `/backtest 180 bybit gelişim` = gelişim seti Bybit verisiyle, sadece ortak coinler (--coins binance varsayılan;
   diğer coinlerin verisi indirilmez). Hangi kural başka borsanın mumlarında da tutuyor. commands: "bybit" artık sadece
   --exchange ekler, set yazılmadıysa bybit seti.
+- BYBIT GELİŞİM (Nis-Eki 26, Bybit verisi, sadece canlı botun Binance coinleri): sabahki canlı 176 iş +0.9 (TP %22) →
+  03-07 kalktı +4.7 (Δ +3.8) → iğneli + taban -1.1 (Δ -5.8) → derin kapanış +10.7 (Δ +11.8) → 1.5 ATR 101 iş +5.9
+  (Δ -4.8, TP %28) → + esnet A+B +12.6 (Δ +6.7). Aynı coin ve dönemde Binance verisiyle canlı +45.1 (TP ~%37).
+  KURAL SAĞLAMLIĞI (Binance 3 dönem + önceki3 + önceki4 + Bybit = 6 görünüm): derin kapanış 6/6 artı (gerçek) · 1.5 ATR
+  5/6 · iğneli + taban 4/6 (şüpheli) · 03-07 kaldırma karışık · esnet A+B önceki4'te -5.6 (red).
+  Bybit'i yeni coinler için ekleme: ŞİMDİLİK HAYIR (Bybit verisinde sistem zayıf; yeni coinler 6 ayda 44 iş +5.7).
+  Not: Bybit mumları daha gürültülü olabilir (fiyat Binance'te oluşuyor) → Bybit testi sistemi cezalandırıyor olabilir;
+  ama 2024 (Binance verisi) de ~0 → beklenti backtestten düşük tutulmalı.
