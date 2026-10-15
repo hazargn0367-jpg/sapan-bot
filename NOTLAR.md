@@ -592,3 +592,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +125 / -26.0 · kural 4 +6 / +1.4 · kural 5 +36 / -11.8 · **kural 6 +35 / +9.4 (toplam +54.5, düşüş 12.8)** · iğneli
   git-gel +18 / -1.1 · dip/tepe tabanı +31 / -2.4 · onay 3. mum +8 / +0.6 · stop ≥ %0.3 +12 / 0.0 · yer 0.5R +40 / +0.1.
   Analiz: scratchpad/an/artir_an.py. Önceki, önceki2 bekleniyor.
+- Artır 2. dönem (Eki 25-Nis 26, canlı 109 iş +43.2, düşüş 5.3). Eklenen işlem / R: kural 1 +6 / -2.4 · kural 2 +119 / +15.0
+  · kural 4 +4 / -2.7 · kural 5 +40 / +6.5 · kural 6 +27 / -3.5 (1. dönemde +9.4 → tutarsız) · iğneli +11 / -3.3 · dip/tepe
+  tabanı +28 / -0.7 · onay 3. mum +8 / +2.4 · stop %0.3 +8 / -0.9 · yer 0.5R +33 / +7.4. İki dönemde de artı: onay 3. mum
+  (+0.6 / +2.4), yer 0.5R (eklenenler +0.1 / +7.4; toplam -2.0 / +7.4).
