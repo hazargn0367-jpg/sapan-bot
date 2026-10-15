@@ -664,7 +664,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "BASE_MIN_RISK_PCT", "FAILED_ENTRY_RED", "TIME_STOP_LOCK_R",
               "EARLY_STOP_R", "EARLY_STOP_BARS", "CLOSE_ENTRY", "CLOSE_ENTRY_MAX_R", "CLOSE_ENTRY_KEEP_TP",
               "WICKY_MAX", "WICKY_BARS", "RECLAIM_BODY_MAX_ATR", "PIVOT_BAND2_ATR", "PIVOT_BAND2_MAX",
-              "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR"]
+              "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR", "ENTRY_BUFFER_ATR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -994,6 +994,16 @@ COMPARE_SETS["stop"] = [
 # -11.4: 31 stop kurtarıp 29 TP'yi girişten çıkarıyordu). Şimdiki canlı sistemle (iki kural + derin kapanışta erken çıkış
 # yok) 1R / 1.5R / 2R'de stop girişe. BE_TRIGGER: o seviyeye gelen mumdan SONRAKİ mumdan itibaren stop = dolum.
 _CANLI_SON = dict(live_setups.LIVE_RULES, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)
+# Başabaş sonucu (15.10 15:29, Nis-Eki 26): canlı +36.5 · 1R -14.0 · 1.5R -1.7 · 2R 0 → red.
+# Giriş yeri (kullanıcı 15.10 15:32 "giriş yerini biraz yükseltsek, stopu da"): giriş onay ucundan +0.1 / +0.2 ATR ötede;
+# 4-5: stop da aynı kadar yukarıda (stop payı 0.3 → 0.2 / 0.1 ATR), risk aynı kalır.
+COMPARE_SETS["giris"] = [
+    C("Canlı ayar", **_CANLI_SON),
+    C("+ giriş 0.1 ATR ötede", **dict(_CANLI_SON, ENTRY_BUFFER_ATR=0.1)),
+    C("+ giriş 0.2 ATR ötede", **dict(_CANLI_SON, ENTRY_BUFFER_ATR=0.2)),
+    C("+ giriş ve stop 0.1 ATR yukarı (risk aynı)", **dict(_CANLI_SON, ENTRY_BUFFER_ATR=0.1, STOP_BUFFER_ATR=0.2)),
+    C("+ giriş ve stop 0.2 ATR yukarı (risk aynı)", **dict(_CANLI_SON, ENTRY_BUFFER_ATR=0.2, STOP_BUFFER_ATR=0.1)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1036,7 +1046,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

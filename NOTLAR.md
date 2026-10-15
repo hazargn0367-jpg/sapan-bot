@@ -540,3 +540,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   sivri tepe ≥3.5 ATR çıkan işlemler +1.8 / +13.2 / +0.2 (tutarsız), sivri & genç trend kombinasyonları 2. dönemde hep artı,
   tek mum ≥0.5 -7.0 / +6.1 / -5.3; trend yaşı R/iş farkı tutarlı (yaşlı trend TP %34, genç %26) ama genç trend işlemleri
   toplamda artı (filtre toplam R'yi düşürür); yön, gün, seri-zarar molası tutarsız. Yeni kural bulunamadı.
+- Başabaş 2. test (şimdiki sistem, Nis-Eki 26): canlı +36.5 · 1R -14.0 (15 stop kurtarıp 13 TP kaçırıyor) · 1.5R -1.7 · 2R 0
+  → red, önceki dönemler çalıştırılmadı. TP 2.5 / 3 (MFE tahmini, 18 ay): -4.4 / +0.7 → TP 2.2 kalır.
+- 15:32 "kodla": ENTRY_BUFFER_ATR (giriş onay ucundan X ATR ötede). COMPARE_SETS["giris"]: canlı · giriş +0.1 · +0.2 ·
+  giriş+stop 0.1 yukarı (stop payı 0.2) · giriş+stop 0.2 yukarı (stop payı 0.1). `/backtest 180 giriş` (+ önceki, önceki2).

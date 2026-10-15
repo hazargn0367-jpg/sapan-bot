@@ -99,6 +99,8 @@ WICKY_BARS = 12              # bundan büyükse girme (git-gel yapan, iğneli pi
 RECLAIM_BODY_MAX_ATR = 0.0   # >0: dönüş varyasyonunda temas mumunun gövdesi bu kadar ATR'den büyükse girme
 # Kullanıcı 15.10 13:41-13:43 (ETHFI 19.04 04:00 SHORT erken -0.53R sonra TP; BLUR 19.04 19:00 LONG stop %4.4 uzakta):
 # "erken çıkışı esnetmek lazım" + "stop çok aşağıda, biraz yükseltsek TP mesafesi kısalır"
+ENTRY_BUFFER_ATR = 0.0       # >0: giriş onay mumunun ucundan bu kadar ATR daha ötede (LONG'da yukarıda): iğneyle değip dönen
+                             # sahte kırılımlarda emir dolmaz (kullanıcı 15.10 15:32, stopla birlikte de denenir)
 STOP_MAX_ATR = 0.0           # >0: stop girişten bu kadar ATR'den uzaksa girişe bu kadar ATR yaklaştırılır (TP de yaklaşır)
 EARLY_EXIT_MAX_ATR = 0.0     # >0: erken çıkış sadece mum dolumun en fazla bu kadar ATR gerisinde kapatırsa; daha derin
                              # kapatırsa erken çıkış o işlem için kapanır (asıl stop / TP beklenir). 18 ay CSV: >0.35 ATR
@@ -599,12 +601,13 @@ def simulate(df, i, side, tick, mode=None):
             return res
 
     buf = STOP_BUFFER_ATR * A[conf]
+    ebuf = ENTRY_BUFFER_ATR * A[conf]
     if long:
-        entry, stop = H[conf] + tick, L[conf] - tick - buf
+        entry, stop = H[conf] + tick + ebuf, L[conf] - tick - buf
     else:
-        entry, stop = L[conf] - tick, H[conf] + tick + buf
+        entry, stop = L[conf] - tick - ebuf, H[conf] + tick + buf
     risk = abs(entry - stop)
-    base_risk = risk - buf  # ATR sınırları stop payı eklenmeden önceki mesafeye uygulanır
+    base_risk = risk - buf - ebuf  # ATR sınırları stop/giriş payları eklenmeden önceki mesafeye uygulanır
     tp = entry + RR * risk if long else entry - RR * risk
     res.update(confirm=conf, entry=entry, stop=stop, tp=tp, risk=risk, atr=A[conf])
 

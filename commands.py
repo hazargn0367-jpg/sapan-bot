@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 giriş -> girişi onay ucundan 0.1 / 0.2 ATR öteye al (stopla birlikte de), şimdiki canlı sistemle
   /backtest 180 stop -> stop payı 0.15 / 0, stop en fazla 1 / 1.2 ATR, derin geri kapanışta erken çıkış yok (0.35 / 0.5 ATR)
   /backtest 180 dilim 30m -> yeni canlı ayar 30m'de (iki yeni kurallı / kuralsız); 5m için /backtest 90 dilim 5m
   /backtest 180 eleme -> iğne oranı ≤ %58 ve dip/tepe 1 ATR bandında ≤ 4 mum (ayrı + birlikte); önceki, önceki2 ile 3 dönem
@@ -109,6 +110,8 @@ def start_backtest(text):
     donus = any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon"))
     if any(w in low for w in ("gevşet", "gevset", "gevşe")):
         args += ["--compare", "gevset"]
+    elif re.search(r"\bgiri[şs]\b", low):
+        args += ["--compare", "giris"]
     elif re.search(r"\bstop\b", low):
         args += ["--compare", "stop"]
     elif re.search(r"\bdilim\b", low):
