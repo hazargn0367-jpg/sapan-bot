@@ -52,6 +52,11 @@ TOUCH_WICK_MIN = 0.0         # >0: temas mumunun EMA20'ye doğru iğnesi en az g
 PIVOT_WICK_MAX = 0.0         # >0: tepe (LONG) / dip (SHORT) mumunun o yöndeki iğnesi gövdenin bu katından uzunsa işlem yok
 QUIET_UTC = (0, 0)           # (başlangıç, bitiş) UTC saat: temas bu aralıktaysa işlem yok. (0, 4) = 03:00-07:00 TR
 ROOM_MIN_R = 0.0             # >0: giriş ile önceki tepe (LONG) / dip (SHORT) arası en az bu kadar R olmalı (önünde yer)
+# İşlem sayısını artırma (15.10 21:5x, artır testinden): bazı durumlarda önünde daha az yer yeter / kural 5 esner
+ROOM_RELAX_R = 0.0           # >0: aşağıdaki koşullardan biri varsa önünde bu kadar R yer yeter (ROOM_MIN_R yerine)
+ROOM_RELAX_WICKY = 0.0       # >0: temastan önceki 12 mumda iğne oranı ≤ bu ise (temiz trend)
+ROOM_RELAX_RISK_ATR = 0.0    # >0: stop mesafesi ≥ bu kadar ATR ise (geniş stop)
+TOUCH_WICK_ROOM_R = 0.0      # >0: kural 5'e uymayan (fitilsiz) temasa önünde en az bu kadar R yer varsa girilir
 STRUCTURE_BREAK = ""         # "wick" / "close": şu anki düzeltme önceki düzeltmenin dibini (LONG) / tepesini (SHORT) kırdıysa işlem yok
 TOUCH_TAIL_MAX = 0.0         # >0: temas mumunun ters iğnesi (SHORT'ta alt, LONG'da üst) en fazla bu kadar TOUCH_TAIL_REF (kural 10)
 TOUCH_TAIL_REF = "wick"      # "wick": EMA20 tarafındaki iğne · "atr": ATR · "body": gövde
@@ -550,9 +555,12 @@ def simulate(df, i, side, tick, mode=None):
         return res
 
     # Kural 5 (fitil temas) dönüş varyasyonunda uygulanmaz: temas mumu zaten EMA20'nin öbür tarafında kapatıyor
+    body_touch = False
     if mode != "reclaim" and TOUCH_WICK_MIN > 0 and not touch_is_wick_candle(df, i, side):
-        res["status"] = "touch_body"
-        return res
+        if TOUCH_WICK_ROOM_R <= 0:
+            res["status"] = "touch_body"
+            return res
+        body_touch = True   # önünde TOUCH_WICK_ROOM_R kadar yer varsa girilir (aşağıda yer kontrolünde)
     if TOUCH_TAIL_MAX > 0 and not touch_tail_ok(df, i, side):
         res["status"] = "touch_tail"
         return res
@@ -682,15 +690,25 @@ def simulate(df, i, side, tick, mode=None):
     if FILTERS and risk_pct > MAX_RISK_PCT:
         res["status"] = "max_risk"
         return res
-    if ROOM_MIN_R > 0:
+    if ROOM_MIN_R > 0 or body_touch:
         start = max(0, i - st.LOOKBACK)
         level = H[start:i].max() if long else L[start:i].min()   # önceki tepe / dip
         room = (level - entry) if long else (entry - level)
         res["room_r"] = room / risk
+        min_r = ROOM_MIN_R
+        if ROOM_RELAX_R > 0 and (
+                (ROOM_RELAX_WICKY > 0 and wickiness(df, i - WICKY_BARS, i) <= ROOM_RELAX_WICKY) or
+                (ROOM_RELAX_RISK_ATR > 0 and risk >= ROOM_RELAX_RISK_ATR * A[conf])):
+            min_r = min(min_r, ROOM_RELAX_R)
+            res["room_relaxed"] = True
         # Giriş seviyeyi zaten geçtiyse (room < 0) önünde engel yok sayılır
-        if 0 <= room < ROOM_MIN_R * risk:
+        if 0 <= room < min_r * risk:
             res["status"] = "no_room"
             return res
+        if body_touch and room < TOUCH_WICK_ROOM_R * risk:
+            res["status"] = "touch_body"
+            return res
+        res["body_touch"] = body_touch
 
     # --- Giriş ---
     k_in = None

@@ -596,3 +596,15 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   · kural 4 +4 / -2.7 · kural 5 +40 / +6.5 · kural 6 +27 / -3.5 (1. dönemde +9.4 → tutarsız) · iğneli +11 / -3.3 · dip/tepe
   tabanı +28 / -0.7 · onay 3. mum +8 / +2.4 · stop %0.3 +8 / -0.9 · yer 0.5R +33 / +7.4. İki dönemde de artı: onay 3. mum
   (+0.6 / +2.4), yer 0.5R (eklenenler +0.1 / +7.4; toplam -2.0 / +7.4).
+- Artır 3. dönem (Nis-Eki 25, canlı 75 iş +17.2, düşüş 11.1). Eklenen R: kural 1 -2.7 · kural 2 -5.1 · kural 4 -1.3 · kural 5
+  +11.9 · kural 6 -7.0 · iğneli -2.4 · taban -5.2 · onay 3. mum -1.3 · stop %0.3 -2.9 · yer 0.5R -4.1.
+  18 AY TOPLAM (eklenen işlem / R): kural 1 24 / -6.5 · kural 2 321 / -16.2 · kural 4 15 / -2.5 · kural 5 108 / +6.6 (-11.8 /
+  +6.5 / +11.9 tutarsız) · kural 6 88 / -1.1 · iğneli 36 / -6.9 · taban 78 / -8.3 · onay 3 24 / +1.7 · stop %0.3 27 / -3.8 ·
+  yer 0.5R 93 / +3.3. SONUÇ: hiçbir kural 3 dönemde de boşuna işlem kesmiyor.
+  Eklenenlerin içinde 3 dönemde artı alt gruplar (scratchpad/an/added_explore.py, room_explore.py; eşikler hassas → ezber
+  riski): yer 0.5R + stop ≥ 1.5 ATR 46 iş +12.5 (+7.5/+3.5/+1.5; 1.4 ATR'de bozuluyor) · yer 0.5R + iğne ≤ %45 30 iş +12.8
+  (≤ %50'de 3. dönem eksi) · kural 5 + önünde ≥ 1.5R 60 iş +13.2 (-1.6/+5.2/+9.6).
+  Kodlandı (varsayılan kapalı): ROOM_RELAX_R / ROOM_RELAX_WICKY / ROOM_RELAX_RISK_ATR, TOUCH_WICK_ROOM_R (kural 5'e uymayan
+  temas yer kontrolüne ertelenir). COMPARE_SETS["esnet"] 6 ayar. commands: "esnet", "önceki3" (--ago 3×gün; rakam RR
+  sanılmasın diye clean'de). Karar dönemi: önceki3 = Eki 24-Nis 25, hiç bakılmamış → aynı zamanda bugünkü bütün canlı
+  kuralların dönem dışı sınaması.

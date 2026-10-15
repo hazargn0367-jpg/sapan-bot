@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 esnet önceki3 -> önünde yer / kural 5 esnetmeleri; önceki3 = 3 dönem önceki 180 gün (hiç bakılmamış)
   /backtest 180 artır -> işlem sayısını artırma: canlı kurallar tek tek kaldırılır / gevşetilir (11 ayar)
   /backtest 180 toplu -> toplu sinyal eşiği 5 / 8 / 10 coin / kapalı / kapalı + en fazla 5 işlem (şimdiki canlı sistem)
   /backtest 180 teyit -> kural 2 (trend teyidi) düzeltmesi: önceki temas, fiyat EMA20'den 0.5 / 1 / 1.5 ATR ayrıldıktan sonra
@@ -91,7 +92,7 @@ def start_backtest(text):
         return
     tf_m = re.search(r"\b(5m|15m|30m|5dk|5 dk)\b", text.lower())
     yil = re.search(r"(\d+)\s*(yıl|yil|sene)", text.lower())   # "2 sene önce": dönemi o kadar yıl geriye kaydır
-    clean = re.sub(r"\b(5m|15m|30m|5dk|5 dk)\b|son2|[öo]nceki2|\d+\s*(yıl|yil|sene)", " ", text.lower())
+    clean = re.sub(r"\b(5m|15m|30m|5dk|5 dk)\b|son2|[öo]nceki[23]|\d+\s*(yıl|yil|sene)", " ", text.lower())
     nums = re.findall(r"\d+(?:[.,]\d+)?", clean)
     days = 7
     args = []
@@ -106,12 +107,16 @@ def start_backtest(text):
     low = text.lower()
     if yil:
         args += ["--ago", str(int(yil.group(1)) * 365)]
+    elif "önceki3" in low or "onceki3" in low:
+        args += ["--ago", str(3 * days)]   # üç dönem önce (4. bağımsız dönem)
     elif "önceki2" in low or "onceki2" in low:
         args += ["--ago", str(2 * days)]   # iki dönem önce (3. bağımsız dönem)
     elif "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
     donus = any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon"))
-    if any(w in low for w in ("artır", "artir", "arttır", "arttir")):
+    if "esnet" in low:
+        args += ["--compare", "esnet"]   # artır testinden çıkan esnetmeler; önceki3 = hiç bakılmamış dönem
+    elif any(w in low for w in ("artır", "artir", "arttır", "arttir")):
         args += ["--compare", "artir"]   # işlem sayısını artırma: canlı kurallar tek tek gevşetilir
     elif any(w in low for w in ("gevşet", "gevset", "gevşe")):
         args += ["--compare", "gevset"]
