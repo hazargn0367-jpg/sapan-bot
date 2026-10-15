@@ -80,6 +80,17 @@ FAILED_ENTRY_BARS = 0        # >0: giriş mumu dahil ilk bu kadar mumdan biri gi
                              # 14.10, BSV 15.09 19:45). Erken çıkış "be" durumuyla sayılır, res["early_exit"] = True
 FAILED_ENTRY_RED = False     # True: erken çıkış sadece girişin gerisinde kapatan mum ters renkliyse (LONG'da kırmızı,
                              # SHORT'ta yeşil). Kullanıcı (15.10 01:57, ZETAUSDT 13.09 13:55): iğne atıp yeşil kapatan mumda çıkma.
+# Erken çıkış zararını azaltma (kullanıcı 15.10 04:2x: "erken çıkışlar 0.3-0.6R yiyor, ölç biç mantıklı yol bul"). 12 ay
+# 15m canlı ayarda 224 erken çıkış -74R (fiyat -54R + komisyon -20R); 157'si giriş mumunun kendisinde (fiyat girişe değip
+# geri kapatmış = sahte kırılım). Derin kapanışlar az: 0.3R erken stop en fazla ~11R/12 ay kazandırabilir.
+EARLY_STOP_R = 0.0           # >0: giriş mumu dahil ilk EARLY_STOP_BARS mumda stop girişin bu kadar R gerisinde (mum içinde
+EARLY_STOP_BARS = 2          # tetiklenir), sonra asıl stopa döner. Giriş mumunda: kapanış seviyenin gerisindeyse kesin,
+                             # mum girişin gerisinde kapatıp iğneyle seviyeyi geçtiyse ya da mum girişin ötesinde açıldıysa
+                             # da tetiklendi sayılır (iğne dolumdan sonra varsayılır). "be" + early_exit + early_stop
+CLOSE_ENTRY = False          # True: girişe stop emriyle değil, bir mum giriş seviyesinin ötesinde KAPATINCA o mumun
+                             # kapanışında girilir (sahte kırılım mumuna girilmez). Risk = kapanış - stop, TP buna göre
+CLOSE_ENTRY_MAX_R = 0.0      # >0: kapanış giriş seviyesinden bu kadar R'den uzaksa girme (kovalamaca, durum "chase")
+CLOSE_ENTRY_KEEP_TP = False  # True: kapanışla girişte TP fiyatı değişmez (giriş seviyesi + RR·asıl risk)
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
 BTC_CORR_BARS = 96           # benzerlik penceresi (15dk'da 96 mum = 24 saat)
@@ -414,7 +425,7 @@ def mfe_r(df, res, side, max_bars=96):
     H, L = df["High"].values, df["Low"].values
     long = side == "LONG"
     k, fill, stop, risk = res["entry_bar"], res["fill"], res["stop"], res["risk"]
-    best = H[k] if long else L[k]
+    best = fill if res.get("close_entry") else (H[k] if long else L[k])   # kapanışla girişte mumun ucu dolumdan önce
     for m in range(k + 1, min(len(df), k + 1 + max_bars)):
         if (L[m] <= stop) if long else (H[m] >= stop):
             break
@@ -431,7 +442,7 @@ def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
     status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | spike_top | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
-            no_entry | win | loss | be | open | pending"""
+            no_entry | chase | win | loss | be | open | pending"""
     O = df["Open"].values
     H = df["High"].values
     L = df["Low"].values
@@ -590,14 +601,30 @@ def simulate(df, i, side, tick, mode=None):
         if (L[k] < L[conf]) if long else (H[k] > H[conf]):
             res["status"] = "cancel_confirm"
             return res
-        if (H[k] >= entry) if long else (L[k] <= entry):
+        if CLOSE_ENTRY:
+            if (C[k] > entry) if long else (C[k] < entry):
+                k_in = k
+                break
+        elif (H[k] >= entry) if long else (L[k] <= entry):
             k_in = k
             break
     if k_in is None:
         res["status"] = "no_entry"
         return res
 
-    fill = max(entry, O[k_in]) if long else min(entry, O[k_in])
+    if CLOSE_ENTRY:
+        # Kapanışla giriş: işlem bir sonraki mumdan itibaren yürür
+        fill = C[k_in]
+        over = (fill - entry) if long else (entry - fill)
+        if CLOSE_ENTRY_MAX_R > 0 and over > CLOSE_ENTRY_MAX_R * risk:
+            res["status"] = "chase"
+            return res
+        risk = abs(fill - stop)
+        if not CLOSE_ENTRY_KEEP_TP:
+            tp = fill + RR * risk if long else fill - RR * risk
+        res.update(risk=risk, tp=tp, close_entry=True)
+    else:
+        fill = max(entry, O[k_in]) if long else min(entry, O[k_in])
     res.update(entry_bar=k_in, fill=fill)
 
     # --- Çıkış ---
@@ -621,17 +648,35 @@ def simulate(df, i, side, tick, mode=None):
             ((C[bar] < entry) if long else (C[bar] > entry)) and \
             (not FAILED_ENTRY_RED or ((C[bar] < O[bar]) if long else (C[bar] > O[bar])))
 
-    # Giriş mumunda TP (stop bu mumda olamaz: olsaydı giriş iptal edilirdi)
-    if (H[k_in] >= tp) if long else (L[k_in] <= tp):
-        return close_trade(k_in, tp, "win")
-    if failed(k_in):
-        res["early_exit"] = True
-        return close_trade(k_in, C[k_in], "be")
-    if reached_be(k_in):
-        cur_stop, be_on = fill, True
+    # Erken stop: ilk EARLY_STOP_BARS mumda girişin EARLY_STOP_R gerisinde
+    es_level = (fill - EARLY_STOP_R * risk) if long else (fill + EARLY_STOP_R * risk)
+
+    def early_stop(bar, price):
+        res["early_exit"] = res["early_stop"] = True
+        return close_trade(bar, price, "be")
+
+    # Kapanışla girişte giriş mumu işlemin parçası değil (dolum kapanışta)
+    if not CLOSE_ENTRY:
+        # Giriş mumunda TP (stop bu mumda olamaz: olsaydı giriş iptal edilirdi)
+        if (H[k_in] >= tp) if long else (L[k_in] <= tp):
+            return close_trade(k_in, tp, "win")
+        if EARLY_STOP_R > 0 and EARLY_STOP_BARS > 0:
+            beyond_close = (C[k_in] < es_level) if long else (C[k_in] > es_level)
+            dipped = (L[k_in] <= es_level) if long else (H[k_in] >= es_level)
+            bad_close = (C[k_in] < entry) if long else (C[k_in] > entry)
+            gap = (O[k_in] >= entry) if long else (O[k_in] <= entry)
+            if beyond_close or (dipped and (bad_close or gap)):
+                return early_stop(k_in, es_level)
+        if failed(k_in):
+            res["early_exit"] = True
+            return close_trade(k_in, C[k_in], "be")
+        if reached_be(k_in):
+            cur_stop, be_on = fill, True
 
     time_moved = False
     for m in range(k_in + 1, n):
+        if EARLY_STOP_R > 0 and m - k_in < EARLY_STOP_BARS and ((L[m] <= es_level) if long else (H[m] >= es_level)):
+            return early_stop(m, min(es_level, O[m]) if long else max(es_level, O[m]))
         if TIME_STOP_BARS > 0 and not time_moved and m - k_in >= TIME_STOP_BARS:
             # Zaman stopu: süre doldu, stop girişe; fiyat girişin gerisindeyse bu mumun açılışında çık
             time_moved = True

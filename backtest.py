@@ -90,6 +90,7 @@ STATUS_TR = {
     "session": "Temas 00-08 UTC (Asya seansı)",
     "cancel_confirm": "Girişten önce onay mumunun ucu kırıldı",
     "no_entry": "2 mumda girişe gelmedi",
+    "chase": "Kapanış girişten çok uzakta (kovalamaca)",
     "win": "TP",
     "loss": "Stop",
     "be": "Başabaş / erken çıkış",
@@ -392,6 +393,8 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
             if r["status"] in ("win", "loss", "be"):
                 if r.get("early_exit") or r.get("time_exit"):
                     row["cikis_turu"] = "erken çıkış" if r.get("early_exit") else "zaman stopu"
+                    if r.get("early_stop"):
+                        row["erken_stop"] = 1   # mum içinde erken stop (cikis_turu yine "erken çıkış")
                 elif r["status"] == "be":
                     row["cikis_turu"] = "başabaş stop"   # 1R'ye gelip stop girişe çekildikten sonra girişten çıktı
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
@@ -604,6 +607,8 @@ def build_report_detailed(df_all, period_txt, n_coins, minutes, examples_txt, p0
         msg.append(f"  ↳ Stop %{tr.MAX_RISK_PCT:g}'ten geniş: {c('max_risk')}")
     msg.append(f"  ↳ Girişten önce iptal: {c('cancel_confirm')}")
     msg.append(f"  ↳ 2 mumda girişe gelmedi: {c('no_entry')}")
+    if c("chase"):
+        msg.append(f"  ↳ Kapanış girişten çok uzakta: {c('chase')}")
     if c("skip_btc", "skip_cluster", "skip_open"):
         msg.append(f"  ↳ Portföy koruması: BTC {c('skip_btc')}, toplu sinyal {c('skip_cluster')}, "
                    f"açık işlem sınırı {c('skip_open')}")
@@ -653,7 +658,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN",
               "LEG_COUNTER_MAX", "PULLBACK_MIN_BARS", "LEG_ATR_MAX", "BTC_CORR_MAX", "BTC_CORR_BARS",
               "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT", "CONFIRM_WINDOW", "SPIKE_TOP_ATR",
-              "BASE_MIN_RISK_PCT", "FAILED_ENTRY_RED", "TIME_STOP_LOCK_R"]
+              "BASE_MIN_RISK_PCT", "FAILED_ENTRY_RED", "TIME_STOP_LOCK_R",
+              "EARLY_STOP_R", "EARLY_STOP_BARS", "CLOSE_ENTRY", "CLOSE_ENTRY_MAX_R", "CLOSE_ENTRY_KEEP_TP"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -926,6 +932,18 @@ COMPARE_SETS["gevset"] = [
     C("- kural 6: tepe iğnesi ≤ 2 gövde", **dict(_EBY, PIVOT_WICK_MAX=0.0)),
     C("- 03-07 TR saat filtresi", **dict(_EBY, QUIET_UTC=(0, 0))),
 ]
+# Erken çıkış zararı (kullanıcı 15.10 04:2x: "erken çıkışlar 0.3-0.6R yiyor; ölç biç mantıklı yol bul"). 12 ay ölçüm:
+# 224 erken çıkış -74R (fiyat -54 + komisyon -20), 157'si giriş mumunun kendisinde (sahte kırılım). Derin kapanış az
+# (0.3R erken stop en fazla +5.5 / +5.8R). Giriş filtreleri (stop ≤ 1.3 ATR, önünde ≥ 1.5R yer, sivri tepe) iki dönemde
+# tutarlı değil: çıkardıkları işlemler toplamda artı. Asıl deneme: sahte kırılım mumuna girmemek (kapanışla giriş).
+COMPARE_SETS["kapanis"] = [
+    C("Canlı ayar (giriş seviyesine değince stop emriyle)", **_EBY),
+    C("+ ilk 2 mumda 0.3R erken stop (mum içinde)", **dict(_EBY, EARLY_STOP_R=0.3)),
+    C("Kapanışla giriş (mum girişin ötesinde kapatınca)", **dict(_EBY, CLOSE_ENTRY=True)),
+    C("Kapanışla giriş, kapanış girişten ≤ 0.5R uzaksa", **dict(_EBY, CLOSE_ENTRY=True, CLOSE_ENTRY_MAX_R=0.5)),
+    C("Kapanışla giriş, TP aynı fiyatta kalır", **dict(_EBY, CLOSE_ENTRY=True, CLOSE_ENTRY_KEEP_TP=True)),
+    C("Kapanışla giriş, erken çıkış yok", **dict(_EBY, CLOSE_ENTRY=True, FAILED_ENTRY_BARS=0)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -955,7 +973,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

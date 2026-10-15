@@ -453,3 +453,15 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   gerçek sonuçları 17.1/17.2 ve 29.8/31.5 tutturuyor): Nis-Eki 165 işlem -24.9R, Eki-Nis 305 işlem -13.7R → filtre kalır.
   COMPARE_SETS["gevset"]: canlı ayardan kural 1 / 2 / 4 / 5 / 6 ve 03-07 saat filtresi tek tek kaldırılır.
   `/backtest 180 gevşet` (+ önceki).
+- Erken çıkış zararı ölçümü (15.10 04:2x, kullanıcı: "erken çıkışlar 0.3-0.6R yiyor, ölç biç"). 12 ay 15m canlı ayar:
+  224 erken çıkış -74R = fiyat -54R + komisyon -20R; 157'si giriş mumunun kendisinde (fiyat girişe değip geri kapattı =
+  sahte kırılım), 67'si sonraki mumda. Derin kapanış az: X'ten derin kapatan (Nis-Eki / Eki-Nis) 0.3R: 35/37 işlem,
+  0.4R: 18/23. Mum içi erken stop en fazla 0.2R +9.8/+10.6 · 0.3R +5.5/+5.8 · 0.4R +2.8/+2.7 kazandırabilir (iğneyle
+  stoplanıp TP olacakları kaybetmeden önce). Giriş filtreleri CSV'den (çıkardıkları işlemlerin R'si, Nis-Eki / Eki-Nis):
+  stop ≤ 1.3 ATR +11.4 / +4.1 · ≤ 1.4 ATR +10.6 / +0.4 · önünde ≥ 1.5R yer +12.0 / +4.2 · sivri < 3 ATR -0.3 / +8.1 →
+  hepsi kârlı işlem de atıyor, tutarlı değil. Asıl kaldıraç sahte kırılım mumuna girmemek.
+  Yeni: CLOSE_ENTRY (mum giriş seviyesinin ötesinde kapatınca kapanışta gir; risk = kapanış - stop, TP buna göre),
+  CLOSE_ENTRY_MAX_R (kapanış seviyeden bu kadar R uzaksa girme, "chase"), CLOSE_ENTRY_KEEP_TP (TP fiyatı aynı kalır),
+  EARLY_STOP_R / EARLY_STOP_BARS (ilk 2 mumda mum içi stop; giriş mumunda kötümser: mum girişin gerisinde kapatıp iğneyle
+  seviyeyi geçtiyse tetiklendi sayılır). COMPARE_SETS["kapanis"], `/backtest 180 kapanış` (+ önceki). CSV'de erken_stop
+  sütunu. Canlıya geçerse: kapanışla girişte oto işlem mum kapanışında piyasa emri verir (stop emri değil).
