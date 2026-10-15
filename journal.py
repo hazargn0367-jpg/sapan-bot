@@ -79,12 +79,12 @@ def _line(name, items):
     wins = sum(s["status"] == "win" for s in done)
     total = sum(s["r"] or 0 for s in done)
     return (f"{name}: {len(done)} işlem, {wins} TP, %{100 * wins / len(done):.0f}, "
-            f"<b>{total:+.1f}R ({total * _risk_usd():+.0f}$)</b>")
+            f"<b>{total:+.1f}R ({total * _risk_usd():+.2f}$)</b>")
 
 
 def _risk_usd():
-    import trade_rules
-    return trade_rules.RISK_USD
+    import live_setups
+    return live_setups.ALERT_RISK_USD
 
 
 def summary():

@@ -1,7 +1,7 @@
 """
 CANLI SETUP BİLDİRİMLERİ
 
-Her mum kapanışında (LIVE_TF, varsayılan 15m) hacmi en yüksek coinleri tarar. Bütün kuralları
+Her mum kapanışında (LIVE_TF, varsayılan 5m) hacmi en yüksek coinleri tarar. Bütün kuralları
 geçen bir setup'ta onay mumu kapanır kapanmaz "EMİR HAZIR" bildirimi gönderir
 (giriş, stop, TP, pozisyon büyüklüğü, grafik, TradingView linki).
 Sonra o setup'ı takip edip giriş / iptal / TP / stop olduğunda haber verir.
@@ -36,7 +36,7 @@ CLUSTER_MAX = 5         # aynı mumda bu kadar coin aynı yönde temas verirse g
 MAX_OPEN = 2            # aynı anda en fazla bu kadar işlem (giriş bekleyen + açık); doluysa yeni EMİR HAZIR gönderilmez
 SCAN_THREADS = 6
 RECOVER_BARS = 60   # yeniden başlarken son 60 mumdaki (5m'de 5 saat) bildirilmiş setup'lar takibe geri alınır
-LIVE_TF = config.LIVE_TF                 # canlı tarama zaman dilimi (varsayılan 15m)
+LIVE_TF = config.LIVE_TF                 # canlı tarama zaman dilimi (varsayılan 5m)
 TF_MIN = config.tf_minutes(LIVE_TF)
 TF_SEC = TF_MIN * 60
 TZ = "Europe/Istanbul"
@@ -65,8 +65,12 @@ LIVE_RULES = dict(
     BASE_MIN_RISK_PCT=0.5,      # stop en az %0.5 (daha darında komisyon + kayma R'nin büyük kısmını yiyor)
     ROOM_MIN_R=1.0,             # giriş ile önceki tepe (LONG) / dip (SHORT) arası en az 1R ("tepenin hizasından girme")
     FAILED_ENTRY_BARS=2,        # erken çıkış: giriş mumu ya da sonraki mum girişin gerisinde kapatırsa "ERKEN ÇIK" bildirimi
+    EMA_FAN_MIN=2.0,            # 15.10 03:00: EMA20-EMA100 arası en az 2 ATR (5m 3 ayda her ay artı: +4.5/+6.6/+9.1R,
+                                # kaymayla +13.3R; canlı 5m'ye geçti). 15m'de bu filtre karışıktı (Eki-Nis'te kötü).
 )
 MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
+# Bildirimlerde 1R kaç dolar (kullanıcı 15.10: "1R'ım 1 dolar olacak"). Backtest raporları 25$ ile kalır.
+ALERT_RISK_USD = float(os.environ.get("ALERT_RISK_USD", os.environ.get("AUTO_RISK_USD", "1")))
 
 FINAL = ("win", "loss", "be", "cancel_confirm", "no_entry")
 STATUS_MSG = {
@@ -108,6 +112,7 @@ def rules_summary():
         f"onay en geç {tr.CONFIRM_WINDOW}. mumda" if tr.CONFIRM_WINDOW < 3 else None,
         f"stop ≥ %{tr.BASE_MIN_RISK_PCT:g}" if not tr.FILTERS and tr.BASE_MIN_RISK_PCT > 0.3 else None,
         f"önünde ≥ {tr.ROOM_MIN_R:g}R yer" if tr.ROOM_MIN_R > 0 else None,
+        f"EMA20-EMA100 ≥ {tr.EMA_FAN_MIN:g} ATR" if tr.EMA_FAN_MIN > 0 else None,
         (f"erken çıkış uyarısı (giriş mumu / sonraki mum girişin gerisinde kapatırsa)"
          if tr.FAILED_ENTRY_BARS == 2 else (f"erken çıkış uyarısı ({tr.FAILED_ENTRY_BARS} mum)" if tr.FAILED_ENTRY_BARS else None)),
         "⚠️ ESKİ FİLTRELER AÇIK" if tr.FILTERS else None,
@@ -212,7 +217,7 @@ def scan_symbol(symbol, keep_df=False, lookback=None):
 def setup_message(symbol, side, r, df):
     ts = df["timestamp"].values
     risk = abs(r["entry"] - r["stop"])
-    qty = tr.RISK_USD / risk if risk else 0
+    qty = ALERT_RISK_USD / risk if risk else 0
     notional = qty * r["entry"]
     valid_until = int(ts[r["confirm"]]) + (tr.ENTRY_WINDOW + 1) * TF_SEC * 1000
     tv = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol}.P&interval={TF_MIN}"
@@ -226,7 +231,7 @@ def setup_message(symbol, side, r, df):
         f"Giriş ({order}): <code>{p(r['entry'])}</code>\n"
         f"Stop: <code>{p(r['stop'])}</code>  (%{100 * risk / r['entry']:.2f})\n"
         f"TP (1:{tr.RR:g}): <code>{p(r['tp'])}</code>\n"
-        f"{tr.RISK_USD:g}$ risk için: ~{notional:,.0f} USDT pozisyon ({qty:.6g} adet)\n\n"
+        f"{ALERT_RISK_USD:g}$ risk için: ~{notional:,.0f} USDT pozisyon ({qty:.6g} adet)\n\n"
         f"{steps}\n"
         f"Emir {fmt(valid_until, '%H:%M')}'e kadar geçerli. Girişten önce fiyat onay mumunun "
         f"{'dibini' if side == 'LONG' else 'tepesini'} kırarsa iptal.\n"
@@ -290,18 +295,29 @@ def follow_up(symbol, df):
             lines.append(f"✅ Giriş gerçekleşti: {p(r.get('fill', r['entry']))} ({fmt(ts[r['entry_bar']])})")
         if status == "be" and r.get("early_exit"):
             under = "altında" if info["side"] == "LONG" else "üstünde"
+            try:
+                import autotrade
+                auto = autotrade.managed(symbol, key[1])
+            except Exception:
+                auto = False
+            todo = "Otomatik işlem pozisyonu kapatıyor." if auto else "Pozisyonu şimdi piyasa emriyle kapat."
             lines.append(f"⚠️ <b>ERKEN ÇIK</b>: {fmt(ts[r['exit_bar']])} mumu girişin {under} kapattı ({p(r['exit'])}), "
-                         f"kırılım tutmadı. Pozisyonu şimdi piyasa emriyle kapat.\n"
-                         f"Bu kapanıştan çıkışla: <b>{r['r_net']:+.2f}R ({r['r_net'] * tr.RISK_USD:+.0f}$)</b>")
+                         f"kırılım tutmadı. {todo}\n"
+                         f"Bu kapanıştan çıkışla: <b>{r['r_net']:+.2f}R ({r['r_net'] * ALERT_RISK_USD:+.2f}$)</b>")
         elif status in STATUS_MSG and status != "open":
             line = STATUS_MSG[status]
             if status in ("win", "loss", "be"):
-                line += f": {p(r['exit'])}  →  <b>{r['r_net']:+.2f}R ({r['r_net'] * tr.RISK_USD:+.0f}$)</b>"
+                line += f": {p(r['exit'])}  →  <b>{r['r_net']:+.2f}R ({r['r_net'] * ALERT_RISK_USD:+.2f}$)</b>"
             lines.append(line)
         if lines:
             emoji = "🟢" if info["side"] == "LONG" else "🔴"
             send_message(f"{emoji} <b>{info['side']} {html.escape(symbol)}</b> (temas {fmt(key[1])})\n" + "\n".join(lines))
         info["status"] = status
+        try:
+            import autotrade
+            autotrade.on_signal(symbol, key[1], status, r)
+        except Exception as e:
+            log.exception("Otomatik işlem hatası: %s", e)
         try:
             journal.set_result(symbol, key[1], status, r.get("r_net") if status in ("win", "loss", "be") else None)
         except Exception as e:
@@ -380,6 +396,11 @@ def run_cycle():
             continue
         send_setup(symbol, side, r, df)
         _active[(symbol, touch_ts)] = {"side": side, "status": "pending"}
+        try:
+            import autotrade
+            autotrade.on_setup(symbol, side, r["entry"], r["stop"], r["tp"], touch_ts, LIVE_TF)
+        except Exception as e:
+            log.exception("Otomatik işlem hatası: %s", e)
         sent += 1
         busy += 1
     if limit_skipped:

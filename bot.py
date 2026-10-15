@@ -121,15 +121,22 @@ def main():
     prev = memwatch.previous_run_note()
     durum = "açık" if config.TOUCH_ALERTS else "kapalı"
     setup = "açık" if config.SETUP_ALERTS else "kapalı"
+    import autotrade
+    try:
+        oto = autotrade.status_text().split("\n")[0]
+    except Exception as e:
+        oto = f"🤖 Otomatik işlem: durum okunamadı ({html.escape(str(e))[:100]})"
     send_message(f"✅ Bot başladı\n"
                  f"🏷 Sürüm: {html.escape(config.version_text())}\n"
                  f"📋 Emir bildirimleri: {setup} (hacmi en yüksek {live_setups.UNIVERSE} coin, {live_setups.LIVE_TF})\n"
                  f"Kurallar: {live_setups.rules_summary()}\n"
                  f"🔔 Temas bildirimleri: {durum}\n"
+                 f"{oto}\n"
                  + (f"🧠 {prev}\n" if prev else "")
-                 + "Komutlar: /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal  /incele")
+                 + "Komutlar: /oto aç|kapat  /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal  /incele")
     start_listener()
     memwatch.start(commands.backtest_proc, send_message)
+    autotrade.start(send_message)
     threading.Thread(target=setup_loop, daemon=True).start()
     while True:
         if config.TOUCH_ALERTS:

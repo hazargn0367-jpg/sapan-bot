@@ -1,5 +1,7 @@
 """
 Telegram komutları (bot arka planda dinler):
+  /oto            -> otomatik işlem durumu (bakiye, açık işlemler, bugünkü R)
+  /oto aç | kapat -> Binance'te otomatik işlemi aç / kapat (1R = AUTO_RISK_USD, varsayılan 1$)
   /backtest       -> son 7 günle backtest başlatır
   /backtest 60    -> son 60 günle backtest başlatır
   /backtest 30 2.5 -> 30 gün, TP = riskin 2.5 katı
@@ -279,7 +281,12 @@ def _listen():
                     import exchanges
                     exchanges.probe_weight()  # IP'nin şu anki Binance kullanımı (1 hafif istek)
                     import journal
-                    send_message(f"{status_text()}\n\n{live_setups.status_text()}\nEmir bildirimleri: {sig}"
+                    import autotrade
+                    try:
+                        oto = autotrade.status_text().split("\n")[0]
+                    except Exception as e:
+                        oto = f"🤖 Otomatik işlem: durum okunamadı ({html.escape(str(e))[:100]})"
+                    send_message(f"{status_text()}\n\n{live_setups.status_text()}\nEmir bildirimleri: {sig}\n{oto}"
                                  f"\n\n{journal.summary()}"
                                  f"\n\n{exchanges.status_line()}\n\n{memwatch.status_line()}"
                                  f"\n\n🏷 Sürüm: {html.escape(config.version_text(), quote=False)}")
@@ -299,6 +306,12 @@ def _listen():
                         config.TOUCH_ALERTS = True
                     send_message("🔔 Temas bildirimleri " + ("açık" if config.TOUCH_ALERTS else "kapalı")
                                  + ". (Bot yeniden başlarsa kapalı başlar.)")
+                elif text.lower().startswith("/oto"):
+                    import autotrade
+                    try:
+                        send_message(autotrade.command(text))
+                    except Exception as e:
+                        send_message(f"⚠️ /oto hatası: {html.escape(str(e))[:300]}")
                 elif text.lower().startswith("/iptal"):
                     if _bt_proc is not None and _bt_proc.poll() is None:
                         _bt_proc.terminate()

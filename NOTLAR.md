@@ -405,3 +405,17 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   sonra; aynı mumda giriş + erken çıkış olursa ikisi tek mesajda). EMİR HAZIR'da erken çıkış satırı. Gerekçe: 15m 12 ay
   +48.6R (kaymayla +36.2), en kötü ay -3.3R; 5m en iyisi kaymayla 3 ayda +4.2R. Backtest karşılaştırma setleri
   LIVE_RULES_14_10'a sabitlendi; preset "canli" artık yeni canlı ayar (`/backtest 180 canlı` ≈ renk setindeki 5. ayar).
+- 5m "yer" testi 90 gün (Tem-Ağu / Ağu-Eyl / Eyl-Eki): taban -8.8/+1.5/+4.6 · +1R yer -1.8/+0.8/+7.1 · **+1R yer +EMA≥2
+  +4.5/+6.6/+9.1 = +20.3R (kaymayla +13.3, her ay artı; düşüş -10.7; ~55 işlem/ay)** · +EMA≥1.5 +5.7.
+- 15.10 02:52 kullanıcı: "son sonuçlar bitsin, en iyi sistemle Binance otomatik işlem; 1R = 1 dolar".
+  autotrade.py: EMİR HAZIR → girişe STOP_MARKET algo emri (/fapi/v1/algoOrder; 2025-12-09'dan beri koşullu emirler
+  orada, triggerPrice); fiyat girişi geçmişse (-2021) ≤0.3R ise piyasa emri. Her 5 sn positionRisk: dolunca stop
+  (STOP_MARKET reduceOnly) + TP (LIMIT reduceOnly GTC, maker). Stop konamazsa piyasa ile kapat. Canlı takip
+  cancel_confirm/no_entry → giriş emri silinir; erken çıkış → piyasa ile kapat + emirleri sil. Pozisyon 0 olunca TP
+  emri FILLED mi bakılır, kalan emir silinir, userTrades'ten (giriş emrinden beri) gerçek kâr-zarar - komisyon (BNB
+  ise BNBUSDT fiyatıyla) → R. Güvenlik: /oto aç ile açılır (auto_state.json kalıcı), izole 10x, en fazla 2 işlem,
+  tek işlem ≤300 USDT, günlük -5R'de durur, coinde başka pozisyon varsa girmez, hedge modu desteklenir.
+  Ortam: BINANCE_API_KEY, BINANCE_API_SECRET (+ isteğe bağlı AUTO_RISK_USD=1, AUTO_LEVERAGE=10, AUTO_MAX_NOTIONAL=300,
+  AUTO_MAX_OPEN=2, AUTO_DAILY_LOSS_R=5). Bildirimler 1R = 1$ (ALERT_RISK_USD). Taklit Binance ile test edildi
+  (TP +2.09R, stop -1.14R, erken çıkış -0.30R, hedge modu, stop konamazsa kapatma, geç giriş, günlük sınır).
+  CANLI: 5m + LIVE_RULES'a EMA_FAN_MIN=2.0 (config.LIVE_TF varsayılanı 5m).
