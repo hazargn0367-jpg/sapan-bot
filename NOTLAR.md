@@ -614,3 +614,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Sonraki adım (kodlandı, sonraki dalında; kullanıcı testleri bitirince yüklenecek): COMPARE_SETS["gelisim"] = 15.10'da
   eklenen kurallar sırayla (sabahki canlı → 03-07 kalktı → iğneli + taban → derin kapanış → 1.5 ATR → + A+B).
   `/backtest 180 gelişim önceki3`, `önceki4` (= --ago 4×gün, Nis-Eki 24). Bugünkü kurallar dönem dışında da işe yarıyor mu.
+- GELİŞİM ÖNCEKİ3 (Eki 24-Nis 25): sabahki canlı 113 iş -2.1 (düşüş 16.0, erken 76) → 03-07 kalktı 131 iş -7.3 (Δ -5.2)
+  → iğneli + taban 85 iş -2.5 (Δ +4.8) → derin kapanış -1.8 (Δ +0.7) → 1.5 ATR 49 iş -0.5 (Δ +1.3, düşüş 7.6) → + esnet A+B
+  62 iş +5.2 (Δ +5.7). Bugünkü kurallar dönem dışında da yön olarak doğru (03-07 kaldırma hariç: dönemler +7.2 / -1.2 /
+  -5.2). Sistem bu dönemde her hâliyle başa baş. önceki4 bekleniyor.
