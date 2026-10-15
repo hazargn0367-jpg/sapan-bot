@@ -32,7 +32,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 renk -> erken çıkış sadece ters renkli mumda (LONG'da kırmızı kapanış); 5m için /backtest 90 renk 5m
   /backtest 30 komisyon 5m -> onay ≤ 2. mum tabanında TP 2.5 ve en az %0.5 stop (komisyon payı küçülsün)
   /backtest 30 sivri 5m -> onay en geç 2. mumda + sivri tepe (2 dev mumla yapılan tepe) yok, erken çıkış üstüne
-  /backtest 180 başabaş -> fiyat 1R / 1.5R / 2R'ye gelince stopu girişe çekme, TP 2.2 ve TP 4 ile (erken çıkış üstüne)
+  /backtest 180 başabaş -> şimdiki canlı sistemle fiyat 1R / 1.5R / 2R kâra gelince stopu girişe çekme
   /backtest 180 örnek -> PDF örneklerinden kurallar (dip tabanı, önünde yer, büyük onay mumu, temas mumu) erken çıkış üstüne
   /backtest 180 erken -> giriş mumu girişin gerisinde kapatırsa çık (1 / 2 mum) + BTC'ye benzerlik filtresi, ay ay + PDF
   /backtest 180 btc -> BTC'ye benzer hareket eden coinlere girmeme filtresi (canlı ayar, 0.8 / 0.6 / 0.4) + fark analizi
@@ -130,7 +130,7 @@ def start_backtest(text):
     elif "sivri" in low:
         args += ["--compare", "sivri"]
     elif any(w in low for w in ("başabaş", "basabas", "başabas", "basabaş")):
-        args += ["--compare", "basabas"]
+        args += ["--compare", "basabas2"]   # 15.10 15:19: şimdiki canlı sistemle (eski set: basabas)
     elif ("canlı" in low or "canli" in low) and "erken" in low:
         args += ["--preset", "canli_erken"]
     elif any(w in low for w in ("örnek", "ornek", "pdf")):

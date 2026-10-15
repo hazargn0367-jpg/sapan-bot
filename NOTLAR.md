@@ -530,3 +530,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   1.5 katından uzak kalacak en yüksek kaldıraç (leverageBracket'tan coin sınırı ve bakım marjini; alınamazsa en fazla 20x;
   geçersizse 25/20/10/5 denenir), AUTO_LEVERAGE en fazla 50, AUTO_MAX_NOTIONAL 4000. Kayıtta risk_usd (eski kayıtlar 1$).
   Stop %1 → 40x marjin ~38$, %4.4 → 13x ~26$, %0.5 → 50x ~60$. Backtest raporları da 1R = 15$.
+- 15:19 kullanıcı "1R kârdan sonra girişe gelirse stop girişte" → sabahki sonuç anlatıldı (eski sistemde 1R BE -31.5 /
+  -11.4), "kodla deneyelim": COMPARE_SETS["basabas2"] = şimdiki canlı (LIVE_RULES) · +1R / +1.5R / +2R BE.
+  `/backtest 180 başabaş` artık bu sete gidiyor (+ önceki + önceki2).

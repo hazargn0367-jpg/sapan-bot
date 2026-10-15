@@ -990,6 +990,16 @@ COMPARE_SETS["stop"] = [
     C("+ derin kapanışta (> 0.35 ATR) erken çıkış yok", **dict(_YENI, EARLY_EXIT_MAX_ATR=0.35)),
     C("+ derin kapanışta (> 0.5 ATR) erken çıkış yok", **dict(_YENI, EARLY_EXIT_MAX_ATR=0.5)),
 ]
+# Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /
+# -11.4: 31 stop kurtarıp 29 TP'yi girişten çıkarıyordu). Şimdiki canlı sistemle (iki kural + derin kapanışta erken çıkış
+# yok) 1R / 1.5R / 2R'de stop girişe. BE_TRIGGER: o seviyeye gelen mumdan SONRAKİ mumdan itibaren stop = dolum.
+_CANLI_SON = dict(live_setups.LIVE_RULES, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)
+COMPARE_SETS["basabas2"] = [
+    C("Canlı ayar (başabaş yok)", **_CANLI_SON),
+    C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
+    C("+ 1.5R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.5)),
+    C("+ 2R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=2.0)),
+]
 # 5m / 30m yeni kurallarla (kullanıcı 15.10 13:21 "hazırla"). Eski 5m (-3R / 6 ay) ve 30m (-3.5R / 12 ay) testleri iğne +
 # dip/tepe tabanı kuralları yokken yapıldı. Aynı zaman diliminde ve dönemde kurallı / kuralsız. /backtest 180 dilim 30m,
 # /backtest 90 dilim 5m (+ önceki). 15m'de: kuralsız +22.5 / +27.5 / -19.0, kurallı +27.1 / +32.3 / -1.5.
@@ -1026,7 +1036,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
