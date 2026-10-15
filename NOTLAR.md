@@ -560,3 +560,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   0.31 → iğne kuralı yakalamıyor), "kodla, yatayın içinde olsun": zigzag(df,i,side) = düzeltme mumlarında (tepe+1..temas-1)
   trend yönlü mum oranı + renk değişimi sayısı; ZIGZAG_MAX / ZIGZAG_MIN_BARS=3. yatay2 setine 2 ayar eklendi (> %50, > %34).
   CSV'de duz_zigzag, duz_donus; /incele de gösteriyor.
+- 17:28 kullanıcı CARVUSDT 05.10 07:45 LONG erken -0.25R: "yataydan tek dev mumla başlamış, sonra EMA testi yok; test olsa
+  girilebilirdi". Kural 2 (prior_touch_ok) yataydaki EMA'ların hafif sıralı olmasıyla trend başlangıcını yatay bölge sanıp
+  oradaki temasları sayıyor. ÖNERİ (kodlanmadı, kullanıcı: "önceki testler bitsin buna geçeriz"): kalkış k = fiyatın EMA20'nin
+  0.5 / 1 ATR üstüne çıktığı ilk mum (şimdi L > E20), temas k'dan sonra ve tepeden önce olmalı. Yatay testleri bitince.
