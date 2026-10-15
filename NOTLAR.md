@@ -618,3 +618,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   → iğneli + taban 85 iş -2.5 (Δ +4.8) → derin kapanış -1.8 (Δ +0.7) → 1.5 ATR 49 iş -0.5 (Δ +1.3, düşüş 7.6) → + esnet A+B
   62 iş +5.2 (Δ +5.7). Bugünkü kurallar dönem dışında da yön olarak doğru (03-07 kaldırma hariç: dönemler +7.2 / -1.2 /
   -5.2). Sistem bu dönemde her hâliyle başa baş. önceki4 bekleniyor.
+- GELİŞİM ÖNCEKİ4 (Nis-Eki 24, 155 coin): sabahki canlı 90 iş -0.4 → 03-07 kalktı -0.9 (Δ -0.6) → iğneli + taban -4.2
+  (Δ -3.2) → derin kapanış -3.4 (Δ +0.8) → 1.5 ATR 44 iş +0.6 (Δ +4.0) → + esnet A+B 53 iş -5.0 (Δ -5.6, 15 iş -8.0).
+  KARAR ÖZETİ (5 dönem): 1.5 ATR ve derin kapanış her dönemde artı (gerçek). İğneli + taban 4/5 artı. 03-07 kaldırma
+  +7.2 / -1.2 / -5.2 / -0.6 (toplam ~0, işlem +3/ay). Esnet A+B önceki3 +5.7 ama önceki4 -5.6 → RED (veri madenciliği
+  ezberi). Canlı sistem dönem dışında başa baş: önceki3 -0.5 (49 iş), önceki4 +0.6 (44 iş). İşlem sayısını kârlı artıran
+  yol bulunamadı; canlı değişmedi.
