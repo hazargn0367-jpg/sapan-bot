@@ -632,3 +632,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   son 5/10, son 7/14/30 gün, coinin BTC korelasyonu < 0.5/0.6/0.7, piyasa ort. korelasyonu (3/7/14 gün) < 0.4/0.45/0.5,
   EMA açılımı, bacak ATR. Sonuç: sistem altcoinlerin kendi trendleriyle gittiği dönemde kazanıyor (Eyl 2025'ten beri
   neredeyse her ay artı), BTC ile birlikte hareket edilen dönemde başa baş; bunu önceden ayıran işaret verimizde yok.
+- 22:43 kullanıcı: "ay sonuna kadar canlıdaki sistemle devam, grafik incelemeye devam". Canlı değişmedi, risk kuralı
+  (2 ay eksi → 1R 10$) eklenmedi. Bundan sonra yeni kural 5 dönemde sınanır: `/backtest 180 X` + önceki + önceki2
+  (kural seçimi) + önceki3 + önceki4 (dönem dışı; 2024 verisi, 155-220 coin, daha uzun sürer).
