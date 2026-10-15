@@ -29,7 +29,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 grafik -> grafik örnekleri: iğneli git-gel mumlar, temiz dip/tepe bandı, dönüşte büyük temas mumu (ayrı ayrı)
   /backtest 180 kapanış -> erken çıkış zararı: kapanışla giriş (sahte kırılım mumuna girme) ve ilk 2 mumda 0.3R erken stop
   /backtest 180 gevşet -> canlı 15m ayardan eski kurallar (1, 2, 4, 5, 6) ve 03-07 saat filtresi tek tek kaldırılır (daha çok işlem)
-  /backtest 180 yatay -> canlı 15m ayar + 2 / 4 / 8 saatte sonuç yoksa stop girişe (ya da 0.2R kâra)
+  /backtest 180 yatay -> şimdiki canlı sistem + 4 / 8 / 12 saatte sonuç yoksa stop girişe
   /backtest 180 yer -> önünde en az 1R yer (+ EMA açıklığı 2 / 1.5 ATR), onay ≤ 2 + stop ≥%0.5 + erken çıkış; 5m: /backtest 90 yer 5m
   /backtest 180 renk -> erken çıkış sadece ters renkli mumda (LONG'da kırmızı kapanış); 5m için /backtest 90 renk 5m
   /backtest 30 komisyon 5m -> onay ≤ 2. mum tabanında TP 2.5 ve en az %0.5 stop (komisyon payı küçülsün)
@@ -126,7 +126,7 @@ def start_backtest(text):
     elif any(w in low for w in ("kapanış", "kapanis", "kapaniş", "kapanıs")):
         args += ["--compare", "kapanis"]
     elif "yatay" in low:
-        args += ["--compare", "yatay"]
+        args += ["--compare", "yatay2"]   # 15.10 17:21: şimdiki canlı sistemle (eski set: yatay)
     elif re.search(r"\byer\b", low):
         args += ["--compare", "yer"]
     elif "renk" in low:

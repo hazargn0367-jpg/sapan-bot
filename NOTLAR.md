@@ -551,3 +551,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   "Kodla": EMA200_ORDER (EMA100 > EMA200 ×1.001), NEW_HIGH_BARS / NEW_HIGH_LOOKBACK (temastan önceki N mumda önceki 92 mumun
   zirvesi). add_atr EMA200 sütunu ekliyor. COMPARE_SETS["gemini"]: canlı · EMA200 · son 4 mum · son 8 mum · EMA200+4.
   `/backtest 180 gemini` (+ önceki, önceki2).
+- Gemini testi (Nis-Eki 26): canlı +36.5 · EMA200 +27.4 · son 4 mum +24.2 (R/iş 0.31 ama yarı işlem) · son 8 mum +37.7 ·
+  ikisi +19.7 → red. Kullanıcı örnekleri RESOLV 01.10 21:00 (tepe 2 mumu 11.8 ATR, trend 9 mum) ve MAGMA 02.10 20:30 (bacak
+  iğneli, 14 saat yatay sonra stop): sivri ≥5/6/8 ATR ve genç trend kombinasyonları 18 ayda başa baş (TP %22 ama toplam
+  -2..+5R), iğneli bacak (gövde <0.3) +9.5 / +20.0 / +2.5 → kural yok. "Tamam": COMPARE_SETS["yatay2"] = şimdiki canlı +
+  4 / 8 / 12 saatte stop girişe; `/backtest 180 yatay` artık bu sete gidiyor.

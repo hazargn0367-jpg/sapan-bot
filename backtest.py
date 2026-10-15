@@ -1016,6 +1016,15 @@ COMPARE_SETS["gemini"] = [
     C("+ son 8 mumda 24 saatin zirvesi", **dict(_CANLI_SON, NEW_HIGH_BARS=8)),
     C("+ EMA200 + son 4 mumda zirve (ikisi)", **dict(_CANLI_SON, EMA200_ORDER=True, NEW_HIGH_BARS=4)),
 ]
+# Gemini sonucu (15.10 17:16, Nis-Eki 26): canlı +36.5 · EMA200 -9.1 · son 4 mum -12.3 · son 8 mum +1.2 · ikisi -16.8 → red.
+# Yatay yeniden (kullanıcı 15.10 17:20 MAGMAUSDT 02.10 20:30: +1.36R'ye gidip 14 saat yatay, sonra stop): şimdiki sistemle
+# 4 / 8 / 12 saatte TP/stop olmadıysa stop girişe (fiyat girişin gerisindeyse o mumun açılışında çık). 15m: 16/32/48 mum.
+COMPARE_SETS["yatay2"] = [
+    C("Canlı ayar", **_CANLI_SON),
+    C("+ 4 saatte sonuç yoksa stop girişe", **dict(_CANLI_SON, TIME_STOP_BARS=16)),
+    C("+ 8 saatte sonuç yoksa stop girişe", **dict(_CANLI_SON, TIME_STOP_BARS=32)),
+    C("+ 12 saatte sonuç yoksa stop girişe", **dict(_CANLI_SON, TIME_STOP_BARS=48)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1058,7 +1067,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
