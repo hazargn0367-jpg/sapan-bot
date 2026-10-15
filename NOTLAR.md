@@ -676,3 +676,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   çünkü yükseldi → seçim yanlılığı. Düzeltme: coin listesi dönem başından önceki 30 günün USDT hacmine göre
   (trend_bt.volume_at: bütün işlemdeki perp'ler, /fapi/v1/klines 1d, k[7]); alınamazsa bugünkü sıra + raporda uyarı.
   1. dönem de bu düzeltmeyle yeniden çalıştırılmalı.
+- TREND 1. DÖNEM DÜZELTİLMİŞ (dönem başı hacmine göre; liste: BTC ETH SOL XRP DOGE ... + ARIA EDGE NOM RAVE RIVER SIREN
+  STO 币安人生 gibi o anki popüler coinler, QNT yok): ana +1.7R (314 iş, düşüş 7.3) · sadece LONG +4.7 · N=20 +8.1 (düşüş
+  14.2) · ilk 60 -6.4 · 4 saatlik +10.3 (düşüş 47.6) · en fazla 5R +3.7. SHORT -3.0. Önceki +31.1R'nin neredeyse tamamı
+  seçim yanlılığıydı. Diğer 4 dönem bekleniyor.
