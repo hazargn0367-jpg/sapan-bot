@@ -443,3 +443,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Not: hacim sırasına göre canlı 15m ayar: 300-500. coinler Nis-Eki +18.8R, Eki-Nis +5.8R → küçük coin filtresi yok.
 - 30m yer Nisan–Ekim (227 coin): taban -11.2R · +1R yer (canlı ayar) 119 işlem TP %15 -14.5R · +EMA≥2 -9.7 · +EMA≥1.5
   -10.5. Aynı dönemde 15m +17.2R → 30m RED, önceki dönem çalıştırılmadı. Canlı/oto sadece 15m.
+- Yatay testi 15m (canlı ayar +17.2 / +31.5): 2 saat +7.3 / +31.9 (-9.9 / +0.4) · 4 saat +13.2 / +36.6 (-4.0 / +5.1) ·
+  8 saat +16.8 / +33.5 (-0.4 / +2.0) · 4 saat 0.2R kâra +10.7 / +37.2 (-6.5 / +5.7). Hiçbiri iki dönemde de iyi değil
+  (Nis-Eki'de hepsi kötü: yatay işlemlerin bir kısmı sonradan TP oluyor) → canlıya eklenmedi.
+- 15m canlı ayar ay ay (TP %): Eki +4.5 (40) · Kas +0.4 (19) · Ara +3.1 (24) · Oca +7.0 (24) · Şub +3.1 (19) · Mar +7.4
+  (26) · Nis +6.0/+5.0 · May -0.7 (23) · Haz +9.7 (31) · Tem +5.2 (24) · Ağu -3.1 (17) · Eyl +4.4 (22) · Eki -3.3 (14).
