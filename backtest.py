@@ -93,6 +93,7 @@ STATUS_TR = {
     "chase": "Kapanış girişten çok uzakta (kovalamaca)",
     "wicky": "Temastan önceki mumlar çok iğneli (git-gel)",
     "big_touch": "Dönüşte temas mumunun gövdesi çok büyük",
+    "wide_pivot": "Dip/tepenin 1 ATR yakınında çok mum (taban)",
     "win": "TP",
     "loss": "Stop",
     "be": "Başabaş / erken çıkış",
@@ -662,7 +663,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT", "CONFIRM_WINDOW", "SPIKE_TOP_ATR",
               "BASE_MIN_RISK_PCT", "FAILED_ENTRY_RED", "TIME_STOP_LOCK_R",
               "EARLY_STOP_R", "EARLY_STOP_BARS", "CLOSE_ENTRY", "CLOSE_ENTRY_MAX_R", "CLOSE_ENTRY_KEEP_TP",
-              "WICKY_MAX", "WICKY_BARS", "RECLAIM_BODY_MAX_ATR"]
+              "WICKY_MAX", "WICKY_BARS", "RECLAIM_BODY_MAX_ATR", "PIVOT_BAND2_ATR", "PIVOT_BAND2_MAX"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -963,6 +964,18 @@ COMPARE_SETS["grafik"] = [
     C("+ dönüşte temas gövdesi ≤ 1 ATR", **dict(_CANLI15, RECLAIM_BODY_MAX_ATR=1.0)),
     C("+ dönüşte temas gövdesi ≤ 0.7 ATR", **dict(_CANLI15, RECLAIM_BODY_MAX_ATR=0.7)),
 ]
+# grafik sonucu (15.10, 3 dönem: Nis-Eki 26 / Eki-Nis / Nis-Eki 25): taban +22.1 / +27.5 / -20.8. Hiçbir ayar 3'ünde iyi
+# değil, ama CSV'de 1.-2. dönemden seçilen iki eşik 3. dönemde de tuttu (12 mum iğne >0.58; kural 4 kalarak 1 ATR bantta
+# ≥5 mum). Kullanıcı 11:46 "kodla" (/backtest 180 eleme): gerçek ayar olarak (portföy etkisiyle) 3 dönemde. 5. ayar: biraz gevşek eşikler
+# (sonuç eşiğe çok hassassa şanstır).
+COMPARE_SETS["grafik2"] = [
+    C("Canlı ayar", **_CANLI15),
+    C("+ iğne oranı ≤ %58", **dict(_CANLI15, WICKY_MAX=0.58)),
+    C("+ dip/tepe 1 ATR bandında ≤ 4 mum", **dict(_CANLI15, PIVOT_BAND2_ATR=1.0, PIVOT_BAND2_MAX=5)),
+    C("+ ikisi birden", **dict(_CANLI15, WICKY_MAX=0.58, PIVOT_BAND2_ATR=1.0, PIVOT_BAND2_MAX=5)),
+    C("+ ikisi birden, gevşek (iğne ≤ %60, bantta ≤ 5 mum)",
+      **dict(_CANLI15, WICKY_MAX=0.60, PIVOT_BAND2_ATR=1.0, PIVOT_BAND2_MAX=6)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -992,7 +1005,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

@@ -496,3 +496,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   1 ATR bant ≥5 (kural 4 kalarak, ek filtre) -2.5 / -3.6 / -13.7. İkisi birden (CSV tahmini): +22.1→+26.7 · +27.5→+32.3 ·
   -20.8→-3.2 (18 ay +28.8 → +55.8R, işlemlerin ~1/3'ü çıkar). Gerçek ayar olarak (portföy etkisiyle) 3 dönemde sınanmalı:
   yeni parametre gerekir (kural 4'ün 0.3 ATR bandı kalırken ikinci bant 1 ATR ≥5 mum).
+- 11:46 "kodla": PIVOT_BAND2_ATR / PIVOT_BAND2_MAX (kural 4'ün 0.3 ATR bandı kalır, ek olarak dip/tepenin 1 ATR yakınında
+  ≥5 mum varsa "wide_pivot") + WICKY_MAX=0.58. COMPARE_SETS["grafik2"]: canlı · iğne ≤%58 · 1 ATR bant ≤4 · ikisi · ikisi
+  gevşek (≤%60, ≤5). `/backtest 180 eleme` + önceki + önceki2 (anahtar kelimede rakam olmasın: "grafik2" → --rr 2 oluyordu).

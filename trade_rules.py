@@ -97,6 +97,9 @@ CLOSE_ENTRY_KEEP_TP = False  # True: kapanışla girişte TP fiyatı değişmez 
 WICKY_MAX = 0.0              # >0: temastan önceki WICKY_BARS mumda iğne oranı (1 - gövdeler toplamı / mum boyları toplamı)
 WICKY_BARS = 12              # bundan büyükse girme (git-gel yapan, iğneli piyasa). 15m'de 12 mum = 3 saat
 RECLAIM_BODY_MAX_ATR = 0.0   # >0: dönüş varyasyonunda temas mumunun gövdesi bu kadar ATR'den büyükse girme
+PIVOT_BAND2_ATR = 0.0        # >0: kural 4'e ek ikinci bant: son tepe/dibin bu kadar ATR yakınına PIVOT_BAND2_MAX ya da daha
+PIVOT_BAND2_MAX = 5          # fazla mum uç verdiyse girme (dipte/tepede taban var). 3 dönem CSV: 1 ATR ≥5 mumdaki işlemler
+                             # -2.5 / -3.6 / -13.7R. 12 mum iğne >0.58 (WICKY_MAX) -3.3 / -6.5 / -2.7R (15.10)
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
 BTC_CORR_BARS = 96           # benzerlik penceresi (15dk'da 96 mum = 24 saat)
@@ -463,7 +466,7 @@ def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
     status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | spike_top | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
-            no_entry | chase | wicky | big_touch | win | loss | be | open | pending"""
+            no_entry | chase | wicky | big_touch | wide_pivot | win | loss | be | open | pending"""
     O = df["Open"].values
     H = df["High"].values
     L = df["Low"].values
@@ -518,6 +521,9 @@ def simulate(df, i, side, tick, mode=None):
         return res
     if CLEAN_PIVOT_MAX > 0 and pivot_touches(df, i, side) >= CLEAN_PIVOT_MAX:
         res["status"] = "dirty_pivot"
+        return res
+    if PIVOT_BAND2_ATR > 0 and pivot_touches(df, i, side, atr_mult=PIVOT_BAND2_ATR) >= PIVOT_BAND2_MAX:
+        res["status"] = "wide_pivot"
         return res
     if PIVOT_WICK_MAX > 0 and not pivot_wick_ok(df, i, side):
         res["status"] = "pivot_wick"
