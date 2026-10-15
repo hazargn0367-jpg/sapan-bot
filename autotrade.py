@@ -86,7 +86,7 @@ class BinanceAPI:
         self.offset = int(res.json()["serverTime"]) - int(time.time() * 1000)
         self.offset_at = time.time()
 
-    def request(self, method, path, params=None, signed=True, _retry=True):
+    def request(self, method, path, params=None, signed=True, _retry=True, base=None):
         wait = exchanges.blocked_for()
         if wait > 0:
             raise BinanceError(-418, f"Binance IP engeli sürüyor (~{int(wait)} sn)")
@@ -99,9 +99,9 @@ class BinanceAPI:
             params["recvWindow"] = 5000
             qs = urlencode(params)
             sig = hmac.new(self.secret.encode(), qs.encode(), hashlib.sha256).hexdigest()
-            url = f"{self.base}{path}?{qs}&signature={sig}"
+            url = f"{base or self.base}{path}?{qs}&signature={sig}"
         else:
-            url = f"{self.base}{path}" + (f"?{urlencode(params)}" if params else "")
+            url = f"{base or self.base}{path}" + (f"?{urlencode(params)}" if params else "")
         res = self.session.request(method, url, headers=headers, timeout=10)
         if res.status_code in (418, 429):
             try:
@@ -119,11 +119,15 @@ class BinanceAPI:
                 self._sync()
                 return self.request(method, path, params={k: v for k, v in params.items()
                                                           if k not in ("timestamp", "recvWindow")},
-                                    signed=signed, _retry=False)
+                                    signed=signed, _retry=False, base=base)
             raise BinanceError(code, data.get("msg", "") if isinstance(data, dict) else str(data), res.status_code)
         return data
 
     # --- bilgi
+    def restrictions(self):
+        """Anahtarın yetkileri: ipRestrict, enableFutures, enableWithdrawals ... (spot API, sadece okuma)."""
+        return self.request("GET", "/sapi/v1/account/apiRestrictions", base="https://api.binance.com")
+
     def exchange_info(self):
         return self.request("GET", "/fapi/v1/exchangeInfo", signed=False)
 
@@ -678,6 +682,25 @@ def ip_text():
 
 
 # ------------------------------------------------------------------ Telegram /oto
+def _perm_check():
+    """(sorun listesi, açıklama satırı). Sorun varsa otomatik işlem açılmaz."""
+    try:
+        r = api.restrictions()
+    except Exception as e:
+        return [], f"Anahtar yetkileri okunamadı ({html.escape(str(e))[:120]})"
+    bad = []
+    if not r.get("enableFutures"):
+        bad.append("Enable Futures kapalı (Binance → Edit restrictions → Enable Futures işaretle)")
+    if r.get("enableWithdrawals"):
+        bad.append("PARA ÇEKME yetkisi AÇIK: güvenlik için kapat (Enable Withdrawals işaretini kaldır)")
+    if not r.get("ipRestrict"):
+        bad.append("IP kısıtlaması yok (Binance Futures yetkili anahtarı siler; /ip'deki IP'yi ekle)")
+    yes = lambda v: "✅" if v else "❌"
+    line = (f"Anahtar: Futures {yes(r.get('enableFutures'))} · IP kısıtlı {yes(r.get('ipRestrict'))} · "
+            f"para çekme {'⚠️ AÇIK' if r.get('enableWithdrawals') else 'kapalı ✅'}")
+    return bad, line
+
+
 def status_text():
     if api is None:
         return ("🤖 Otomatik işlem: <b>kurulmamış</b>. Render → Environment'a BINANCE_API_KEY ve "
@@ -690,6 +713,9 @@ def status_text():
             avail, total = api.usdt_balance()
         lines.append(f"Bakiye: {total:.2f} USDT (kullanılabilir {avail:.2f})")
         lines.append("Pozisyon modu: " + ("çift yön (hedge)" if _dual() else "tek yön"))
+        bad, line = _perm_check()
+        lines.append(line)
+        lines.extend(f"⚠️ {b}" for b in bad)
     except BinanceError as e:
         lines.append(f"⚠️ Binance'e bağlanılamadı: {html.escape(str(e))[:200]}")
         if e.code == -2015:
@@ -715,6 +741,9 @@ def command(text):
             avail, total = api.usdt_balance()
         except Exception as e:
             return f"⚠️ Binance'e bağlanılamadı, açılmadı: {html.escape(str(e))[:200]}"
+        bad, line = _perm_check()
+        if bad:
+            return "🤖 Otomatik işlem <b>AÇILMADI</b>:\n" + "\n".join(f"⚠️ {b}" for b in bad) + f"\n{line}"
         _set_state(enabled=True)
         return (f"🤖 Otomatik işlem <b>AÇILDI</b>. Bakiye {total:.2f} USDT. Bundan sonraki EMİR HAZIR'larda "
                 f"{RISK_USD:g}$ riskle işlem açılacak. Durdurmak için /oto kapat")

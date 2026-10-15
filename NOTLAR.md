@@ -432,3 +432,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   IP'sini gösterir (ipify / checkip.amazonaws / ifconfig.me), ip_seen.json'da tutulur; 10 dk'da bir kontrol, yeni IP
   görülürse (anahtar kuruluysa) Telegram uyarısı. -2015 hatasında IP ipucu. Kalıcı çözüm gerekirse: sabit IP'li
   küçük sunucu (proxy) ya da Render Dedicated IP.
+- 15.10 03:37 kullanıcı IP'yi (74.220.51.142) ekledi; /oto bakiye okuyor (225 USDT, tek yön). Futures yetkisi bakiye
+  okumakla anlaşılmıyor → /oto ve /oto aç artık /sapi/v1/account/apiRestrictions ile Futures / IP kısıtı / para çekme
+  bayraklarını gösteriyor; Futures kapalıysa, IP kısıtı yoksa ya da PARA ÇEKME açıksa /oto aç reddedilir.
