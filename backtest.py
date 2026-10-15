@@ -914,6 +914,18 @@ COMPARE_SETS["yatay"] = [
     C("+ 8 saatte sonuç yoksa stop girişe", **dict(_EBY, TIME_STOP_BARS=32)),
     C("+ 4 saatte sonuç yoksa stop girişin 0.2R kârına", **dict(_EBY, TIME_STOP_BARS=16, TIME_STOP_LOCK_R=0.2)),
 ]
+# İşlem sayısını artırma (kullanıcı 15.10 04:03: "erken çıkışlar hariç ayda ~10 işlem, çok az; işlem ve kazancı artırırsak
+# 10R'ye ulaşırım"). Toplu sinyale takılanlar CSV'den (mfe + erken çıkış) tahminle eksi: Nis-Eki -24.9R, Eki-Nis -13.7R →
+# o filtre kalıyor. Eski 6 kuraldan ve saat filtresinden biri tek tek kaldırılır: eklenen işlemler artıdaysa toplam R artar.
+COMPARE_SETS["gevset"] = [
+    C("Canlı ayar", **_EBY),
+    C("- kural 1: onay iğnesi ≤ gövde", **dict(_EBY, WICK_MAX_BODY=0.0)),
+    C("- kural 2: trend teyidi (önceki temas)", **dict(_EBY, REQUIRE_PRIOR_TOUCH=False)),
+    C("- kural 4: temiz tepe/dip", **dict(_EBY, CLEAN_PIVOT_MAX=0)),
+    C("- kural 5: fitil temas", **dict(_EBY, TOUCH_WICK_MIN=0.0)),
+    C("- kural 6: tepe iğnesi ≤ 2 gövde", **dict(_EBY, PIVOT_WICK_MAX=0.0)),
+    C("- 03-07 TR saat filtresi", **dict(_EBY, QUIET_UTC=(0, 0))),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -943,7 +955,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

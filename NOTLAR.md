@@ -448,3 +448,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   (Nis-Eki'de hepsi kötü: yatay işlemlerin bir kısmı sonradan TP oluyor) → canlıya eklenmedi.
 - 15m canlı ayar ay ay (TP %): Eki +4.5 (40) · Kas +0.4 (19) · Ara +3.1 (24) · Oca +7.0 (24) · Şub +3.1 (19) · Mar +7.4
   (26) · Nis +6.0/+5.0 · May -0.7 (23) · Haz +9.7 (31) · Tem +5.2 (24) · Ağu -3.1 (17) · Eyl +4.4 (22) · Eki -3.3 (14).
+- 15.10 04:03 kullanıcı: "erken çıkış hariç ayda ~10 işlem az; işlem + kazanç artarsa 10R". 12 ayda işlem başı ~0.13R →
+  10R için ayda ~77 işlem gerekir (şu an ~31). Toplu sinyale takılanlar (CSV'de mfe + erken çıkış bilgisi var; tahminci
+  gerçek sonuçları 17.1/17.2 ve 29.8/31.5 tutturuyor): Nis-Eki 165 işlem -24.9R, Eki-Nis 305 işlem -13.7R → filtre kalır.
+  COMPARE_SETS["gevset"]: canlı ayardan kural 1 / 2 / 4 / 5 / 6 ve 03-07 saat filtresi tek tek kaldırılır.
+  `/backtest 180 gevşet` (+ önceki).
