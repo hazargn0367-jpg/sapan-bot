@@ -54,6 +54,7 @@ BAN_WAIT = 600  # Binance IP engeli/sınırı en fazla bu kadar sn sürecekse be
 USE_ARCHIVE = True  # geçmiş veri Binance dosya arşivinden (API sınırı/engeli yok); --api ile kapatılır
 EXCHANGE = "binance"  # --exchange bybit: mumlar ve coin listesi Bybit'ten (diske kaydedilmez)
 BINANCE_SET = set()   # Bybit testinde canlı botun Binance coinleri (bybit.norm adlarıyla)
+DEFAULT_COINS = "all"  # Bybit testinde "coins" anahtarı olmayan ayarlar: bybit seti dışında "binance" (aynı coinler)
 TZ = "Europe/Istanbul"
 
 # Senin fotoğraflarla anlattığın örnekler (Türkiye saati, temas mumu)
@@ -1427,14 +1428,17 @@ def main():
     ap.add_argument("--stop-buf", type=float, default=0.0, help="stop payı (ATR)")
     ap.add_argument("--top", type=int, default=None, help="hacme göre ilk kaç coin (0 = hepsi; Binance 500, Bybit hepsi)")
     ap.add_argument("--exchange", default="binance", choices=["binance", "bybit"], help="veri kaynağı borsa")
+    ap.add_argument("--coins", default=None, choices=["all", "binance", "new"],
+                    help="Bybit testinde hangi coinler (varsayılan: bybit setinde ayara göre, diğerlerinde binance)")
     ap.add_argument("--max-open", type=int, default=0, help="aynı anda en fazla açık işlem (0 = sınırsız)")
     ap.add_argument("--cluster", type=int, default=0, help="aynı mumda bu kadar sinyal varsa girme (0 = kapalı)")
     ap.add_argument("--btc", action="store_true", help="BTC yön filtresi")
     ap.add_argument("--api", action="store_true", help="veriyi arşiv yerine sadece Binance API'den çek")
     ap.add_argument("--fark", action="store_true", help="TP ile stop olan işlemler arasındaki farkları ölç (ilk ayar)")
     args = ap.parse_args()
-    global EXCHANGE
+    global EXCHANGE, DEFAULT_COINS
     EXCHANGE = args.exchange
+    DEFAULT_COINS = args.coins or ("binance" if EXCHANGE == "bybit" and args.compare != "bybit" else "all")
     if args.top is None:
         args.top = 0 if EXCHANGE == "bybit" else 500
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
@@ -1503,6 +1507,15 @@ def main():
         n_new = sum(1 for x in symbols if bybit.norm(x) not in BINANCE_SET)
         source = (f"Bybit API ({len(symbols)} USDT vadeli coin; {len(symbols) - n_new} tanesi canlı botun Binance "
                   f"listesinde de var, {n_new} tanesi yeni). Komisyon Bybit: %0.055 / %0.02")
+        need = {cfg.get("coins", DEFAULT_COINS) for cfg in configs}
+        if need == {"binance"}:   # sadece ortak coinler: diğerlerinin verisi indirilmez (toplu sinyal de bunlardan sayılır)
+            symbols = [x for x in symbols if bybit.norm(x) in BINANCE_SET]
+        elif need == {"new"}:
+            symbols = [x for x in symbols if bybit.norm(x) not in BINANCE_SET]
+        if args.compare != "bybit":
+            source += {"binance": ". Test edilen: sadece canlı botun Binance coinleri (aynı coinler, Bybit verisi)",
+                       "new": ". Test edilen: sadece Binance'te olmayan coinler",
+                       "all": ". Test edilen: bütün Bybit coinleri"}[DEFAULT_COINS]
         log.info("Veri kaynağı: %s", source)
     elif args.api:
         USE_ARCHIVE, source = False, "Binance API (--api)"
@@ -1590,7 +1603,7 @@ def main():
                 touch_counts.update((int(ts_[i]), side) for i, side in signals)
                 on_bn = bybit.norm(symbol) in BINANCE_SET if EXCHANGE == "bybit" else True
                 for ci, cfg in enumerate(configs):
-                    only = cfg.get("coins")
+                    only = cfg.get("coins", DEFAULT_COINS)
                     if (only == "binance" and not on_bn) or (only == "new" and on_bn):
                         continue
                     apply_cfg(cfg)

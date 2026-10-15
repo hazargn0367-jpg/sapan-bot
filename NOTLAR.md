@@ -643,3 +643,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   bütün coinler / sadece canlı botun Binance (ilk 500) coinleri / sadece Binance'te olmayanlar (yeni işlemler);
   config "coins" anahtarı process()'te filtreler. Toplu sinyal sayımı bütün Bybit coinleri üzerinden.
   `/backtest 180 bybit` (+ önceki, önceki2, önceki3, önceki4). Render'dan Bybit'e erişim denenmedi (bu ortam ulaşamıyor).
+- BYBIT 1. DÖNEM (Nis-Eki 26, 790 USDT perp, komisyon %0.055): bütün coinler 135 iş +9.0 · canlı botun Binance coinleri
+  (Bybit verisiyle) 91 iş +3.2 (düşüş 11.4) · sadece Bybit'te olanlar 44 iş +5.7 (40 coin; içinde hisse perp'leri var:
+  SAMSUNG, AMZN, BABA, EWY, WDC, SKHY...). ÖNEMLİ: aynı coinler aynı dönem Binance verisiyle 115 iş +45.1. Ortak setup
+  sadece 34 (29'u aynı sonuç); Binance'e özgü 81 işlem +43.0, Bybit'e özgü 57 işlem +2.2. Kurallar mum ayrıntısına çok
+  duyarlı (iğne oranı, gövde, temas) → Binance sonucunun bir kısmı o mumlara özgü şans olabilir (önceki3/4'te de canlı ~0).
+  Sonraki: `/backtest 180 bybit gelişim` = gelişim seti Bybit verisiyle, sadece ortak coinler (--coins binance varsayılan;
+  diğer coinlerin verisi indirilmez). Hangi kural başka borsanın mumlarında da tutuyor. commands: "bybit" artık sadece
+  --exchange ekler, set yazılmadıysa bybit seti.
