@@ -976,6 +976,14 @@ COMPARE_SETS["grafik2"] = [
     C("+ ikisi birden, gevşek (iğne ≤ %60, bantta ≤ 5 mum)",
       **dict(_CANLI15, WICKY_MAX=0.60, PIVOT_BAND2_ATR=1.0, PIVOT_BAND2_MAX=6)),
 ]
+# 5m / 30m yeni kurallarla (kullanıcı 15.10 13:21 "hazırla"). Eski 5m (-3R / 6 ay) ve 30m (-3.5R / 12 ay) testleri iğne +
+# dip/tepe tabanı kuralları yokken yapıldı. Aynı zaman diliminde ve dönemde kurallı / kuralsız. /backtest 180 dilim 30m,
+# /backtest 90 dilim 5m (+ önceki). 15m'de: kuralsız +22.5 / +27.5 / -19.0, kurallı +27.1 / +32.3 / -1.5.
+_YENI = dict(live_setups.LIVE_RULES, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)
+COMPARE_SETS["dilim"] = [
+    C("Yeni canlı ayar (iğne ≤ %58 + dip/tepe tabanı yok)", **_YENI),
+    C("Bu sabahki ayar (iki kural yok)", **dict(_YENI, WICKY_MAX=0.0, PIVOT_BAND2_ATR=0.0)),
+]
 # PDF örneklerinden gelen kurallar (kullanıcı, 14.10 22:3x), iki dönemde doğrulanan erken çıkış (2 mum) üstüne:
 # STABLE 09.12.2025 10:45 (dip taban yapmış, giriş dibe 0.36R), ACE 17.04.2026 16:30 (onay mumu çok büyük, tepenin
 # hizasında), XMR 19.03.2026 02:45 (temas mumunun dibi önceki mumun dibinin altında)
@@ -1005,7 +1013,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

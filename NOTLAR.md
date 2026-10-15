@@ -505,3 +505,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +16.5 / +33.4 / -10.0 (+39.9). İkisi birden ve ikisi ayrı ayrı 3 dönemde de canlıdan iyi; eşikler 1.-2. dönemden seçilip
   3. dönemde sınandı. Gevşek eşik 1. dönemde kötü → eşik hassas, %58 / ≤4 mum korunmalı. 2025 ortası hâlâ zayıf (ikisiyle
   Haz -6.8, Tem -6.0, Ağu -4.8). LIVE_RULES'a WICKY_MAX=0.58 + PIVOT_BAND2 1 ATR/5 15.10 13:08 "yükle" → canlıda (bildirim + oto işlem).
+- 13:21 "hazırla": COMPARE_SETS["dilim"] = yeni canlı ayar (LIVE_RULES) / iki kural kapalı, aynı zaman diliminde.
+  `/backtest 180 dilim 30m` (+ önceki), `/backtest 90 dilim 5m` (+ önceki). WICKY_BARS 12 mum (30m'de 6 saat, 5m'de 1 saat).
+  Kullanıcının `/backtest 90 canlı önceki` testi çalışıyor olabilir → bitince yüklenecek.
