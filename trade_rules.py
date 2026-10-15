@@ -97,6 +97,12 @@ CLOSE_ENTRY_KEEP_TP = False  # True: kapanışla girişte TP fiyatı değişmez 
 WICKY_MAX = 0.0              # >0: temastan önceki WICKY_BARS mumda iğne oranı (1 - gövdeler toplamı / mum boyları toplamı)
 WICKY_BARS = 12              # bundan büyükse girme (git-gel yapan, iğneli piyasa). 15m'de 12 mum = 3 saat
 RECLAIM_BODY_MAX_ATR = 0.0   # >0: dönüş varyasyonunda temas mumunun gövdesi bu kadar ATR'den büyükse girme
+# Kullanıcı 15.10 13:41-13:43 (ETHFI 19.04 04:00 SHORT erken -0.53R sonra TP; BLUR 19.04 19:00 LONG stop %4.4 uzakta):
+# "erken çıkışı esnetmek lazım" + "stop çok aşağıda, biraz yükseltsek TP mesafesi kısalır"
+STOP_MAX_ATR = 0.0           # >0: stop girişten bu kadar ATR'den uzaksa girişe bu kadar ATR yaklaştırılır (TP de yaklaşır)
+EARLY_EXIT_MAX_ATR = 0.0     # >0: erken çıkış sadece mum dolumun en fazla bu kadar ATR gerisinde kapatırsa; daha derin
+                             # kapatırsa erken çıkış o işlem için kapanır (asıl stop / TP beklenir). 18 ay CSV: >0.35 ATR
+                             # derin kapanan erken çıkışların %30'u TP'ye gidiyor (sığların %12-19'u)
 PIVOT_BAND2_ATR = 0.0        # >0: kural 4'e ek ikinci bant: son tepe/dibin bu kadar ATR yakınına PIVOT_BAND2_MAX ya da daha
 PIVOT_BAND2_MAX = 5          # fazla mum uç verdiyse girme (dipte/tepede taban var). 3 dönem CSV: 1 ATR ≥5 mumdaki işlemler
                              # -2.5 / -3.6 / -13.7R. 12 mum iğne >0.58 (WICKY_MAX) -3.3 / -6.5 / -2.7R (15.10)
@@ -605,6 +611,11 @@ def simulate(df, i, side, tick, mode=None):
     if base_risk > ATR_MAX_MULT * A[conf]:
         res["status"] = "atr"
         return res
+    if STOP_MAX_ATR > 0 and risk > STOP_MAX_ATR * A[conf]:
+        risk = STOP_MAX_ATR * A[conf]
+        stop = entry - risk if long else entry + risk
+        tp = entry + RR * risk if long else entry - RR * risk
+        res.update(stop=stop, tp=tp, risk=risk, stop_capped=True)
     if MIN_ATR_MULT > 0 and base_risk < MIN_ATR_MULT * A[conf]:
         res["status"] = "atr_min"
         return res
@@ -675,11 +686,18 @@ def simulate(df, i, side, tick, mode=None):
     def reached_be(bar):
         return BE_TRIGGER > 0 and ((H[bar] >= be_level) if long else (L[bar] <= be_level))
 
+    early_off = [False]
+
     def failed(bar):
         # Kırılım tutmadı: mum girişin gerisinde kapattı (giriş sadece iğneyle olmuş)
-        return FAILED_ENTRY_BARS > 0 and bar - k_in < FAILED_ENTRY_BARS and \
+        ok = not early_off[0] and FAILED_ENTRY_BARS > 0 and bar - k_in < FAILED_ENTRY_BARS and \
             ((C[bar] < entry) if long else (C[bar] > entry)) and \
             (not FAILED_ENTRY_RED or ((C[bar] < O[bar]) if long else (C[bar] > O[bar])))
+        if ok and EARLY_EXIT_MAX_ATR > 0 and ((fill - C[bar]) if long else (C[bar] - fill)) > EARLY_EXIT_MAX_ATR * A[conf]:
+            early_off[0] = True   # derin geri kapanış: erken çıkma, asıl stop / TP beklenir
+            res["early_skipped"] = True
+            return False
+        return ok
 
     # Erken stop: ilk EARLY_STOP_BARS mumda girişin EARLY_STOP_R gerisinde
     es_level = (fill - EARLY_STOP_R * risk) if long else (fill + EARLY_STOP_R * risk)

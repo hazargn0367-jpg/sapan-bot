@@ -663,7 +663,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "FAILED_ENTRY_BARS", "TOUCH_PREV_EXTREME", "ATR_MAX_MULT", "CONFIRM_WINDOW", "SPIKE_TOP_ATR",
               "BASE_MIN_RISK_PCT", "FAILED_ENTRY_RED", "TIME_STOP_LOCK_R",
               "EARLY_STOP_R", "EARLY_STOP_BARS", "CLOSE_ENTRY", "CLOSE_ENTRY_MAX_R", "CLOSE_ENTRY_KEEP_TP",
-              "WICKY_MAX", "WICKY_BARS", "RECLAIM_BODY_MAX_ATR", "PIVOT_BAND2_ATR", "PIVOT_BAND2_MAX"]
+              "WICKY_MAX", "WICKY_BARS", "RECLAIM_BODY_MAX_ATR", "PIVOT_BAND2_ATR", "PIVOT_BAND2_MAX",
+              "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -976,10 +977,22 @@ COMPARE_SETS["grafik2"] = [
     C("+ ikisi birden, gevşek (iğne ≤ %60, bantta ≤ 5 mum)",
       **dict(_CANLI15, WICKY_MAX=0.60, PIVOT_BAND2_ATR=1.0, PIVOT_BAND2_MAX=6)),
 ]
+# Stop yeri ve erken çıkış esnetme (kullanıcı 15.10 13:41-13:43, "kodla"). Taban = yeni canlı ayar (_YENI, aşağıda).
+# 18 ay CSV: erken çıkışta mum dolumun >0.35 ATR gerisinde kapattıysa %30'u sonra TP (tutsaydık +9.0 / +8.2 / +12.9R),
+# sığ kapanışlarda %12-19 (erken çıkış doğru). Stop yerinin etkisi CSV'den ölçülemez (aleyhe gidiş yok) → test.
+_YENI = dict(live_setups.LIVE_RULES, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)
+COMPARE_SETS["stop"] = [
+    C("Canlı ayar", **_YENI),
+    C("+ stop payı 0.15 ATR (0.3 yerine)", **dict(_YENI, STOP_BUFFER_ATR=0.15)),
+    C("+ stop payı yok (onay mumunun dibi)", **dict(_YENI, STOP_BUFFER_ATR=0.0)),
+    C("+ stop en fazla 1 ATR uzakta", **dict(_YENI, STOP_MAX_ATR=1.0)),
+    C("+ stop en fazla 1.2 ATR uzakta", **dict(_YENI, STOP_MAX_ATR=1.2)),
+    C("+ derin kapanışta (> 0.35 ATR) erken çıkış yok", **dict(_YENI, EARLY_EXIT_MAX_ATR=0.35)),
+    C("+ derin kapanışta (> 0.5 ATR) erken çıkış yok", **dict(_YENI, EARLY_EXIT_MAX_ATR=0.5)),
+]
 # 5m / 30m yeni kurallarla (kullanıcı 15.10 13:21 "hazırla"). Eski 5m (-3R / 6 ay) ve 30m (-3.5R / 12 ay) testleri iğne +
 # dip/tepe tabanı kuralları yokken yapıldı. Aynı zaman diliminde ve dönemde kurallı / kuralsız. /backtest 180 dilim 30m,
 # /backtest 90 dilim 5m (+ önceki). 15m'de: kuralsız +22.5 / +27.5 / -19.0, kurallı +27.1 / +32.3 / -1.5.
-_YENI = dict(live_setups.LIVE_RULES, cluster_max=live_setups.CLUSTER_MAX, max_open=live_setups.MAX_OPEN)
 COMPARE_SETS["dilim"] = [
     C("Yeni canlı ayar (iğne ≤ %58 + dip/tepe tabanı yok)", **_YENI),
     C("Bu sabahki ayar (iki kural yok)", **dict(_YENI, WICKY_MAX=0.0, PIVOT_BAND2_ATR=0.0)),
@@ -1013,7 +1026,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

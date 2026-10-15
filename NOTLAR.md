@@ -512,3 +512,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +10.9 (150 iş) / -3.1 (15m yeni +59.4). 5m Tem-Eki +5.8 / +8.7 (kom 20R) · 5m Nis-Tem -22.9 / -32.5 → 5m 6 ay -17.1 /
   -23.8 (15m aynı dönemler +8.5 +18.7 = +27.2). KARAR: canlı/oto 15m kalır; 5m ve 30m eklenmez. Yeni kurallar 30m ve
   5m'de de toplamda iyileştiriyor (+14.0 / +6.7) → kurallar 15m'ye özgü tesadüf değil.
+- 13:41-13:43 kullanıcı: ETHFIUSDT 19.04 04:00 SHORT dönüş erken -0.53R (kapanış dolumun 0.54 ATR gerisinde, mfe 2.49 → TP
+  olacaktı), BLURUSDT 19.04 19:00 LONG erken -0.26R (0.29 ATR, mfe 1.17 → TP olmayacaktı; stop %4.4 uzakta) "girerdim,
+  erken çıkışı esnetmek lazım" + "stop çok aşağıda, yükseltsek TP kısalır". 18 ay CSV (yeni ayar, 234 erken çıkış):
+  derinlik <0.1 ATR %12 TP'ye gidiyor · 0.1-0.2 %19 · 0.2-0.35 %12 · >0.35 ATR %30 (tutsaydık +9.0 / +8.2 / +12.9R).
+  Yeni: STOP_MAX_ATR (stop girişe en fazla X ATR; TP de yaklaşır), EARLY_EXIT_MAX_ATR (dolumun X ATR'den derin gerisinde
+  kapanışta erken çıkış o işlem için kapanır). COMPARE_SETS["stop"]: canlı · pay 0.15 · pay 0 · stop ≤1 / ≤1.2 ATR ·
+  derin erken çıkış yok 0.35 / 0.5. `/backtest 180 stop` + önceki + önceki2.
