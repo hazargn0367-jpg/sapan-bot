@@ -133,7 +133,7 @@ def main():
                  f"🔔 Temas bildirimleri: {durum}\n"
                  f"{oto}\n"
                  + (f"🧠 {prev}\n" if prev else "")
-                 + "Komutlar: /oto aç|kapat  /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal  /incele")
+                 + "Komutlar: /oto aç|kapat  /ip  /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal  /incele")
     start_listener()
     memwatch.start(commands.backtest_proc, send_message)
     autotrade.start(send_message)

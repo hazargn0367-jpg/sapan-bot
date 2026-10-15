@@ -318,7 +318,9 @@ def on_setup(symbol, side, entry, stop, tp, touch_ts, tf):  # noqa: C901
             _open_setup(key, symbol, side, float(entry), float(stop), float(tp), tf, touch_ts)
         except BinanceError as e:
             log.warning("OTO giriş emri reddedildi: %s", e)
-            _say(f"⚠️ {html.escape(symbol)} {side}: giriş emri konamadı ({html.escape(str(e))[:200]})")
+            hint = (f"\nBüyük ihtimalle IP izni: Binance API'ye <code>{public_ip()}</code> IP'sini ekle (/ip)."
+                    if e.code == -2015 else "")
+            _say(f"⚠️ {html.escape(symbol)} {side}: giriş emri konamadı ({html.escape(str(e))[:200]}){hint}")
         except Exception as e:
             log.exception("OTO giriş emri hatası")
             _say(f"⚠️ {html.escape(symbol)} {side}: Binance cevap vermedi ({html.escape(str(e))[:120]}). Emir borsaya "
@@ -605,9 +607,74 @@ def _loop():
 def start(send_message):
     global _send
     _send = send_message
+    threading.Thread(target=_ip_loop, daemon=True).start()
     if api is None:
         return
     threading.Thread(target=_loop, daemon=True).start()
+
+
+# ------------------------------------------------------------------ çıkış IP'si
+# Render'ın çıkış IP'leri paylaşılan /24 aralıkları (Frankfurt: 74.220.51.0/24, 74.220.59.0/24); Binance IP izni sadece
+# tek tek IP kabul ediyor ve IP kısıtlaması olmadan Futures yetkili anahtarı siliyor. Bu yüzden botun gerçekte
+# kullandığı IP izlenir; yeni bir IP görülürse kullanıcıya "Binance'e ekle" diye haber verilir.
+IP_URLS = ("https://api.ipify.org", "https://checkip.amazonaws.com", "https://ifconfig.me/ip")
+IP_CHECK_SEC = 600
+
+
+def public_ip():
+    import re
+    for u in IP_URLS:
+        try:
+            ip = requests.get(u, timeout=5).text.strip()
+            if re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", ip):
+                return ip
+        except requests.RequestException:
+            continue
+    return None
+
+
+def seen_ips():
+    return _load("ip_seen.json", {})
+
+
+def _note_ip(ip):
+    """IP'yi kaydet; daha önce görülmemişse True."""
+    seen = seen_ips()
+    new = ip not in seen
+    seen.setdefault(ip, time.time())
+    _save("ip_seen.json", seen)
+    return new
+
+
+def _ip_loop():
+    first = True
+    while True:
+        try:
+            ip = public_ip()
+            if ip:
+                new = _note_ip(ip)
+                if new and not first and api is not None:
+                    _say(f"⚠️ Botun internet çıkış IP'si değişti: <code>{ip}</code>\n"
+                         f"Otomatik işlem için Binance → API Management → Edit restrictions → trusted IPs listesine "
+                         f"bu IP'yi ekle (eskileri silme). Tüm görülen IP'ler: /ip")
+        except Exception as e:
+            log.debug("IP kontrolü: %s", e)
+        first = False
+        time.sleep(IP_CHECK_SEC)
+
+
+def ip_text():
+    ip = public_ip()
+    if ip:
+        _note_ip(ip)
+    seen = seen_ips()
+    others = [x for x in sorted(seen, key=seen.get) if x != ip]
+    return (f"🌐 Botun şu anki internet çıkış IP'si: <code>{ip or 'bulunamadı'}</code>\n"
+            "Binance → API Management → Edit restrictions → <b>Restrict access to trusted IPs only</b> → bu IP'yi ekle → "
+            "sonra <b>Enable Futures</b>'ı işaretle → Save.\n"
+            + (f"Daha önce görülen IP'ler (hepsi listede olmalı): " + ", ".join(f"<code>{x}</code>" for x in others)
+               if others else "Şimdiye kadar başka IP görülmedi.")
+            + "\nRender IP'yi değiştirirse bot yeni IP'yi buraya yazar.")
 
 
 # ------------------------------------------------------------------ Telegram /oto
@@ -623,6 +690,11 @@ def status_text():
             avail, total = api.usdt_balance()
         lines.append(f"Bakiye: {total:.2f} USDT (kullanılabilir {avail:.2f})")
         lines.append("Pozisyon modu: " + ("çift yön (hedge)" if _dual() else "tek yön"))
+    except BinanceError as e:
+        lines.append(f"⚠️ Binance'e bağlanılamadı: {html.escape(str(e))[:200]}")
+        if e.code == -2015:
+            lines.append(f"→ Anahtar, IP ya da yetki sorunu. Botun IP'si: <code>{public_ip()}</code> (Binance'te izinli "
+                         f"IP listesinde olmalı, Enable Futures işaretli olmalı). Ayrıntı: /ip")
     except Exception as e:
         lines.append(f"⚠️ Binance'e bağlanılamadı: {html.escape(str(e))[:200]}")
     act = [x for x in trades().values() if x["status"] in ("pending", "open")]

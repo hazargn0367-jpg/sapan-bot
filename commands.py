@@ -2,6 +2,7 @@
 Telegram komutları (bot arka planda dinler):
   /oto            -> otomatik işlem durumu (bakiye, açık işlemler, bugünkü R)
   /oto aç | kapat -> Binance'te otomatik işlemi aç / kapat (1R = AUTO_RISK_USD, varsayılan 1$)
+  /ip             -> botun internet çıkış IP'si (Binance API izin listesine eklenecek)
   /backtest       -> son 7 günle backtest başlatır
   /backtest 60    -> son 60 günle backtest başlatır
   /backtest 30 2.5 -> 30 gün, TP = riskin 2.5 katı
@@ -306,6 +307,9 @@ def _listen():
                         config.TOUCH_ALERTS = True
                     send_message("🔔 Temas bildirimleri " + ("açık" if config.TOUCH_ALERTS else "kapalı")
                                  + ". (Bot yeniden başlarsa kapalı başlar.)")
+                elif text.lower().split()[0].split("@")[0] == "/ip":   # /iptal ile karışmasın
+                    import autotrade
+                    send_message(autotrade.ip_text())
                 elif text.lower().startswith("/oto"):
                     import autotrade
                     try:

@@ -426,3 +426,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   kaybolursa izleme döngüsü pozisyonu bulup korur, tekrar denemede "duplicate" = konmuş sayılır; stop/TP eksikse her
   döngüde yeniden denenir (TP en fazla 5 kez). Taklit Binance testleri: tek yön + hedge, TP/stop/erken/iptal/SHORT,
   giriş/stop/TP cevabı kaybolması, stop reddi → kapatma.
+- 15.10 03:26 Binance API anahtarı oluşturuldu (kullanıcı). Binance: IP kısıtlaması yoksa ve Reading dışında yetki
+  açılırsa anahtar SİLİNİR. Render çıkış IP'leri paylaşılan aralıklar (Frankfurt 74.220.51.0/24, 74.220.59.0/24);
+  Binance sadece tek IP kabul ediyor. Dedicated IP Render Pro plan ister. Ücretsiz yol: /ip komutu botun gerçek çıkış
+  IP'sini gösterir (ipify / checkip.amazonaws / ifconfig.me), ip_seen.json'da tutulur; 10 dk'da bir kontrol, yeni IP
+  görülürse (anahtar kuruluysa) Telegram uyarısı. -2015 hatasında IP ipucu. Kalıcı çözüm gerekirse: sabit IP'li
+  küçük sunucu (proxy) ya da Render Dedicated IP.
