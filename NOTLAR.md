@@ -576,3 +576,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   hiç işlem engellemedi (skip_open 0/0/0). Toplu sinyal (≥5) filtresi 87 / 183 / 122 kurulum eledi; tahmini değeri
   -16.5 / +9.9 / -7.8 (toplam -14.4R; erken -0.3, mfe≥2.2 → +2.1, değilse -1.1) → filtre kalıyor. Daha çok coin = filtre
   daha sık devreye giriyor, 525'in fayda etmemesinin sebebi bu.
+- 19:14 kullanıcı "işlem sayısını 5 yapıp test etsek" → "kodla": COMPARE_SETS["toplu2"] (şimdiki canlı sistem, 1.5 ATR
+  dahil): canlı (toplu 5+, en fazla 2) · toplu 8 · toplu 10 · toplu kapalı · toplu kapalı + en fazla 5 işlem.
+  `/backtest 180 toplu` artık bu sete gidiyor (eski set: toplu, 14.10 kuralları). Canlı ayar değişmedi.

@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 toplu -> toplu sinyal eşiği 5 / 8 / 10 coin / kapalı / kapalı + en fazla 5 işlem (şimdiki canlı sistem)
   /backtest 180 teyit -> kural 2 (trend teyidi) düzeltmesi: önceki temas, fiyat EMA20'den 0.5 / 1 / 1.5 ATR ayrıldıktan sonra
   /backtest 180 gemini -> Gemini kodundaki şartlar: EMA100 > EMA200 ve son 4 / 8 mumda 24 saatin zirvesi
   /backtest 180 giriş -> girişi onay ucundan 0.1 / 0.2 ATR öteye al (stopla birlikte de), şimdiki canlı sistemle
@@ -51,7 +52,6 @@ Telegram komutları (bot arka planda dinler):
   /backtest 90 yapı -> kural 7 (önünde yer) ve kural 8 (yapı bozulmamış), ay ay + grafik PDF
   /backtest 7 canlı 5m -> canlı ayar 5 dakikalık grafikte (sona 5m yazılırsa her test 5m'de çalışır)
   /backtest 30 iğne 5m -> kural 10 (temas mumunun ters iğnesi) ve kural 7 (önünde yer)
-  /backtest 30 toplu 5m -> toplu sinyal filtresi: 5 / 8 / 12 coin / kapalı karşılaştırması
   /backtest 90 destek -> kural 9 (dip/tepeden sonra iğneli mumlar = destek/direnç), ay ay + grafik PDF
   (varsayılan: hacmi en yüksek 500 coin, canlı bildirimlerle aynı; 'tüm' yazılırsa hepsi)
   /durum          -> backtest ilerlemesi + canlı tarama + günlük (Girdim/Girmedim sonuçları)
@@ -160,7 +160,7 @@ def start_backtest(text):
     elif "iğne" in low or "igne" in low:
         args += ["--compare", "igne"]
     elif "toplu" in low:
-        args += ["--compare", "toplu"]
+        args += ["--compare", "toplu2"]   # 15.10 19:15: şimdiki canlı sistemle (eski set: toplu)
     elif "destek" in low:
         args += ["--compare", "destek"]
     elif "yapı" in low or "yapi" in low:

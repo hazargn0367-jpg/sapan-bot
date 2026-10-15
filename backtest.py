@@ -1040,6 +1040,15 @@ COMPARE_SETS["teyit"] = [
     C("+ kural 2: kalkış 1 ATR ayrılınca", **dict(_CANLI_SON, PRIOR_TOUCH_SEP_ATR=1.0)),
     C("+ kural 2: kalkış 1.5 ATR ayrılınca", **dict(_CANLI_SON, PRIOR_TOUCH_SEP_ATR=1.5)),
 ]
+# Toplu sinyal eşiği şimdiki canlı sistemle (kullanıcı 15.10 19:14 "kodla"). 18 ayda en fazla 2 işlem sınırı hiç işlem
+# engellemedi; toplu filtre 87 / 183 / 122 kurulum eledi (tahmini -16.5 / +9.9 / -7.8). Eski "toplu" seti 14.10 kurallarıyla.
+COMPARE_SETS["toplu2"] = [
+    C("Canlı ayar (aynı mumda 5+ coin varsa girme, en fazla 2 işlem)", **_CANLI_SON),
+    C("Toplu sinyal sınırı 8 coin", **dict(_CANLI_SON, cluster_max=8)),
+    C("Toplu sinyal sınırı 10 coin", **dict(_CANLI_SON, cluster_max=10)),
+    C("Toplu sinyal filtresi kapalı (en fazla 2 işlem)", **dict(_CANLI_SON, cluster_max=0)),
+    C("Toplu sinyal filtresi kapalı + en fazla 5 işlem", **dict(_CANLI_SON, cluster_max=0, max_open=5)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1082,7 +1091,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
