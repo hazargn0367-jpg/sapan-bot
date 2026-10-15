@@ -66,6 +66,8 @@ LIVE_RULES = dict(
     ROOM_MIN_R=1.0,             # giriş ile önceki tepe (LONG) / dip (SHORT) arası en az 1R ("tepenin hizasından girme")
     FAILED_ENTRY_BARS=2,        # erken çıkış: giriş mumu ya da sonraki mum girişin gerisinde kapatırsa "ERKEN ÇIK" bildirimi
     # EMA_FAN_MIN=2.0 denendi (15.10): 5m Tem-Eki +20.3R ama Nis-Tem -23.3R → tutmadı; 15m'de de karışık. Kullanılmıyor.
+    QUIET_UTC=(0, 0),           # 03-07 TR saat filtresi kaldırıldı (kullanıcı 15.10 04:14 "yarın kaldırırsın"): kaldırınca
+                                # eklenen işlemler Nis-Eki +7.2R (38 işlem, TP %32), Eki-Nis -1.2R (38 işlem) → 12 ayda +6R
 )
 MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
 # Bildirimlerde 1R kaç dolar (kullanıcı 15.10: "1R'ım 1 dolar olacak"). Backtest raporları 25$ ile kalır.

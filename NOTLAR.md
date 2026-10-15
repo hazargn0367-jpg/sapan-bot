@@ -453,6 +453,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   gerçek sonuçları 17.1/17.2 ve 29.8/31.5 tutturuyor): Nis-Eki 165 işlem -24.9R, Eki-Nis 305 işlem -13.7R → filtre kalır.
   COMPARE_SETS["gevset"]: canlı ayardan kural 1 / 2 / 4 / 5 / 6 ve 03-07 saat filtresi tek tek kaldırılır.
   `/backtest 180 gevşet` (+ önceki).
+- Gevşetme testi 15m (eklenen işlemlerin R'si, Nis-Eki / Eki-Nis): kural 1 -5.0 / -6.8 · kural 2 -11.4 / +17.4 · kural 4
+  -2.9 / -6.3 · kural 5 -4.6 / +10.2 · kural 6 -3.1 / -3.1 · 03-07 saat filtresi +7.2 / -1.2 (38+38 işlem). Kural 1, 4, 6
+  kesin kalır; 2 ve 5 tutarsız → kalır. Saat filtresi sınırda; kullanıcı (04:14) "yarın kaldırırsın" → LIVE_RULES'ta
+  QUIET_UTC=(0,0) sonraki dalında hazır, YARIN kullanıcının grafik örnekleriyle birlikte yüklenecek (henüz main'de değil).
 - Erken çıkış zararı ölçümü (15.10 04:2x, kullanıcı: "erken çıkışlar 0.3-0.6R yiyor, ölç biç"). 12 ay 15m canlı ayar:
   224 erken çıkış -74R = fiyat -54R + komisyon -20R; 157'si giriş mumunun kendisinde (fiyat girişe değip geri kapattı =
   sahte kırılım), 67'si sonraki mumda. Derin kapanış az: X'ten derin kapatan (Nis-Eki / Eki-Nis) 0.3R: 35/37 işlem,
