@@ -504,4 +504,4 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +31.1 / -5.4 (+50.7) · **ikisi birden +27.1 / +32.3 / -1.5 (+57.9, 415 iş, R/iş 0.052 → 0.14)** · gevşek (≤%60, ≤5)
   +16.5 / +33.4 / -10.0 (+39.9). İkisi birden ve ikisi ayrı ayrı 3 dönemde de canlıdan iyi; eşikler 1.-2. dönemden seçilip
   3. dönemde sınandı. Gevşek eşik 1. dönemde kötü → eşik hassas, %58 / ≤4 mum korunmalı. 2025 ortası hâlâ zayıf (ikisiyle
-  Haz -6.8, Tem -6.0, Ağu -4.8). LIVE_RULES'a WICKY_MAX=0.58 + PIVOT_BAND2 1 ATR/5 sonraki dalında hazır, "yükle" bekliyor.
+  Haz -6.8, Tem -6.0, Ağu -4.8). LIVE_RULES'a WICKY_MAX=0.58 + PIVOT_BAND2 1 ATR/5 15.10 13:08 "yükle" → canlıda (bildirim + oto işlem).
