@@ -708,3 +708,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +0.27R/iş, 6/6 artı (+0.5/+2.5/+12.3/+23.4/+25.6/+3.1) · klasik onay 2. mum 103 iş TP %28 +0.07R/iş (+3.8/-4.0/-0.7/
   +1.9/+7.4/-1.2) · dönüş (hep 2. mum) 142 iş +0.26R/iş · onay 3. mum (artır testi) +0.6/+2.4/-1.3 ~0. Sonuç: 1. mum en
   güçlü; 2. mumu kaldırmak işlem sayısını ~%20 azaltır, toplam kârı az düşürür → değişiklik yok.
+- 2 MUMLU HER SIRA 5 dönem (canlıya göre fark): gövde ≤ 0.3 ATR -0.3 / +3.8 / +2.2 / +1.0 / -1.1 (toplam +5.6, 3/5
+  artı, 30 ayda ~13 ek işlem; 2 mumlu işlemlerin kendisi 5/5 artı +15.3R ama değiştirdiği klasik işlemler -9.7R) · ≤ 0.5
+  -4.3 / -1.1 / +4.6 / +1.2 / -0.3 (+0.1) · sınırsız -13.0 / -6.9 / +0.2 / +1.9 / +3.9 (-13.9). KARAR: canlıya alınmadı
+  (4/5 şartını geçmedi, etki ayda ~+0.2R, işlem sayısı aynı). Canlı değişmedi.
