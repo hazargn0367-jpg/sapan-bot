@@ -54,6 +54,7 @@ QUIET_UTC = (0, 0)           # (başlangıç, bitiş) UTC saat: temas bu aralık
 ROOM_MIN_R = 0.0             # >0: giriş ile önceki tepe (LONG) / dip (SHORT) arası en az bu kadar R olmalı (önünde yer)
 # İşlem sayısını artırma (15.10 21:5x, artır testinden): bazı durumlarda önünde daha az yer yeter / kural 5 esner
 TWO_BAR_TOUCH = False        # True: 2 mumlu temas (2. mum dibi kırsa da EMA20'ye değip dönüyorsa iptal değil)
+TWO_BAR_ANY = False          # True: 2 mumlu temas her sırada (dip 1. ya da 2. mumda), onay iki mumun en tepesinin üstü
 TWO_BAR_BODY_ATR = 0.0       # >0: 2 mumlu temasta iki mumun gövdesi en fazla bu kadar ATR (kullanıcı: "gövdeleri büyük olmayacak")
 ROOM_RELAX_R = 0.0           # >0: aşağıdaki koşullardan biri varsa önünde bu kadar R yer yeter (ROOM_MIN_R yerine)
 ROOM_RELAX_WICKY = 0.0       # >0: temastan önceki 12 mumda iğne oranı ≤ bu ise (temiz trend)
@@ -515,6 +516,14 @@ def touch_closes_right_side(df, i, side):
     return c > e if side == "LONG" else c < e
 
 
+def _two_bar_ok(O, H, L, C, A, E20, i, j, long):
+    """j. mum da EMA20'ye değip doğru tarafta kapattı mı, iki mumun gövdesi küçük mü (TWO_BAR_BODY_ATR)."""
+    touch = (L[j] <= E20[j] and C[j] > E20[j]) if long else (H[j] >= E20[j] and C[j] < E20[j])
+    small = TWO_BAR_BODY_ATR <= 0 or (abs(C[i] - O[i]) <= TWO_BAR_BODY_ATR * A[i] and
+                                      abs(C[j] - O[j]) <= TWO_BAR_BODY_ATR * A[j])
+    return touch and small
+
+
 def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
     status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | spike_top | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
@@ -648,13 +657,18 @@ def simulate(df, i, side, tick, mode=None):
         if j >= n:
             res["status"] = "pending"
             return res
+        # 2 mumlu temas, her sıra (kullanıcı 16.10 02:06 "ilk mum daha dipte de olabilir"): temastan sonraki mum da
+        # EMA20'ye değip doğru tarafta kapattıysa (gövdeler küçük) dip hangisinde olursa olsun iki mum birlikte temas
+        if (TWO_BAR_ANY and j == i + 1 and mode != "reclaim" and _two_bar_ok(O, H, L, C, A, E20, i, j, long)):
+            lo, hi = min(lo, L[j]), max(hi, H[j])
+            res["two_bar"] = True
+            j_end = j + 1 + CONFIRM_WINDOW
+            j += 1
+            continue
         if (L[j] < lo) if long else (H[j] > hi):
             # 2 mumlu temas (kullanıcı 16.10 01:36): temastan sonraki mum dibi kırsa da kendisi de EMA20'ye değip
             # doğru tarafta kapattıysa iki mum birlikte temas sayılır; onay iki mumun en tepesinin (SHORT: dibinin) ötesi
-            if (TWO_BAR_TOUCH and j == i + 1 and mode != "reclaim" and
-                    ((L[j] <= E20[j] and C[j] > E20[j]) if long else (H[j] >= E20[j] and C[j] < E20[j])) and
-                    (TWO_BAR_BODY_ATR <= 0 or (abs(C[i] - O[i]) <= TWO_BAR_BODY_ATR * A[i] and
-                                               abs(C[j] - O[j]) <= TWO_BAR_BODY_ATR * A[j]))):
+            if TWO_BAR_TOUCH and j == i + 1 and mode != "reclaim" and _two_bar_ok(O, H, L, C, A, E20, i, j, long):
                 lo, hi = min(lo, L[j]), max(hi, H[j])
                 res["two_bar"] = True
                 j_end = j + 1 + CONFIRM_WINDOW

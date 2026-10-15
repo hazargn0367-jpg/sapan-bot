@@ -700,3 +700,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   -2.3 / +0.7 / +1.9 / +1.0 / +0.2 (toplam +1.5, 15 ek işlem) · ≤ 0.5 ATR -3.6 / +0.3 / +3.7 / +1.0 / +0.2 (+1.6) ·
   sınırsız -1.8 / +0.3 / +2.5 / +1.0 / +0.2 (+2.2, 24 ek işlem). 30 ayda ~20 işlem (ayda <1), etkisi sıfıra yakın →
   canlıya değmez (canlı tarama tarafında da ayrıca kodlanması gerekirdi). Canlı değişmedi.
+- 02:07 "kodla": TWO_BAR_ANY (2 mumlu temas her sıra): temastan sonraki mum EMA20'ye değip doğru tarafta kapattıysa
+  ve iki gövde küçükse, dip hangisinde olursa olsun iki mum birlikte temas; onay iki mumun en tepesinin üstünde kapanış,
+  bekleme 2. mumdan sonra 2 mum. _two_bar_ok() ortak kontrol. COMPARE_SETS["ikimum2"] (gövde ≤ 0.3 / 0.5 / sınırsız);
+  "iki mum" komutu artık ikimum2'ye gider.

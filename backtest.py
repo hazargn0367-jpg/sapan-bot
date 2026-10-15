@@ -678,7 +678,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR", "ENTRY_BUFFER_ATR",
               "EMA200_ORDER", "NEW_HIGH_BARS", "NEW_HIGH_LOOKBACK",
               "ZIGZAG_MAX", "ZIGZAG_MIN_BARS", "PRIOR_TOUCH_SEP_ATR",
-              "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR"]
+              "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1122,6 +1122,15 @@ COMPARE_SETS["ikimum"] = [
     C("+ 2 mumlu temas, gövdeler ≤ 0.5 ATR", **dict(_CANLI_SON, TWO_BAR_TOUCH=True, TWO_BAR_BODY_ATR=0.5)),
     C("+ 2 mumlu temas, gövde sınırı yok", **dict(_CANLI_SON, TWO_BAR_TOUCH=True)),
 ]
+# 2 mumlu temas her sırada (kullanıcı 16.10 02:07 "kodla"): dip 1. ya da 2. mumda olabilir; iki mum EMA20'ye değip
+# doğru tarafta kapatır, onay iki mumun en tepesinin üstünde kapanış (bekleme 2. mumdan sonra 2 mum).
+# İlk test (sadece 2. mum dipte): 5 dönem toplam +1.5 / +1.6 / +2.2R, 30 ayda 15-24 işlem.
+COMPARE_SETS["ikimum2"] = [
+    C("Canlı ayar", **_CANLI_SON),
+    C("+ 2 mumlu temas her sıra, gövdeler ≤ 0.3 ATR", **dict(_CANLI_SON, TWO_BAR_ANY=True, TWO_BAR_BODY_ATR=0.3)),
+    C("+ 2 mumlu temas her sıra, gövdeler ≤ 0.5 ATR", **dict(_CANLI_SON, TWO_BAR_ANY=True, TWO_BAR_BODY_ATR=0.5)),
+    C("+ 2 mumlu temas her sıra, gövde sınırı yok", **dict(_CANLI_SON, TWO_BAR_ANY=True)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1164,7 +1173,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
