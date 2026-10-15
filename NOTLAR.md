@@ -583,3 +583,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +33.8 (190 iş, 11 işlem 2 sınırına takıldı) · kapalı + en fazla 5 işlem +33.4 (200 iş, düşüş 12.9). Canlıda elenen 85
   kurulum filtre kapalıyken: 13 TP / 25 stop / 46 erken = -11.4R (tahmin -16.5 idi) → filtre ve 2 işlem sınırı kalıyor,
   önceki dönemler çalıştırılmadı.
+- 21:10 kullanıcı: "17 işlem çok az, artırmanın yolunu bul, her şeyi benden bekleme". Önceden denenip reddedilenler: 5m, 30m,
+  1h, 525 coin, toplu filtre kapalı / 8 / 10, en fazla 5 işlem, kural 2 0.5/1 ATR. Kendi başıma hazırladım:
+  COMPARE_SETS["artir"] = şimdiki canlı sistemden tek tek: - kural 1 / 2 / 4 / 5 / 6, - iğneli git-gel, - dip/tepe tabanı,
+  onay 3. mum, stop ≥ %0.3, önünde ≥ 0.5R yer (11 ayar). `/backtest 180 artır` (+ önceki, önceki2). 3 dönemde de kârı
+  düşürmeden işlem ekleyen gevşetmeler birlikte ikinci testte denenecek. CSV'deki özelliklerle eşik taraması da yapılabilir.

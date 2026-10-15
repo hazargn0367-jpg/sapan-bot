@@ -1049,6 +1049,22 @@ COMPARE_SETS["toplu2"] = [
     C("Toplu sinyal filtresi kapalı (en fazla 2 işlem)", **dict(_CANLI_SON, cluster_max=0)),
     C("Toplu sinyal filtresi kapalı + en fazla 5 işlem", **dict(_CANLI_SON, cluster_max=0, max_open=5)),
 ]
+# İşlem sayısını artırma taraması (kullanıcı 15.10 21:10 "17 işlem çok az, artırmanın yolunu bul"). 30m / 5m / 1h, daha
+# çok coin, toplu filtre kapalı, en fazla 5 işlem zaten denendi (hepsi red). Burada şimdiki canlı sistemden her kural tek tek
+# kaldırılıyor / gevşetiliyor: hangisi kâr kaybettirmeden işlem ekliyor (3 dönemde de artı ise o kural gevşetilir).
+COMPARE_SETS["artir"] = [
+    C("Canlı ayar", **_CANLI_SON),
+    C("- kural 1: onay mumu iğnesi ≤ gövde", **dict(_CANLI_SON, WICK_MAX_BODY=0.0)),
+    C("- kural 2: trend teyidi (önceki temas)", **dict(_CANLI_SON, REQUIRE_PRIOR_TOUCH=False)),
+    C("- kural 4: temiz tepe/dip", **dict(_CANLI_SON, CLEAN_PIVOT_MAX=0)),
+    C("- kural 5: fitil temas", **dict(_CANLI_SON, TOUCH_WICK_MIN=0.0)),
+    C("- kural 6: tepe/dip iğnesi ≤ 2 gövde", **dict(_CANLI_SON, PIVOT_WICK_MAX=0.0)),
+    C("- iğneli git-gel (≤ %58)", **dict(_CANLI_SON, WICKY_MAX=0.0)),
+    C("- dip/tepe tabanı (1 ATR bantta ≥5 mum)", **dict(_CANLI_SON, PIVOT_BAND2_ATR=0.0)),
+    C("onay 3. muma kadar (şimdi 2)", **dict(_CANLI_SON, CONFIRM_WINDOW=3)),
+    C("stop en az %0.3 (şimdi %0.5)", **dict(_CANLI_SON, BASE_MIN_RISK_PCT=0.3)),
+    C("önünde en az 0.5R yer (şimdi 1R)", **dict(_CANLI_SON, ROOM_MIN_R=0.5)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1091,7 +1107,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

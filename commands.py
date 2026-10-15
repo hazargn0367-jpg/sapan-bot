@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 artır -> işlem sayısını artırma: canlı kurallar tek tek kaldırılır / gevşetilir (11 ayar)
   /backtest 180 toplu -> toplu sinyal eşiği 5 / 8 / 10 coin / kapalı / kapalı + en fazla 5 işlem (şimdiki canlı sistem)
   /backtest 180 teyit -> kural 2 (trend teyidi) düzeltmesi: önceki temas, fiyat EMA20'den 0.5 / 1 / 1.5 ATR ayrıldıktan sonra
   /backtest 180 gemini -> Gemini kodundaki şartlar: EMA100 > EMA200 ve son 4 / 8 mumda 24 saatin zirvesi
@@ -110,7 +111,9 @@ def start_backtest(text):
     elif "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
     donus = any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon"))
-    if any(w in low for w in ("gevşet", "gevset", "gevşe")):
+    if any(w in low for w in ("artır", "artir", "arttır", "arttir")):
+        args += ["--compare", "artir"]   # işlem sayısını artırma: canlı kurallar tek tek gevşetilir
+    elif any(w in low for w in ("gevşet", "gevset", "gevşe")):
         args += ["--compare", "gevset"]
     elif "teyit" in low:
         args += ["--compare", "teyit"]
