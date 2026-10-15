@@ -544,3 +544,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   → red, önceki dönemler çalıştırılmadı. TP 2.5 / 3 (MFE tahmini, 18 ay): -4.4 / +0.7 → TP 2.2 kalır.
 - 15:32 "kodla": ENTRY_BUFFER_ATR (giriş onay ucundan X ATR ötede). COMPARE_SETS["giris"]: canlı · giriş +0.1 · +0.2 ·
   giriş+stop 0.1 yukarı (stop payı 0.2) · giriş+stop 0.2 yukarı (stop payı 0.1). `/backtest 180 giriş` (+ önceki, önceki2).
+- Giriş yeri testi (Nis-Eki 26): canlı +36.3 · giriş +0.1 ATR +6.8 · +0.2 -0.8 · giriş+stop 0.1 yukarı +11.0 · 0.2 -3.8 →
+  red (33 işlem dolmadı, 12'si TP; TP→erken 7, TP→stop 4). Erken çıkışı eski çizgide bırakmak tahmini +19 → yine red.
+- 17:04 kullanıcı Gemini raporu (1 hafta canlı, 38 işlem, %63, +%16.4): kodda TP/stop/sonuç takibi yok → rapor uydurma
+  (24×2-14 = +34R, %16.4 tutmuyor). Kodun içinde Telegram token'ı açık → kullanıcıya BotFather /revoke söylendi.
+  "Kodla": EMA200_ORDER (EMA100 > EMA200 ×1.001), NEW_HIGH_BARS / NEW_HIGH_LOOKBACK (temastan önceki N mumda önceki 92 mumun
+  zirvesi). add_atr EMA200 sütunu ekliyor. COMPARE_SETS["gemini"]: canlı · EMA200 · son 4 mum · son 8 mum · EMA200+4.
+  `/backtest 180 gemini` (+ önceki, önceki2).

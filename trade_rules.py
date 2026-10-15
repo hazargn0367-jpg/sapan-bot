@@ -99,6 +99,10 @@ WICKY_BARS = 12              # bundan büyükse girme (git-gel yapan, iğneli pi
 RECLAIM_BODY_MAX_ATR = 0.0   # >0: dönüş varyasyonunda temas mumunun gövdesi bu kadar ATR'den büyükse girme
 # Kullanıcı 15.10 13:41-13:43 (ETHFI 19.04 04:00 SHORT erken -0.53R sonra TP; BLUR 19.04 19:00 LONG stop %4.4 uzakta):
 # "erken çıkışı esnetmek lazım" + "stop çok aşağıda, biraz yükseltsek TP mesafesi kısalır"
+# Gemini kodundan (kullanıcı 15.10 17:07 "kodla"): EMA100 > EMA200 sıralaması ve "son N mumda son ~24 saatin zirvesi"
+EMA200_ORDER = False         # True: temasta EMA100 > EMA200 × 1.001 (LONG) / EMA100 < EMA200 × 0.999 (SHORT)
+NEW_HIGH_BARS = 0            # >0: temastan önceki bu kadar mumun tepesi (LONG) / dibi (SHORT), ondan önceki NEW_HIGH_LOOKBACK
+NEW_HIGH_LOOKBACK = 92       # mumun en yükseğini (en düşüğünü) geçmiş olmalı (yeni zirve yakın zamanda yapılmış)
 ENTRY_BUFFER_ATR = 0.0       # >0: giriş onay mumunun ucundan bu kadar ATR daha ötede (LONG'da yukarıda): iğneyle değip dönen
                              # sahte kırılımlarda emir dolmaz (kullanıcı 15.10 15:32, stopla birlikte de denenir)
 STOP_MAX_ATR = 0.0           # >0: stop girişten bu kadar ATR'den uzaksa girişe bu kadar ATR yaklaştırılır (TP de yaklaşır)
@@ -132,6 +136,7 @@ def add_atr(df):
         axis=1,
     ).max(axis=1)
     df["ATR"] = tr.ewm(alpha=1 / ATR_PERIOD, adjust=False).mean()
+    df["EMA200"] = df["Close"].ewm(span=200, adjust=False).mean()
     return df
 
 
@@ -474,7 +479,7 @@ def simulate(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
     status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | spike_top | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
-            no_entry | chase | wicky | big_touch | wide_pivot | win | loss | be | open | pending"""
+            no_entry | chase | no_ema200 | no_new_high | wicky | big_touch | wide_pivot | win | loss | be | open | pending"""
     O = df["Open"].values
     H = df["High"].values
     L = df["Low"].values
@@ -554,6 +559,16 @@ def simulate(df, i, side, tick, mode=None):
     if SPIKE_TOP_ATR > 0 and spike_top(df, i, side) >= SPIKE_TOP_ATR:
         res["status"] = "spike_top"
         return res
+    if EMA200_ORDER and "EMA200" in df.columns:
+        e100, e200 = df["EMA100"].values[i], df["EMA200"].values[i]
+        if not ((e100 > e200 * 1.001) if long else (e100 < e200 * 0.999)):
+            res["status"] = "no_ema200"
+            return res
+    if NEW_HIGH_BARS > 0:
+        a0, b0 = max(0, i - NEW_HIGH_BARS - NEW_HIGH_LOOKBACK), max(0, i - NEW_HIGH_BARS)
+        if b0 <= a0 or not ((H[b0:i].max() > H[a0:b0].max()) if long else (L[b0:i].min() < L[a0:b0].min())):
+            res["status"] = "no_new_high"
+            return res
     if WICKY_MAX > 0 and wickiness(df, i - WICKY_BARS, i) > WICKY_MAX:
         res["status"] = "wicky"
         return res

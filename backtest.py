@@ -94,6 +94,8 @@ STATUS_TR = {
     "wicky": "Temastan önceki mumlar çok iğneli (git-gel)",
     "big_touch": "Dönüşte temas mumunun gövdesi çok büyük",
     "wide_pivot": "Dip/tepenin 1 ATR yakınında çok mum (taban)",
+    "no_ema200": "EMA100 ile EMA200 sıralı değil",
+    "no_new_high": "Yakın zamanda yeni zirve/dip yok",
     "win": "TP",
     "loss": "Stop",
     "be": "Başabaş / erken çıkış",
@@ -664,7 +666,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "BASE_MIN_RISK_PCT", "FAILED_ENTRY_RED", "TIME_STOP_LOCK_R",
               "EARLY_STOP_R", "EARLY_STOP_BARS", "CLOSE_ENTRY", "CLOSE_ENTRY_MAX_R", "CLOSE_ENTRY_KEEP_TP",
               "WICKY_MAX", "WICKY_BARS", "RECLAIM_BODY_MAX_ATR", "PIVOT_BAND2_ATR", "PIVOT_BAND2_MAX",
-              "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR", "ENTRY_BUFFER_ATR"]
+              "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR", "ENTRY_BUFFER_ATR",
+              "EMA200_ORDER", "NEW_HIGH_BARS", "NEW_HIGH_LOOKBACK"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1004,6 +1007,15 @@ COMPARE_SETS["giris"] = [
     C("+ giriş ve stop 0.1 ATR yukarı (risk aynı)", **dict(_CANLI_SON, ENTRY_BUFFER_ATR=0.1, STOP_BUFFER_ATR=0.2)),
     C("+ giriş ve stop 0.2 ATR yukarı (risk aynı)", **dict(_CANLI_SON, ENTRY_BUFFER_ATR=0.2, STOP_BUFFER_ATR=0.1)),
 ]
+# Gemini kodu (kullanıcı 15.10 17:04-17:07): rapor uydurma (kodda TP/stop yok) ama iki şartı bizde yok: EMA100 > EMA200
+# ve "temastan önceki 4 mumda son ~24 saatin (92 mum) zirvesi". 8 mumluk sürüm de (bizde düzeltme ortanca 4 mum).
+COMPARE_SETS["gemini"] = [
+    C("Canlı ayar", **_CANLI_SON),
+    C("+ EMA100 > EMA200 sıralı", **dict(_CANLI_SON, EMA200_ORDER=True)),
+    C("+ son 4 mumda 24 saatin zirvesi", **dict(_CANLI_SON, NEW_HIGH_BARS=4)),
+    C("+ son 8 mumda 24 saatin zirvesi", **dict(_CANLI_SON, NEW_HIGH_BARS=8)),
+    C("+ EMA200 + son 4 mumda zirve (ikisi)", **dict(_CANLI_SON, EMA200_ORDER=True, NEW_HIGH_BARS=4)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1046,7 +1058,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
