@@ -608,3 +608,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   temas yer kontrolüne ertelenir). COMPARE_SETS["esnet"] 6 ayar. commands: "esnet", "önceki3" (--ago 3×gün; rakam RR
   sanılmasın diye clean'de). Karar dönemi: önceki3 = Eki 24-Nis 25, hiç bakılmamış → aynı zamanda bugünkü bütün canlı
   kuralların dönem dışı sınaması.
+- ESNET ÖNCEKİ3 (Eki 24-Nis 25, hiç bakılmamış, 168 coin): **canlı ayar 49 iş (TP 10 / stop 15 / erken 24) -0.5R**, düşüş
+  7.6 → bugünkü sistem dönem dışında başa baş (14.10 notu: Ekim 2024 30 gün eski kurallar da 0.0R). Esnetmeler: A stop ≥ 1.5
+  ATR +9 iş +0.3 · B iğne ≤ %45 +5 iş +4.4 · C kural 5 + 1.5R +18 iş -4.5 (RED) · A+B +13 iş +5.7 · üçü +1.2.
+  Sonraki adım (kodlandı, sonraki dalında; kullanıcı testleri bitirince yüklenecek): COMPARE_SETS["gelisim"] = 15.10'da
+  eklenen kurallar sırayla (sabahki canlı → 03-07 kalktı → iğneli + taban → derin kapanış → 1.5 ATR → + A+B).
+  `/backtest 180 gelişim önceki3`, `önceki4` (= --ago 4×gün, Nis-Eki 24). Bugünkü kurallar dönem dışında da işe yarıyor mu.

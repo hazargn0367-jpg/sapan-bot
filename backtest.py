@@ -1079,6 +1079,20 @@ COMPARE_SETS["esnet"] = [
     C("ilk ikisi birlikte", **dict(_CANLI_SON, **_Y05, ROOM_RELAX_RISK_ATR=1.5, ROOM_RELAX_WICKY=0.45)),
     C("üçü birlikte", **dict(_CANLI_SON, **_Y05, ROOM_RELAX_RISK_ATR=1.5, ROOM_RELAX_WICKY=0.45, TOUCH_WICK_ROOM_R=1.5)),
 ]
+# Dönem dışı sınama (15.10 22:0x): önceki3 (Eki 24-Nis 25, hiç bakılmamış) canlı ayar 49 iş -0.5R. Bugün eklenen
+# kurallar dönem dışında da işe yarıyor mu? Kurallar eklendikleri sırayla. `/backtest 180 gelişim önceki3` (+ önceki4).
+_SABAH = dict(_CANLI_SON, QUIET_UTC=(0, 4), WICKY_MAX=0.0, PIVOT_BAND2_ATR=0.0, EARLY_EXIT_MAX_ATR=0.0,
+              PRIOR_TOUCH_SEP_ATR=0.0)
+COMPARE_SETS["gelisim"] = [
+    C("15.10 sabahki canlı (03-07 filtresi var)", **_SABAH),
+    C("+ 03-07 filtresi kaldırıldı", **dict(_SABAH, QUIET_UTC=(0, 0))),
+    C("+ iğneli git-gel + dip/tepe tabanı", **dict(_SABAH, QUIET_UTC=(0, 0), WICKY_MAX=_CANLI_SON["WICKY_MAX"],
+                                                   PIVOT_BAND2_ATR=_CANLI_SON["PIVOT_BAND2_ATR"])),
+    C("+ derin geri kapanışta erken çıkılmaz", **dict(_CANLI_SON, PRIOR_TOUCH_SEP_ATR=0.0)),
+    C("+ trend teyidi 1.5 ATR (şimdiki canlı)", **_CANLI_SON),
+    C("şimdiki canlı + 0.5R yer (stop ≥ 1.5 ATR / iğne ≤ %45)",
+      **dict(_CANLI_SON, ROOM_RELAX_R=0.5, ROOM_RELAX_RISK_ATR=1.5, ROOM_RELAX_WICKY=0.45)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1121,7 +1135,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
