@@ -687,3 +687,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   CSV'deki bütün özellikler x eşikler: elenen grup 6'nın ≥5'inde eksi ve toplam ≤ -5R olan YOK. En yakın: bacakta tek mum
   payı > %48 (50 iş, -4.9R, 4/6 eksi, P2 +12.2) → zayıf. Yeni kural ancak henüz ölçülmeyen bir özellikten gelir
   (kullanıcının grafik incelemesi). Kullanıcıya grafik için `/backtest 90 canlı` (bütün işlemler PDF) verildi.
+- 16.10 01:36 kullanıcı (örnek 09.10 12:30, bot zaten girmiş, TP): "2 mumlu temas" varyasyonu; 2. mum dibi kırabilir
+  ("2'li mum olsun yeter"). TWO_BAR_TOUCH: temastan sonraki mum temasın dibini kırarsa (SHORT tepesini) iptal yerine,
+  kendisi de EMA20'ye değip doğru tarafta kapattıysa iki mum birlikte temas; bölge = iki mumun en dibi / en tepesi,
+  onay pencere 2. mumdan sonra yeniden 2 mum, onay = iki mumun en tepesinin üstünde kapanış; dönüşte uygulanmaz.
+  CSV'de iki_mum. COMPARE_SETS["ikimum"]: canlı / + 2 mumlu. `/backtest 180 iki mum` (+ önceki ... önceki4, + bybit).
+  Not: dibi kırmayan 2. mum zaten eskisi gibi; 2. mumun kendisi de ayrıca temas sinyali olarak değerlendiriliyordu.

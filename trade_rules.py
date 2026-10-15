@@ -53,6 +53,7 @@ PIVOT_WICK_MAX = 0.0         # >0: tepe (LONG) / dip (SHORT) mumunun o yöndeki 
 QUIET_UTC = (0, 0)           # (başlangıç, bitiş) UTC saat: temas bu aralıktaysa işlem yok. (0, 4) = 03:00-07:00 TR
 ROOM_MIN_R = 0.0             # >0: giriş ile önceki tepe (LONG) / dip (SHORT) arası en az bu kadar R olmalı (önünde yer)
 # İşlem sayısını artırma (15.10 21:5x, artır testinden): bazı durumlarda önünde daha az yer yeter / kural 5 esner
+TWO_BAR_TOUCH = False        # True: 2 mumlu temas (2. mum dibi kırsa da EMA20'ye değip dönüyorsa iptal değil)
 ROOM_RELAX_R = 0.0           # >0: aşağıdaki koşullardan biri varsa önünde bu kadar R yer yeter (ROOM_MIN_R yerine)
 ROOM_RELAX_WICKY = 0.0       # >0: temastan önceki 12 mumda iğne oranı ≤ bu ise (temiz trend)
 ROOM_RELAX_RISK_ATR = 0.0    # >0: stop mesafesi ≥ bu kadar ATR ise (geniş stop)
@@ -640,16 +641,28 @@ def simulate(df, i, side, tick, mode=None):
         if not ((C[conf] > H[j]) if long else (C[conf] < L[j])):
             res["status"] = "no_confirm"
             return res
-    for j in (range(i + 1, i + 1 + CONFIRM_WINDOW) if conf is None else ()):
+    lo, hi = L[i], H[i]          # temas bölgesi (2 mumlu temasta iki mumun en dibi / en tepesi)
+    j, j_end = i + 1, i + 1 + CONFIRM_WINDOW
+    while conf is None and j < j_end:
         if j >= n:
             res["status"] = "pending"
             return res
-        if (L[j] < L[i]) if long else (H[j] > H[i]):
+        if (L[j] < lo) if long else (H[j] > hi):
+            # 2 mumlu temas (kullanıcı 16.10 01:36): temastan sonraki mum dibi kırsa da kendisi de EMA20'ye değip
+            # doğru tarafta kapattıysa iki mum birlikte temas sayılır; onay iki mumun en tepesinin (SHORT: dibinin) ötesi
+            if (TWO_BAR_TOUCH and j == i + 1 and mode != "reclaim" and
+                    ((L[j] <= E20[j] and C[j] > E20[j]) if long else (H[j] >= E20[j] and C[j] < E20[j]))):
+                lo, hi = min(lo, L[j]), max(hi, H[j])
+                res["two_bar"] = True
+                j_end = j + 1 + CONFIRM_WINDOW
+                j += 1
+                continue
             res["status"] = "cancel_touch"
             return res
-        if (C[j] > H[i]) if long else (C[j] < L[i]):
+        if (C[j] > hi) if long else (C[j] < lo):
             conf = j
             break
+        j += 1
     if conf is None:
         res["status"] = "no_confirm"
         return res

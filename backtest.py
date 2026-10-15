@@ -385,6 +385,8 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
             "_touch_ts": int(ts[i]),
             "sonuc": STATUS_TR[r["status"]],
         }
+        if r.get("two_bar"):
+            row["iki_mum"] = 1
         if tr.ENTRY_MODE == "both" and "mode" in r:
             row["varyasyon"] = "dönüş" if r["mode"] == "reclaim" else "klasik"
         if "entry" in r:
@@ -676,7 +678,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR", "ENTRY_BUFFER_ATR",
               "EMA200_ORDER", "NEW_HIGH_BARS", "NEW_HIGH_LOOKBACK",
               "ZIGZAG_MAX", "ZIGZAG_MIN_BARS", "PRIOR_TOUCH_SEP_ATR",
-              "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R"]
+              "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1111,6 +1113,13 @@ COMPARE_SETS["bybit"] = [
     C("Sadece canlı botun Binance coinleri (aynı sinyaller)", **_CANLI_SON, coins="binance"),
     C("Sadece Binance'te olmayan coinler (YENİ işlemler)", **_CANLI_SON, coins="new"),
 ]
+# 2 mumlu temas (kullanıcı 16.10 01:36, örnek 09.10 12:30): temastan sonraki mum dibi kırsa da EMA20'ye değip doğru
+# tarafta kapattıysa iptal yerine iki mum birlikte temas; onay iki mumun en tepesinin üstünde kapanış.
+# `/backtest 180 iki mum` (+ önceki ... önceki4), Bybit verisiyle: `/backtest 180 iki mum bybit`.
+COMPARE_SETS["ikimum"] = [
+    C("Canlı ayar", **_CANLI_SON),
+    C("+ 2 mumlu temas", **dict(_CANLI_SON, TWO_BAR_TOUCH=True)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1153,7 +1162,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
