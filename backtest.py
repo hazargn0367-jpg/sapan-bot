@@ -33,6 +33,7 @@ import numpy as np
 import pandas as pd
 
 import archive
+import bybit
 import config
 import charts
 import live_setups
@@ -51,6 +52,8 @@ FETCH_THREADS = 16  # aynı anda kaç coinin verisi çekilsin (arşiv dosyaları
 MAX_IN_FLIGHT = 20  # bellekte aynı anda en fazla kaç coinin ham verisi dursun
 BAN_WAIT = 600  # Binance IP engeli/sınırı en fazla bu kadar sn sürecekse beklenir, daha uzunsa backtest durur
 USE_ARCHIVE = True  # geçmiş veri Binance dosya arşivinden (API sınırı/engeli yok); --api ile kapatılır
+EXCHANGE = "binance"  # --exchange bybit: mumlar ve coin listesi Bybit'ten (diske kaydedilmez)
+BINANCE_SET = set()   # Bybit testinde canlı botun Binance coinleri (bybit.norm adlarıyla)
 TZ = "Europe/Istanbul"
 
 # Senin fotoğraflarla anlattığın örnekler (Türkiye saati, temas mumu)
@@ -183,6 +186,8 @@ def set_base_tf(tf):
 
 
 def _fetch_range(symbol, start_ms, end_ms):
+    if EXCHANGE == "bybit":
+        return bybit.klines(symbol, start_ms, end_ms, BASE_TF)
     if USE_ARCHIVE:
         return archive.get_range(symbol, BASE_TF, start_ms, end_ms, api_max_wait=BAN_WAIT, api_recent=False)
     return get_klines_range(symbol, BASE_TF, start_ms, end_ms, max_wait=BAN_WAIT)
@@ -203,7 +208,7 @@ def load_15m(symbol, days, ago=0):
     Kayıt her zaman kesintisizdir: span = çekilmiş aralık (coin o tarihte yoksa da çekilmiş sayılır)."""
     start_ms, end_ms = period(days, ago)
     start_ms -= WARMUP * BAR_MS * WARMUP_FACTOR
-    if end_ms < time.time() * 1000 - OLD_DAYS * 86400 * 1000:
+    if EXCHANGE == "bybit" or end_ms < time.time() * 1000 - OLD_DAYS * 86400 * 1000:
         # Çok eski dönem (ör. 2-3 yıl önce): sadece o aylar arşivden indirilir, kayda eklenmez
         # (kayıt kesintisiz tutulduğu için aradaki yılların hepsi indirilip diske yazılırdı)
         df = _fetch_range(symbol, start_ms, end_ms)
@@ -674,6 +679,10 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
+class _SkipBinance(Exception):
+    """Bybit testinde Binance coin bilgisi bloğu atlanır."""
+
+
 def C(ad, **kw):
     return {"ad": ad, **kw}
 
@@ -1093,6 +1102,14 @@ COMPARE_SETS["gelisim"] = [
     C("şimdiki canlı + 0.5R yer (stop ≥ 1.5 ATR / iğne ≤ %45)",
       **dict(_CANLI_SON, ROOM_RELAX_R=0.5, ROOM_RELAX_RISK_ATR=1.5, ROOM_RELAX_WICKY=0.45)),
 ]
+# Bybit'teki bütün USDT vadeli coinler (kullanıcı 15.10 23:06). Aynı canlı kurallar; "coins": hangi coinler.
+# Binance'te de olan coinler aynı sinyali verir (fiyatlar aynı) → yeni işlem sadece "new" grubundan gelir.
+# `/backtest 180 bybit` (+ önceki ...). Veri Bybit API'den, diske kaydedilmez (her test yeniden indirir).
+COMPARE_SETS["bybit"] = [
+    C("Bybit'teki bütün coinler", **_CANLI_SON, coins="all"),
+    C("Sadece canlı botun Binance coinleri (aynı sinyaller)", **_CANLI_SON, coins="binance"),
+    C("Sadece Binance'te olmayan coinler (YENİ işlemler)", **_CANLI_SON, coins="new"),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1135,7 +1152,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -1408,13 +1425,18 @@ def main():
     ap.add_argument("--wick", type=float, default=0.0, help="onay iğnesi en fazla kaç gövde (0 = kapalı)")
     ap.add_argument("--prior-touch", action="store_true", help="trend teyidi: önceden EMA20 teması")
     ap.add_argument("--stop-buf", type=float, default=0.0, help="stop payı (ATR)")
-    ap.add_argument("--top", type=int, default=500, help="hacme göre ilk kaç coin (0 = hepsi)")
+    ap.add_argument("--top", type=int, default=None, help="hacme göre ilk kaç coin (0 = hepsi; Binance 500, Bybit hepsi)")
+    ap.add_argument("--exchange", default="binance", choices=["binance", "bybit"], help="veri kaynağı borsa")
     ap.add_argument("--max-open", type=int, default=0, help="aynı anda en fazla açık işlem (0 = sınırsız)")
     ap.add_argument("--cluster", type=int, default=0, help="aynı mumda bu kadar sinyal varsa girme (0 = kapalı)")
     ap.add_argument("--btc", action="store_true", help="BTC yön filtresi")
     ap.add_argument("--api", action="store_true", help="veriyi arşiv yerine sadece Binance API'den çek")
     ap.add_argument("--fark", action="store_true", help="TP ile stop olan işlemler arasındaki farkları ölç (ilk ayar)")
     args = ap.parse_args()
+    global EXCHANGE
+    EXCHANGE = args.exchange
+    if args.top is None:
+        args.top = 0 if EXCHANGE == "bybit" else 500
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
     if "5m" in tfs:
         tfs = ["5m"]  # 5 dakikalık test tek başına çalışır
@@ -1464,15 +1486,36 @@ def main():
     drop_other_tf_cache()
     global USE_ARCHIVE
     exchanges.WEIGHT_SOFT_LIMIT = exchanges.BACKTEST_SOFT_LIMIT  # canlı taramaya pay bırak
-    if args.api:
+    if EXCHANGE == "bybit":
+        USE_ARCHIVE = False
+        tr.FEE_TAKER, tr.FEE_MAKER = 0.00055, 0.0002   # Bybit temel vadeli komisyon (taker %0.055, maker %0.02)
+        symbols, ticks = bybit.top_symbols(args.top)
+        bn = None
+        try:
+            bn = get_top_symbols(live_setups.UNIVERSE if hasattr(live_setups, "UNIVERSE") else 500, max_wait=60)
+        except Exception as e:
+            log.warning("Binance coin listesi alınamadı (%s), son kayıttan", e)
+            uni = _load_universe()
+            bn = uni[0][:500] if uni else None
+        if not bn:
+            raise RuntimeError("Binance coin listesi alınamadı: hangi coinin yeni olduğu ayrılamıyor")
+        BINANCE_SET.update(bybit.norm(x) for x in bn)
+        n_new = sum(1 for x in symbols if bybit.norm(x) not in BINANCE_SET)
+        source = (f"Bybit API ({len(symbols)} USDT vadeli coin; {len(symbols) - n_new} tanesi canlı botun Binance "
+                  f"listesinde de var, {n_new} tanesi yeni). Komisyon Bybit: %0.055 / %0.02")
+        log.info("Veri kaynağı: %s", source)
+    elif args.api:
         USE_ARCHIVE, source = False, "Binance API (--api)"
     else:
         ok, why = archive_reachable()
         USE_ARCHIVE = ok
         source = (f"Binance arşivi ({why})" if ok else f"Binance API, arşive ulaşılamadı: {why}")
-    log.info("Veri kaynağı: %s", source)
-    ticks, symbols = {}, [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
+    if EXCHANGE != "bybit":
+        log.info("Veri kaynağı: %s", source)
+        ticks, symbols = {}, [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
     try:
+        if EXCHANGE == "bybit":
+            raise _SkipBinance
         for attempt in range(3):
             try:
                 ticks = get_tick_sizes(max_wait=60)
@@ -1487,6 +1530,8 @@ def main():
         if not symbols:
             symbols = get_top_symbols(args.top, max_wait=60) if args.top > 0 else fetch_symbols(60)
         _save_universe(symbols, ticks)
+    except _SkipBinance:
+        pass
     except BinanceBlocked as e:
         # Binance API engelli: coin listesi önceki kayıttan ya da arşivden; bugünün mumları alınamaz
         if not USE_ARCHIVE:
@@ -1543,13 +1588,19 @@ def main():
                 ts_ = df["timestamp"].values
                 signals = [(i, sd) for i, sd in find_signals(df) if ts_[i] >= p0]  # ısınma payındaki temaslar sayılmaz
                 touch_counts.update((int(ts_[i]), side) for i, side in signals)
+                on_bn = bybit.norm(symbol) in BINANCE_SET if EXCHANGE == "bybit" else True
                 for ci, cfg in enumerate(configs):
+                    only = cfg.get("coins")
+                    if (only == "binance" and not on_bn) or (only == "new" and on_bn):
+                        continue
                     apply_cfg(cfg)
                     new = run_df(df, symbol, tf, tick, signals,
                                  with_ctx=(ci == chart_idx), trades_only=True,
                                  status_counter=None if args.compare else status_counts)
                     for r in new:
                         r["hacim_sirasi"] = rank.get(symbol, 0)
+                        if EXCHANGE == "bybit":
+                            r["binance_da"] = int(on_bn)
                     results[cfg["ad"]] += new
                 if not args.compare:
                     for ex_sym, ex_tf, ex_when in EXAMPLES:

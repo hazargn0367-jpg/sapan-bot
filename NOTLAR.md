@@ -635,3 +635,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 22:43 kullanıcı: "ay sonuna kadar canlıdaki sistemle devam, grafik incelemeye devam". Canlı değişmedi, risk kuralı
   (2 ay eksi → 1R 10$) eklenmedi. Bundan sonra yeni kural 5 dönemde sınanır: `/backtest 180 X` + önceki + önceki2
   (kural seçimi) + önceki3 + önceki4 (dönem dışı; 2024 verisi, 155-220 coin, daha uzun sürer).
+- 23:06 kullanıcı: MEXC araştırması sonrası "Bybit'teki bütün coinlere göre backtest". bybit.py (v5 herkese açık API:
+  instruments-info, tickers, kline 1000 mum/istek, saniyede ≤15 istek, 403/451 = bölge engeli → hata mesajı). norm():
+  1000PEPE / SHIB1000 / 1MBABYDOGE → PEPE / SHIB / BABYDOGE (borsalar arası eşleştirme). backtest --exchange bybit: coin
+  listesi Bybit'in bütün USDT linear perpetual'ları (hacme göre), mumlar diske KAYDEDİLMEZ (her test yeniden indirir,
+  ~650 coin x 18 istek ≈ 13 dk), komisyon taker %0.055 / maker %0.02, CSV'de binance_da. COMPARE_SETS["bybit"]:
+  bütün coinler / sadece canlı botun Binance (ilk 500) coinleri / sadece Binance'te olmayanlar (yeni işlemler);
+  config "coins" anahtarı process()'te filtreler. Toplu sinyal sayımı bütün Bybit coinleri üzerinden.
+  `/backtest 180 bybit` (+ önceki, önceki2, önceki3, önceki4). Render'dan Bybit'e erişim denenmedi (bu ortam ulaşamıyor).

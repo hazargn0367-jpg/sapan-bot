@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 bybit -> canlı kurallar Bybit'teki bütün USDT vadeli coinlerde; Binance'te olmayanlar ayrı (yeni işlemler)
   /backtest 180 gelişim önceki3 -> 15.10'da eklenen kurallar sırayla, hiç bakılmamış dönemde (önceki4 = bir öncesi)
   /backtest 180 esnet önceki3 -> önünde yer / kural 5 esnetmeleri; önceki3 = 3 dönem önceki 180 gün (hiç bakılmamış)
   /backtest 180 artır -> işlem sayısını artırma: canlı kurallar tek tek kaldırılır / gevşetilir (11 ayar)
@@ -117,7 +118,9 @@ def start_backtest(text):
     elif "önceki" in low or "onceki" in low:
         args += ["--ago", str(days)]
     donus = any(w in low for w in ("dönüş", "donus", "dönus", "varyasyon"))
-    if any(w in low for w in ("gelişim", "gelisim")):
+    if "bybit" in low:
+        args += ["--exchange", "bybit", "--compare", "bybit"]   # Bybit'teki bütün coinler (yeni / Binance'te de olan)
+    elif any(w in low for w in ("gelişim", "gelisim")):
         args += ["--compare", "gelisim"]   # bugün eklenen kurallar sırayla (dönem dışı sınama)
     elif "esnet" in low:
         args += ["--compare", "esnet"]   # artır testinden çıkan esnetmeler; önceki3 = hiç bakılmamış dönem
