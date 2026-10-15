@@ -72,6 +72,9 @@ LIVE_RULES = dict(
     # -19.0 → ikisi birden +27.1 / +32.3 / -1.5 (18 ay +31.0 → +57.9R, işlem ~%30 az). Ayrı ayrı da 3 dönemde iyi.
     WICKY_MAX=0.58,             # temastan önceki 12 mumda iğne oranı > %58 ise girme (git-gel yapan piyasa)
     PIVOT_BAND2_ATR=1.0, PIVOT_BAND2_MAX=5,   # dip/tepenin 1 ATR yakınında ≥5 mum varsa girme (dipte/tepede taban)
+    # Kullanıcı 15.10 (ETHFI örneği): derin geri kapanışta erken çıkma. 3 dönem: +26.8 / +32.3 / -1.6 → +36.2 / +39.1 / +12.0
+    # (18 ay +57.5 → +87.3R; 0.5 ATR eşiği de 3'ünde iyi: +81.2)
+    EARLY_EXIT_MAX_ATR=0.35,    # mum dolumun 0.35 ATR'den derin gerisinde kapatırsa erken çıkış yok, stop / TP beklenir
 )
 MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
 # Bildirimlerde 1R kaç dolar (kullanıcı 15.10: "1R'ım 1 dolar olacak"). Backtest raporları 25$ ile kalır.
@@ -123,6 +126,8 @@ def rules_summary():
          if tr.PIVOT_BAND2_ATR > 0 else None),
         (f"erken çıkış uyarısı (giriş mumu / sonraki mum girişin gerisinde kapatırsa)"
          if tr.FAILED_ENTRY_BARS == 2 else (f"erken çıkış uyarısı ({tr.FAILED_ENTRY_BARS} mum)" if tr.FAILED_ENTRY_BARS else None)),
+        (f"derin geri kapanışta (> {tr.EARLY_EXIT_MAX_ATR:g} ATR) erken çıkış yok, stop beklenir"
+         if tr.FAILED_ENTRY_BARS and tr.EARLY_EXIT_MAX_ATR > 0 else None),
         "⚠️ ESKİ FİLTRELER AÇIK" if tr.FILTERS else None,
         "klasik + dönüş varyasyonu" if tr.ENTRY_MODE == "both" else ("dönüş varyasyonu" if tr.ENTRY_MODE == "reclaim" else None),
     ]
@@ -244,7 +249,11 @@ def setup_message(symbol, side, r, df):
         f"Emir {fmt(valid_until, '%H:%M')}'e kadar geçerli. Girişten önce fiyat onay mumunun "
         f"{'dibini' if side == 'LONG' else 'tepesini'} kırarsa iptal.\n"
         + (f"Giriş mumu ya da sonraki mum girişin {'altında' if side == 'LONG' else 'üstünde'} kapatırsa "
-           f"⚠️ ERKEN ÇIK mesajı gelir: o an piyasa emriyle kapat.\n" if tr.FAILED_ENTRY_BARS else "") +
+           f"⚠️ ERKEN ÇIK mesajı gelir: o an piyasa emriyle kapat"
+           + (f"; ama kapanış {p(r['entry'] - tr.EARLY_EXIT_MAX_ATR * r['atr'] if side == 'LONG' else r['entry'] + tr.EARLY_EXIT_MAX_ATR * r['atr'])}"
+              f" seviyesinin {'altındaysa' if side == 'LONG' else 'üstündeyse'} çıkılmaz, stop / TP beklenir"
+              if tr.EARLY_EXIT_MAX_ATR > 0 and r.get("atr") else "")
+           + ".\n" if tr.FAILED_ENTRY_BARS else "") +
         f'<a href="{tv}">TradingView\'da aç</a>'
     )
 

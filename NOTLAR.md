@@ -519,3 +519,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Yeni: STOP_MAX_ATR (stop girişe en fazla X ATR; TP de yaklaşır), EARLY_EXIT_MAX_ATR (dolumun X ATR'den derin gerisinde
   kapanışta erken çıkış o işlem için kapanır). COMPARE_SETS["stop"]: canlı · pay 0.15 · pay 0 · stop ≤1 / ≤1.2 ATR ·
   derin erken çıkış yok 0.35 / 0.5. `/backtest 180 stop` + önceki + önceki2.
+- Stop testi 3 dönem (Nis-Eki 26 / Eki-Nis / Nis-Eki 25), canlı +26.8 / +32.3 / -1.6 (18 ay +57.5, ay ort 3.7, düşüş 21.7):
+  pay 0.15 +18.8 / +27.2 / +4.0 · pay 0 +20.4 / +43.7 / -0.8 · stop ≤1 ATR +31.0 / +19.6 / -7.7 · ≤1.2 ATR +34.5 / +28.6 /
+  +4.8 → stop yeri değişiklikleri tutarsız, RED. **Derin kapanışta erken çıkma 0.35 ATR +36.2 / +39.1 / +12.0 (18 ay +87.3,
+  ay ort 5.4, son 12 ay 6.8, düşüş 17.7)** · 0.5 ATR +35.9 / +39.2 / +6.1 (+81.2) → 3 dönemde iyi, eşiğe hassas değil.
+  LIVE_RULES EARLY_EXIT_MAX_ATR=0.35 sonraki dalında hazır (bildirimde çıkılmayacak kapanış seviyesi yazılıyor), "yükle" bekliyor.
