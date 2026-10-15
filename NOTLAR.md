@@ -588,3 +588,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   COMPARE_SETS["artir"] = şimdiki canlı sistemden tek tek: - kural 1 / 2 / 4 / 5 / 6, - iğneli git-gel, - dip/tepe tabanı,
   onay 3. mum, stop ≥ %0.3, önünde ≥ 0.5R yer (11 ayar). `/backtest 180 artır` (+ önceki, önceki2). 3 dönemde de kârı
   düşürmeden işlem ekleyen gevşetmeler birlikte ikinci testte denenecek. CSV'deki özelliklerle eşik taraması da yapılabilir.
+- Artır 1. dönem (Nis-Eki 26, canlı 115 iş +45.1, düşüş 11.9). Kaldırınca eklenen işlem / R: kural 1 +11 / -1.3 · kural 2
+  +125 / -26.0 · kural 4 +6 / +1.4 · kural 5 +36 / -11.8 · **kural 6 +35 / +9.4 (toplam +54.5, düşüş 12.8)** · iğneli
+  git-gel +18 / -1.1 · dip/tepe tabanı +31 / -2.4 · onay 3. mum +8 / +0.6 · stop ≥ %0.3 +12 / 0.0 · yer 0.5R +40 / +0.1.
+  Analiz: scratchpad/an/artir_an.py. Önceki, önceki2 bekleniyor.
