@@ -670,3 +670,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   kapanıştan. 6 ayar: günlük 20/50/100 L+S top30 · sadece LONG · günlük 20 · top60 · 4 saatlik · en fazla 5R açık risk.
   En likit 60 coin yüklenir (USDC/FDUSD vb. hariç), 130 gün ısınma. `/backtest 180 trend` (+ önceki ... önceki4).
   backtest --trend → main'de coin listesi alındıktan sonra trend_bt.run. Sahte veride mantık testi: scratchpad trend_unit.py.
+- TREND 1. DÖNEM (Nis-Eki 26, bugünkü hacme göre ilk 30/60): ana ayar 380 alt işlem %38 +31.1R düşüş 6.3 · sadece LONG
+  +33.5 · N=20 +37.4 · ilk 60 +35.7 · 4 saatlik +41.1 ama düşüş 48.8 (RED) · en fazla 5R açık +7.8 (düşüş 3.8). SHORT'lar
+  ~-2R (başa baş). SORUN: QNT 23.09-28.09 73.75→286 tek işlem 3 alt sistemde +21.6R (toplamın 2/3'ü); QNT bugün ilk 30'da
+  çünkü yükseldi → seçim yanlılığı. Düzeltme: coin listesi dönem başından önceki 30 günün USDT hacmine göre
+  (trend_bt.volume_at: bütün işlemdeki perp'ler, /fapi/v1/klines 1d, k[7]); alınamazsa bugünkü sıra + raporda uyarı.
+  1. dönem de bu düzeltmeyle yeniden çalıştırılmalı.

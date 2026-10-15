@@ -143,12 +143,44 @@ def summarize(name, rows, p0, days, tz):
             f"  {'🟢' if tot > 0 else '🔴'} <b>{tot:+.1f}R</b> · en büyük düşüş {dd:.1f}R\n  aylar: {mtxt}")
 
 
+def volume_at(symbols, t_ms, days=30):
+    """Her coinin t_ms'den önceki `days` gündeki USDT hacmi (Binance günlük mumları). O tarihte olmayan coin = 0.
+    Bugünün hacim sırası geçmişte büyük yükselmiş coinleri seçer (QNT 23.09 → +21.6R): dönem başındaki hacim kullanılır."""
+    import exchanges
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(sym):
+        try:
+            res = exchanges._get("/fapi/v1/klines", params={"symbol": sym, "interval": "1d", "limit": days + 1,
+                                                             "startTime": t_ms - days * 86400000, "endTime": t_ms - 1},
+                                 timeout=15, max_wait=120)
+            return sym, sum(float(k[7]) for k in res.json())
+        except Exception as e:
+            log.debug("%s hacmi alınamadı: %s", sym, e)
+            return sym, None
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        return dict(ex.map(one, symbols))
+
+
 def run(symbols, args, load, period, send_message, send_document, tz):
     """symbols: hacme göre sıralı (büyükten küçüğe). load(symbol, days, ago) -> 15dk mumlar."""
     import backtest as bt
     t0 = time.time()
     p0, p1 = period(args.days, args.ago)
-    syms = [s for s in symbols if not s.startswith(("USDC", "FDUSD", "TUSD", "BUSD"))][:TOP]
+    stable = ("USDC", "FDUSD", "TUSD", "BUSD", "USDP", "DAI")
+    uni_txt = "bugünkü hacim sırası (geçmiş dönemde seçim yanlılığı var)"
+    try:
+        import exchanges
+        cands = [s for s in exchanges.fetch_symbols(60) if not s.startswith(stable)]
+        vols = volume_at(cands, p0)
+        ok = {s: v for s, v in vols.items() if v}
+        if len(ok) < TOP:
+            raise RuntimeError(f"sadece {len(ok)} coinin hacmi alındı")
+        syms = sorted(ok, key=ok.get, reverse=True)[:TOP]
+        uni_txt = "dönem başından önceki 30 günün hacmine göre (o tarihteki en likitler)"
+    except Exception as e:
+        log.warning("Dönem başı hacimleri alınamadı (%s), bugünkü sıra kullanılıyor", e)
+        syms = [s for s in symbols if not s.startswith(stable)][:TOP]
     period_txt = (f"{pd.Timestamp(p0, unit='ms', tz='UTC').tz_convert(tz):%d.%m.%Y} – "
                   f"{pd.Timestamp(p1, unit='ms', tz='UTC').tz_convert(tz):%d.%m.%Y} ({args.days} gün)")
     send_message(f"⏳ Trend takibi testi başladı: en likit {len(syms)} coin, {period_txt}, {len(CONFIGS)} ayar. "
@@ -178,7 +210,7 @@ def run(symbols, args, load, period, send_message, send_document, tz):
     for cfg in CONFIGS:
         if cfg.get("max_risk"):
             rows[cfg["ad"]] = apply_max_risk(rows[cfg["ad"]], cfg["max_risk"])
-    msg = [f"📈 <b>TREND TAKİBİ (Donchian kırılımı)</b>", f"{period_txt}, {n_ok} coin, 1R = 15$ "
+    msg = [f"📈 <b>TREND TAKİBİ (Donchian kırılımı)</b>", f"{period_txt}, {n_ok} coin ({uni_txt}), 1R = 15$ "
            f"(komisyon + kayma + funding dahil; 20/50/100 = üç alt sistem, her biri 1/3 R)", ""]
     for cfg in CONFIGS:
         msg.append(summarize(cfg["ad"], rows[cfg["ad"]], p0, args.days, tz))
