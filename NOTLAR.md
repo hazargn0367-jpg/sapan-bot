@@ -482,3 +482,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   0.5 (≤2 mum) / 1 ATR (≤4 mum; 1 ATR bantta ≤2 neredeyse hepsini eler) (ornek setindeydi, hiç çalıştırılmamıştı). COMPARE_SETS["grafik"], taban = yeni canlı ayar. CSV'de igne_orani,
   duz_igne, temas_govde_atr, pivot_bant_05, pivot_bant_1 → eşikler CSV'den taranabilir. /incele de gösteriyor.
   `/backtest 180 grafik` (+ önceki).
+- Grafik testi 15m (taban = 03-07 filtresi yok canlı ayar: Nis-Eki +22.1R 236 iş, Eki-Nis +27.5R 212 iş → 12 ay +49.6R).
+  Ayar farkları (Nis-Eki / Eki-Nis): iğne ≤%60 0 / +1.3 · iğne ≤%55 +2.5 / -1.6 · 0.5 ATR bant ≤2 +3.1 / -13.1 · 1 ATR
+  bant ≤4 +4.5 / -1.4 · dönüş gövde ≤1 ATR -2.9 / +1.5 · ≤0.7 ATR -4.5 / -0.5 → hiçbiri iki dönemde iyi değil, canlıya yok.
+  Örnekler: RESOLV iğne 0.574, düz_iğne 0.70, bant 0.5=4 / 1=5 · NIL iğne 0.609, düz_iğne 0.77, bant 1=6 · ESP gövde 1.76.
+  CSV taraması (çıkan işlemlerin R'si): 12 mum iğne >0.58 -3.3 / -6.5 (31/21 iş) ama >0.55 -2.5/+2.6, >0.6 +0.1/-1.3;
+  1 ATR bant ≥5 -2.5 / -3.6 (53/45 iş) ama ≥4 -1.6/+7.2, ≥6 +4.6/-8.1 → komşu eşikler tutarsız, büyük ihtimalle şans.
+  3. bağımsız dönemde (`/backtest 180 grafik önceki2`, Nis-Eki 2025) bu iki eşik CSV'den sınanacak (yeni kod gerekmez).
