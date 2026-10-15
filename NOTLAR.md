@@ -489,3 +489,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   CSV taraması (çıkan işlemlerin R'si): 12 mum iğne >0.58 -3.3 / -6.5 (31/21 iş) ama >0.55 -2.5/+2.6, >0.6 +0.1/-1.3;
   1 ATR bant ≥5 -2.5 / -3.6 (53/45 iş) ama ≥4 -1.6/+7.2, ≥6 +4.6/-8.1 → komşu eşikler tutarsız, büyük ihtimalle şans.
   3. bağımsız dönemde (`/backtest 180 grafik önceki2`, Nis-Eki 2025) bu iki eşik CSV'den sınanacak (yeni kod gerekmez).
+- 3. dönem (Nis-Eki 2025, `grafik önceki2`, 262 coin): taban (03-07 filtresi yok canlı ayar) 149 iş TP %15 **-20.8R**, 7 ayın
+  6'sı eksi (Tem -9.0, Ağu -6.4; sadece Eyl +5.2). 18 ay toplam +28.8R. Ayar farkları: iğne ≤%60 +0.6 · ≤%55 +2.1 · 0.5
+  ATR ≤2 +3.5 · 1 ATR ≤4 (kural 4'ün yerine) +10.0 · dönüş gövde ≤1 -1.3 · ≤0.7 +0.8.
+  Önceden seçilen iki eşik 3. dönemde de tuttu (çıkan işlemlerin R'si, 3 dönem): 12 mum iğne >0.58 -3.3 / -6.5 / -2.7 ·
+  1 ATR bant ≥5 (kural 4 kalarak, ek filtre) -2.5 / -3.6 / -13.7. İkisi birden (CSV tahmini): +22.1→+26.7 · +27.5→+32.3 ·
+  -20.8→-3.2 (18 ay +28.8 → +55.8R, işlemlerin ~1/3'ü çıkar). Gerçek ayar olarak (portföy etkisiyle) 3 dönemde sınanmalı:
+  yeni parametre gerekir (kural 4'ün 0.3 ATR bandı kalırken ikinci bant 1 ATR ≥5 mum).
