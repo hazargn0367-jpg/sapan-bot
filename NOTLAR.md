@@ -441,3 +441,5 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   fiyat gerisindeyse o mum açılışında çık). COMPARE_SETS["yatay"]: canlı 15m · 2 / 4 / 8 saat stop girişe · 4 saat
   0.2R kâra. `/backtest 180 yatay` (+ önceki). 30m testleri bitince yüklenecek (henüz yüklenmedi).
   Not: hacim sırasına göre canlı 15m ayar: 300-500. coinler Nis-Eki +18.8R, Eki-Nis +5.8R → küçük coin filtresi yok.
+- 30m yer Nisan–Ekim (227 coin): taban -11.2R · +1R yer (canlı ayar) 119 işlem TP %15 -14.5R · +EMA≥2 -9.7 · +EMA≥1.5
+  -10.5. Aynı dönemde 15m +17.2R → 30m RED, önceki dönem çalıştırılmadı. Canlı/oto sadece 15m.
