@@ -750,3 +750,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   (run_df): onay_uc_ema_atr (onay mumunun dibi - EMA20, ATR; SHORT tepe, işaret ters), onay_kap_ema_atr, giris_ema_atr,
   onay_govde_atr, onay_mum (temastan kaç mum sonra), temas_stoch. COMPARE_SETS["analiz"] = sadece canlı ayar.
   `/backtest 180 analiz seri` (5 dönem, hızlı).
+- ANALİZ 5 dönem (canlı ayar 392 iş, yeni CSV ölçüleri): onay mumunun dibi EMA20'ye değmiş (≤0) 156 iş TP %28 +0.13R/iş
+  (2024'te -1.3 / -10.1) · çok yakın 0-0.2 ATR 126 iş %35 +0.36 · 0.2-0.5 94 iş %34 +0.35 · >0.5 16 iş. Onay kapanışı EMA20'ye
+  < 0.5 ATR: 40 iş %22, -6.9 / +8.9 / -3.0 / +4.3 / -5.8 (eşiğe çok duyarlı: < 0.6 → +23R) → kural yok. Temas stoch LONG < 10:
+  23 iş TP %9 -9.8R (4/5 eksi) ama SHORT > 90 simetriği +6.1 → tek yönlü, az işlem → kural yok. Onay gövdesi > 1 ATR 15 iş
+  -0.12R/iş. Sonuç: onay mumunun EMA20'ye yakınlığı kazanma oranını belirgin değiştirmiyor.
