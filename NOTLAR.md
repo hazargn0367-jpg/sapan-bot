@@ -780,3 +780,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   -1.3 / -2.7 / -6.0 / -0.8 / +3.6 (1/5, -7.2R, -27 iş) · ≥0.2 +0.9 / -6.2 / -8.1 / +1.6 / +1.5 (3/5, -10.3, -46 iş) · ≥0.3
   +0.2 / -14.2 / -8.9 / -1.3 / +3.0 (2/5, -21.2, -68 iş) → RED. CSV (canlı 106 dönüş): kapanış < 0.1 ATR 27 iş 9 TP +7.2R
   (0.05-0.1: 18 iş +8.2R); < 0.05 ATR 9 iş 2 TP -1.0R (karışık, az). ESP 0.029 ATR. Çizgiye yakın kapanan dönüşler kötü değil.
+- 16.10 22:01 kullanıcı "TP 2.3 / 2.4 / 2.5 / 3 / 4?" MFE tahmini (yeni canlı, kontrol CSV 5 dönem, TP olanlardan X'e
+  gitmeyen stop -1.09 sayıldı): 2.3 +2.3 (4/5) · 2.4 +7.5 (4/5) · 2.5 -8.9 · 2.75 -11.5 · 3 -10.2 · 3.5 -2.7 · 4 -9.2 · 5 -28.5.
+  TP olanların %96'sı 2.4'e, %89'u 2.5'e, %78'i 3'e gidiyor. 2.4 → 2.5 uçurumu 8 işlem (şans). Kullanıcı: "kalsın" → TP 2.2.
