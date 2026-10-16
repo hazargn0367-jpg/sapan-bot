@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 çizgi seri -> dönüş mumu EMA20'nin en az 0.1 / 0.2 / 0.3 ATR ötesinde kapatmalı (tam çizgide kapatan dönüş yok)
   /backtest 180 temel seri -> herhangi bir karşılaştırma testinin sonuna "seri" yazılırsa 5 dönem arka arkaya çalışır, sonunda özet
   /backtest 180 temel -> temas tanımının temel ayarları: stoch 40/60 · stoch yok · ters mum 3/4 · tepe 45 mum · tolerans %0.15
   /backtest 180 dalga -> temastan önceki 12 mum büyük gövdeyle sürekli yön değiştiriyorsa girme (AXL örneği)
@@ -129,6 +130,8 @@ def start_backtest(text):
         args += ["--exchange", "bybit"]   # veri Bybit'ten; başka set yazılmadıysa "bybit" seti (yeni / ortak coinler)
     if re.search(r"\bkontrol\b", low):
         args += ["--compare", "kontrol"]   # 16.10 canlıya alınan gövde + düzeltme kuralı kontrolü
+    elif re.search(r"\b[çc]izgi\b", low):
+        args += ["--compare", "cizgi"]   # dönüş mumu EMA20'den en az 0.1 / 0.2 / 0.3 ATR ötede kapatmalı (ESP 30.08)
     elif re.search(r"\banaliz\b", low):
         args += ["--compare", "analiz"]   # sadece canlı ayar, CSV ölçüleri için (seri ile 5 dönem)
     elif re.search(r"\btemel\b", low):

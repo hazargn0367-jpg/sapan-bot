@@ -768,3 +768,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +3.7 / +2.6 / +1.0 → 5/5 artı, toplam +14.4R. 31 işlem elendi (-14.3R, içinde sadece 2 TP), eklenen yok. Yeni canlı
   dönem toplamları: 44.9 / 50.4 / 14.5 / -0.1 / 3.8 = 113.5R (30 ay, ~3.8R/ay, 364 işlem ~12/ay). Son 6 ay 106 işlem
   (~17.7/ay) TP %38.7, +44.9R. Analizle birebir tuttu; kural canlıda doğru çalışıyor.
+- 16.10 17:22 kullanıcı HYPERUSDT 06.05.2026 04:45 SHORT dönüş erken -0.18R: "girerdim, trend temiz" → mfe 5.3R, tutsaydı
+  TP. Erken çıkışlar (5 dönem 131): sonradan TP 29 (dönüşte 37'de 5); tutsaydık ~-51R vs gerçek -28R → erken çıkış kalır.
+  Güçlü trend üçte biri (ema_acilim > 3.24): 43 erkenin 13'ü TP (%30), tutmak ≈ -0.14 vs -0.22R/iş, ~+3R / 30 ay → değişiklik yok.
+  Dönüş vs klasik (5 dönem): dönüş 106 iş +0.34R/iş, klasik 258 iş +0.30R/iş (dönüş 4/5 dönemde iş başına daha iyi; sadece seyrek).
+- 17:26 ESPUSDT 30.08.2026 11:30 SHORT dönüş erken -0.37R (mfe 0.23): "dönüş mumu tam çizgiye kapamış, girmezdim" (15.10'da
+  aynı işlem temas gövdesi için örnekti, o kural RED). 17:29 "kodla": RECLAIM_CLOSE_MIN_ATR (dönüş mumu kapanışı EMA20'nin
+  doğru tarafında en az X ATR; altı "weak_reclaim"), CSV donus_kap_ema_atr, COMPARE_SETS["cizgi"] canlı / 0.1 / 0.2 / 0.3 ATR.
+  `/backtest 180 çizgi seri`. CHECK_TRADES'e ESP eklendi.

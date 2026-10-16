@@ -113,6 +113,8 @@ CLOSE_ENTRY_KEEP_TP = False  # True: kapanışla girişte TP fiyatı değişmez 
 WICKY_MAX = 0.0              # >0: temastan önceki WICKY_BARS mumda iğne oranı (1 - gövdeler toplamı / mum boyları toplamı)
 WICKY_BARS = 12              # bundan büyükse girme (git-gel yapan, iğneli piyasa). 15m'de 12 mum = 3 saat
 RECLAIM_BODY_MAX_ATR = 0.0   # >0: dönüş varyasyonunda temas mumunun gövdesi bu kadar ATR'den büyükse girme
+# Kullanıcı 16.10 17:26 (ESPUSDT 30.08 11:30 SHORT dönüş, erken -0.37R): "dönüş mumu tam çizgiye kapamış, girmezdim".
+RECLAIM_CLOSE_MIN_ATR = 0.0  # >0: dönüş mumu EMA20'nin doğru tarafında en az bu kadar ATR ötede kapatmalı ("weak_reclaim")
 # Kullanıcı 15.10 13:41-13:43 (ETHFI 19.04 04:00 SHORT erken -0.53R sonra TP; BLUR 19.04 19:00 LONG stop %4.4 uzakta):
 # "erken çıkışı esnetmek lazım" + "stop çok aşağıda, biraz yükseltsek TP mesafesi kısalır"
 # Gemini kodundan (kullanıcı 15.10 17:07 "kodla"): EMA100 > EMA200 sıralaması ve "son N mumda son ~24 saatin zirvesi"
@@ -683,6 +685,11 @@ def simulate(df, i, side, tick, mode=None):
             return res
         if not ((C[j] > E20[j]) if long else (C[j] < E20[j])):
             res["status"] = "no_reclaim"
+            return res
+        gap = ((C[j] - E20[j]) if long else (E20[j] - C[j])) / A[j] if A[j] > 0 else 0.0
+        res["reclaim_gap"] = float(gap)   # dönüş mumunun kapanışı EMA20'den kaç ATR ötede (doğru tarafta +)
+        if RECLAIM_CLOSE_MIN_ATR > 0 and gap < RECLAIM_CLOSE_MIN_ATR:
+            res["status"] = "weak_reclaim"
             return res
         res["reclaim"] = j
         conf = j + 1  # onay: dönüş mumunun tepesini (LONG) / dibini (SHORT) kapanışla geçmeli
