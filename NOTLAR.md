@@ -847,3 +847,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   risk_mult; işlem R'si kendi riskine göre, günlük sınır dolar bazında (net / AUTO_RISK_USD). Kapanış mesajında "sıradaki
   işlemin riski", /oto durumunda çarpan, EMİR HAZIR'da aynı risk. Testler: scratchpad ototest/momentum_test.py (+2), lev_test.py.
   Not: 225 USDT bakiyede 2x + dar stop (%0.5, ~6000 USDT, 20x) marjin ~360 → 1x'e düşer.
+- 17.10 00:41 /oto: Binance -2015, botun IP'si 74.220.51.152 (15.10'da eklenen 74.220.51.142 idi) → bugünkü yüklemelerden
+  birinde Render çıkış IP'si değişti, otomatik işlem o andan beri emir koyamıyor (işlem çıkmadı). Kullanıcıya: /ip'deki
+  IP'leri Binance trusted IPs'e ekle, /oto ile kontrol. HATA: _ip_loop ilk kontrolde (yeniden başlatmadan hemen sonra) yeni
+  IP'yi sessizce kaydediyordu → uyarı hiç gelmedi. Düzeltildi (daha önce IP kaydı varsa ilk kontrolde de uyar); SADECE
+  sonraki dalında, YÜKLENMEDİ (yükleme IP'yi yine değiştirebilir; kullanıcı salıya kadar yazmayacak) → salı yüklenecek.

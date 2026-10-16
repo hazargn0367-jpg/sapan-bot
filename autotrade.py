@@ -747,8 +747,10 @@ def _ip_loop():
         try:
             ip = public_ip()
             if ip:
+                had = bool(seen_ips())
                 new = _note_ip(ip)
-                if new and not first and api is not None:
+                # IP genelde yeniden başlatmada değişir: ilk kontrolde de (daha önce IP kaydı varsa) uyar (17.10 düzeltmesi)
+                if new and (had or not first) and api is not None:
                     _say(f"⚠️ Botun internet çıkış IP'si değişti: <code>{ip}</code>\n"
                          f"Otomatik işlem için Binance → API Management → Edit restrictions → trusted IPs listesine "
                          f"bu IP'yi ekle (eskileri silme). Tüm görülen IP'ler: /ip")
