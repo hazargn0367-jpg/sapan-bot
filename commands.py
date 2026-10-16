@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 temel seri -> herhangi bir karşılaştırma testinin sonuna "seri" yazılırsa 5 dönem arka arkaya çalışır, sonunda özet
   /backtest 180 temel -> temas tanımının temel ayarları: stoch 40/60 · stoch yok · ters mum 3/4 · tepe 45 mum · tolerans %0.15
   /backtest 180 dalga -> temastan önceki 12 mum büyük gövdeyle sürekli yön değiştiriyorsa girme (AXL örneği)
   /backtest 180 iki mum -> 2 mumlu temas her sıra (dip 1. ya da 2. mumda), iki mum EMA20'de döner, onay iki mumun en tepesinin üstü
@@ -218,6 +219,8 @@ def start_backtest(text):
         args += ["--compare", "yeni"]
     elif any(w in low for w in ("hepsi", "karşılaştır", "karsilastir")):
         args += ["--compare", "hepsi"]
+    if re.search(r"\bseri\b", low) and "--compare" in args:
+        args += ["--seri", "5"]   # 5 dönem arka arkaya (bugün, önceki ... önceki4) + sonunda özet
     if bybit_mode and "--compare" not in args and "--preset" not in args:
         args += ["--compare", "bybit"]
     if "fark" in low:

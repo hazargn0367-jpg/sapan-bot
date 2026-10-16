@@ -738,3 +738,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   * İşlem kalitesine göre risk (6 görünüm): klasik onay 1. mum 1.5R / 2. mum 0.5R / dönüş 1R → toplam 111.5 → 141.7R
     (+%27, 5/6 görünümde daha iyi), en büyük düşüşler %15-30 artar (getiri/düşüş 11.3 → 12.4). Kodlanmadı; öneri.
   * TP düşürme (kazanma oranı için): eski testte TP 1.5 -9.9 vs 2.2 +12.8 → hayır. Kısmi TP 6/6 eksi → hayır.
+- 04:45 kullanıcı: "tek tek çok uzun sürüyor". backtest --seri N: aynı karşılaştırmayı N dönem arka arkaya (ago 0, d, 2d…)
+  tek süreçte çalıştırır (main() tekrar çağrılır, SERI_MODE'da grafik yok), her dönemin raporu + CSV'si gelir, sonunda
+  seri_summary: her ayarın ilk ayara göre dönem farkları, toplam, artı dönem sayısı, işlem farkı (✅ ≥ n-1 artı ve
+  toplam artı). commands: karşılaştırma komutunun sonuna "seri" → --seri 5. Toplam süre aynı, komut tek.

@@ -1767,6 +1767,12 @@ def main():
         raise RuntimeError(f"Hiçbir coinin verisi alınamadı ({len(symbols)} coin denendi)")
     if args.compare:
         frames_all = {cfg: pd.DataFrame(rows) for cfg, rows in results.items()}
+        if SERI_MODE:
+            summ = {}
+            for name, dfa in frames_all.items():
+                t = dfa[dfa["durum"].isin(["win", "loss", "be"])] if not dfa.empty else dfa
+                summ[name] = (len(t), float(t["R_net"].sum()) if len(t) else 0.0)
+            SERI_OUT.append((period_txt, summ))
         report = build_compare(frames_all, period_txt, coins_txt, minutes, p0=p0, days=args.days)
         if args.compare == "tp":
             ms = mfe_summary(frames_all[configs[1]["ad"]], configs[1]["ad"])
@@ -1785,7 +1791,7 @@ def main():
             out.drop(columns=[c for c in out.columns if c.startswith("_")]).to_csv(
                 path, index=False, sep=";", decimal=",", encoding="utf-8-sig")
             send_document(path, "Tüm ayarların işlemleri ('ayar' sütununa göre filtrele)")
-        if chart_idx is None:  # tarama: binlerce işlem, grafik yok
+        if chart_idx is None or SERI_MODE:  # tarama: binlerce işlem / seri: dönemler arka arkaya, grafik yok
             return
         chart_name = configs[chart_idx]["ad"]
         d = frames_all[chart_name]
@@ -1829,9 +1835,72 @@ def main():
                 send_message(f"⚠️ Grafikler oluşturulamadı: {e}")
 
 
+SERI_MODE = False
+SERI_OUT = []   # (dönem, {ayar: (işlem, R)})
+
+
+def seri_summary(set_name):
+    """5 dönemin özeti: her ayarın canlıya (ilk ayara) göre farkı."""
+    if not SERI_OUT:
+        return "⚠️ Seri özeti: hiçbir dönem tamamlanmadı."
+    names = list(SERI_OUT[0][1])
+    base = names[0]
+    lines = [f"📊 <b>{len(SERI_OUT)} DÖNEM ÖZETİ</b> ({html.escape(set_name)}), ilk ayara göre fark (R):",
+             "Dönemler: " + " · ".join(p.split(" (")[0] for p, _ in SERI_OUT), ""]
+    b = [s.get(base, (0, 0.0)) for _, s in SERI_OUT]
+    lines.append(f"<b>{html.escape(base)}</b>: " + " / ".join(f"{r:+.1f}" for _, r in b) +
+                 f" → toplam {sum(r for _, r in b):+.1f}R, {sum(n for n, _ in b)} işlem")
+    for name in names[1:]:
+        d = [s.get(name, (0, 0.0))[1] - s.get(base, (0, 0.0))[1] for _, s in SERI_OUT]
+        dn = sum(s.get(name, (0, 0.0))[0] - s.get(base, (0, 0.0))[0] for _, s in SERI_OUT)
+        pos = sum(1 for x in d if x > 0)
+        mark = "✅" if pos >= len(d) - 1 and sum(d) > 0 else ("❌" if sum(d) < 0 else "⚪")
+        lines.append(f"{mark} <b>{html.escape(name)}</b>: " + " / ".join(f"{x:+.1f}" for x in d) +
+                     f" → toplam {sum(d):+.1f}R, {pos}/{len(d)} artı, işlem {dn:+d}")
+    return "\n".join(lines)
+
+
+def run_seri():
+    """--seri N: aynı testi N dönem (bugünden geriye, --days uzunluğunda) arka arkaya çalıştırır, sonunda özet gönderir."""
+    import sys
+    global SERI_MODE
+    argv = list(sys.argv)
+    k = argv.index("--seri")
+    n = int(argv[k + 1])
+    argv = argv[:k] + argv[k + 2:]
+    days = int(argv[argv.index("--days") + 1]) if "--days" in argv else 7
+    ago0 = 0
+    if "--ago" in argv:
+        j = argv.index("--ago")
+        ago0 = int(argv[j + 1])
+        argv = argv[:j] + argv[j + 2:]
+    set_name = argv[argv.index("--compare") + 1] if "--compare" in argv else "test"
+    SERI_MODE = True
+    send_message(f"⏳ {n} dönemlik seri başladı ({set_name}): dönemler arka arkaya çalışacak, her biri bitince sonucu ve "
+                 f"CSV'si gelir, en sonda özet. Eski dönemler arşivden indirildiği için daha uzun sürer.")
+    for i in range(n):
+        sys.argv = argv + ["--ago", str(ago0 + i * days)]
+        try:
+            main()
+        except BinanceBlocked as e:
+            log.error("Seri durdu: %s", e)
+            send_message(f"⛔ Seri durdu ({i + 1}. dönem): {e}")
+            break
+        except Exception as e:
+            log.exception("Seri: %d. dönem hata verdi", i + 1)
+            send_message(f"⚠️ Seri: {i + 1}. dönem hata verdi: {type(e).__name__}: {e}")
+        gc.collect()
+        _trim_memory()
+    send_message(seri_summary(set_name))
+
+
 if __name__ == "__main__":
     try:
-        main()
+        import sys as _sys
+        if "--seri" in _sys.argv:
+            run_seri()
+        else:
+            main()
     except BinanceBlocked as e:
         log.error("Backtest durdu: %s", e)
         send_message(f"⛔ Backtest durdu: {e}. Engel bitince tekrar başlat (/durum'da Binance satırına bak).")
