@@ -240,7 +240,14 @@ def scan_symbol(symbol, keep_df=False, lookback=None):
 def setup_message(symbol, side, r, df):
     ts = df["timestamp"].values
     risk = abs(r["entry"] - r["stop"])
-    qty = ALERT_RISK_USD / risk if risk else 0
+    try:   # otomatik işlemdeki risk çarpanı (son 24 saatte kapanan işlemler): bildirimde de aynı risk gösterilir
+        import autotrade
+        m, mtot, mn = autotrade.risk_mult()
+        mnote = f" ({autotrade.mult_text(m, mtot, mn)})"
+    except Exception:
+        m, mnote = 1.0, ""
+    risk_usd = ALERT_RISK_USD * m
+    qty = risk_usd / risk if risk else 0
     notional = qty * r["entry"]
     valid_until = int(ts[r["confirm"]]) + (tr.ENTRY_WINDOW + 1) * TF_SEC * 1000
     tv = f"https://www.tradingview.com/chart/?symbol=BINANCE:{symbol}.P&interval={TF_MIN}"
@@ -254,7 +261,7 @@ def setup_message(symbol, side, r, df):
         f"Giriş ({order}): <code>{p(r['entry'])}</code>\n"
         f"Stop: <code>{p(r['stop'])}</code>  (%{100 * risk / r['entry']:.2f})\n"
         f"TP (1:{tr.RR:g}): <code>{p(r['tp'])}</code>\n"
-        f"{ALERT_RISK_USD:g}$ risk için: ~{notional:,.0f} USDT pozisyon ({qty:.6g} adet)\n\n"
+        f"{risk_usd:g}$ risk için{mnote}: ~{notional:,.0f} USDT pozisyon ({qty:.6g} adet)\n\n"
         f"{steps}\n"
         f"Emir {fmt(valid_until, '%H:%M')}'e kadar geçerli. Girişten önce fiyat onay mumunun "
         f"{'dibini' if side == 'LONG' else 'tepesini'} kırarsa iptal.\n"

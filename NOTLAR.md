@@ -840,3 +840,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   işlem (-1.1 / +2.2) → sınanamadı; "<0" 8 + 1 iş -3.4R (yönü uyumlu). Boyut: >0 2R → 2022 -6.3 (-1.1), 2021 -1.8 (+2.2) ·
   2 / 0.5 / 1 → -4.7 (+0.5), -1.8 (+2.2) → 9 dönemin 9'unda eşit veya daha iyi. Kural kötü rejimde kendiliğinden az devreye
   giriyor (art arda kazanç yok). Kalite boyutu: 2022 +0.1, 2021 -2.8 (k1 -0.36/iş, k2 +0.17) → 9 dönemde 6/9, ZAYIFLADI, önerilmiyor.
+- 17.10 00:34 kullanıcı "mantıklı yükle" → CANLI DEĞİŞTİ (otomatik işlem): autotrade.risk_mult(): son MOMENTUM_HOURS (24)
+  saatte kapanan otomatik işlemlerin R toplamı (her biri kendi riskine göre, rec["r"]) > 0 → MOMENTUM_UP (2x = 30$), < 0 →
+  MOMENTUM_DOWN (0.5x = 7.5$), kapanan yok → 1x (15$). Env ile değişir/kapanır (AUTO_MOMENTUM_UP=1, AUTO_MOMENTUM_DOWN=1).
+  2x'te pozisyon sınırı (MAX_NOTIONAL × çarpan) ya da bakiye yetmezse 1x ile girilir (mesajda yazar). rec risk_usd /
+  risk_mult; işlem R'si kendi riskine göre, günlük sınır dolar bazında (net / AUTO_RISK_USD). Kapanış mesajında "sıradaki
+  işlemin riski", /oto durumunda çarpan, EMİR HAZIR'da aynı risk. Testler: scratchpad ototest/momentum_test.py (+2), lev_test.py.
+  Not: 225 USDT bakiyede 2x + dar stop (%0.5, ~6000 USDT, 20x) marjin ~360 → 1x'e düşer.

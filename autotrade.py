@@ -8,7 +8,8 @@ likidasyon fiyatı stopun en az 1.5 katı uzakta kalacak en yüksek kaldıraç (
 böylece marjin küçük kalır ama pozisyon stoptan önce likide olmaz.
 
 Akış (her setup için):
-  1. EMİR HAZIR → girişe borsada STOP_MARKET (algo emri) konur. Miktar = AUTO_RISK_USD / |giriş - stop|.
+  1. EMİR HAZIR → girişe borsada STOP_MARKET (algo emri) konur. Miktar = risk / |giriş - stop|; risk = AUTO_RISK_USD ×
+     çarpan (son 24 saatte kapanan otomatik işlemler artıda 2x, ekside 0.5x, yoksa 1x; 17.10).
      Fiyat girişi çoktan geçtiyse (emir hemen tetiklenecekse) ve 0.3R'den fazla kaçmadıysa piyasa emriyle girilir.
   2. Pozisyon açılınca (her ~5 sn kontrol) hemen borsaya stop (STOP_MARKET, reduceOnly) ve TP (LIMIT, reduceOnly)
      konur. Bot ya da bağlantı çökse bile pozisyon borsadaki stop/TP ile korunur.
@@ -56,6 +57,13 @@ MAX_OPEN = int(os.environ.get("AUTO_MAX_OPEN", "2"))
 DAILY_LOSS_R = float(os.environ.get("AUTO_DAILY_LOSS_R", "5"))
 LATE_MAX_R = 0.3          # fiyat girişi en fazla bu kadar R geçmişse piyasa emriyle girilir, fazlasıysa girilmez
 POLL_SEC = 5
+# Kullanıcı 17.10 00:34 "yükle": işlem riski, son 24 saatte kapanan otomatik işlemlerin R toplamına göre (rejim sürekliliği:
+# sistem yeni kazandıysa sıradaki işlem çok daha iyi). 9 dönem backtest (54 ay, 2021-2026): artıda 2x / ekside 0.5x / kapanan
+# yoksa 1x → 9/9 dönem eşit ya da daha iyi, ayda ~+1R (son yıl +2.4R), en büyük düşüş 16.3R → 14.3R. Kapatmak için Render
+# Environment'ta AUTO_MOMENTUM_UP=1 ve AUTO_MOMENTUM_DOWN=1.
+MOMENTUM_HOURS = float(os.environ.get("AUTO_MOMENTUM_HOURS", "24"))
+MOMENTUM_UP = float(os.environ.get("AUTO_MOMENTUM_UP", "2.0"))
+MOMENTUM_DOWN = float(os.environ.get("AUTO_MOMENTUM_DOWN", "0.5"))
 TZ_OFFSET = 3 * 3600      # gün sınırı TR saatine göre
 
 _lock = threading.RLock()
@@ -231,6 +239,29 @@ def _save_trades(t):
     _save("auto_trades.json", t)
 
 
+def risk_mult(extra=None, now=None):
+    """Sıradaki işlemin risk çarpanı: son MOMENTUM_HOURS saatte kapanan otomatik işlemlerin (her biri kendi riskine göre)
+    R toplamı > 0 → MOMENTUM_UP, < 0 → MOMENTUM_DOWN, kapanan yoksa 1. Dönüş: (çarpan, R toplamı ya da None, işlem sayısı).
+    extra: henüz kaydedilmemiş (az önce kapanan) kayıtlar."""
+    now = time.time() if now is None else now
+    recs = dict(trades())
+    for x in extra or []:
+        recs[x.get("key", id(x))] = x
+    rs = [float(x["r"]) for x in recs.values()
+          if x.get("status") == "closed" and x.get("closed") and x.get("r") is not None
+          and now - float(x["closed"]) <= MOMENTUM_HOURS * 3600]
+    if not rs:
+        return 1.0, None, 0
+    tot = sum(rs)
+    return (MOMENTUM_UP if tot > 0 else MOMENTUM_DOWN if tot < 0 else 1.0), tot, len(rs)
+
+
+def mult_text(m, tot, n):
+    if tot is None:
+        return f"son {MOMENTUM_HOURS:g} saatte kapanan işlem yok → {m:g}x"
+    return f"son {MOMENTUM_HOURS:g} saatte kapanan {n} işlem {tot:+.2f}R → {m:g}x"
+
+
 def _today():
     return time.strftime("%Y-%m-%d", time.gmtime(time.time() + TZ_OFFSET))
 
@@ -382,21 +413,34 @@ def _open_setup(key, symbol, side, entry, stop, tp, tf, touch_ts):
     risk = abs(entry - stop)
     if risk <= 0:
         return
-    qty = Decimal(_q(RISK_USD / risk, f["step"]))
-    notional = float(qty) * entry
-    if qty < f["min_qty"] or notional < f["min_notional"]:
-        _say(f"{html.escape(symbol)}: {RISK_USD:g}$ risk için pozisyon çok küçük ({notional:.1f} USDT, en az "
-             f"{f['min_notional']:g}), girilmedi")
+    mult, mtot, mn = risk_mult()
+    plan, why, avail = None, "", None
+    # Çarpan > 1 iken pozisyon sınırı ya da bakiye yetmezse normal riskle (1x) girilir
+    for m in [mult] + ([1.0] if mult > 1.0 else []):
+        risk_usd = round(RISK_USD * m, 4)
+        qty = Decimal(_q(risk_usd / risk, f["step"]))
+        notional = float(qty) * entry
+        cap = MAX_NOTIONAL * max(1.0, m)
+        if qty < f["min_qty"] or notional < f["min_notional"]:
+            why = f"{risk_usd:g}$ risk için pozisyon çok küçük ({notional:.1f} USDT, en az {f['min_notional']:g})"
+            continue
+        if notional > cap:
+            why = f"pozisyon {notional:.0f} USDT, sınır {cap:g}"
+            continue
+        lev = _pick_leverage(symbol, notional, risk / entry)
+        if avail is None:
+            avail, _ = api.usdt_balance()
+        if avail < notional / lev * 1.2:
+            why = f"bakiye yetersiz (kullanılabilir {avail:.2f} USDT, gereken ~{notional / lev * 1.2:.2f} {lev}x ile)"
+            continue
+        plan = (m, risk_usd, qty, notional, lev)
+        break
+    if plan is None:
+        _say(f"{html.escape(symbol)}: {why}, girilmedi")
         return
-    if notional > MAX_NOTIONAL:
-        _say(f"{html.escape(symbol)}: pozisyon {notional:.0f} USDT, sınır {MAX_NOTIONAL:g}; girilmedi")
-        return
-    lev = _pick_leverage(symbol, notional, risk / entry)
-    avail, _ = api.usdt_balance()
-    if avail < notional / lev * 1.2:
-        _say(f"{html.escape(symbol)}: bakiye yetersiz (kullanılabilir {avail:.2f} USDT, gereken ~{notional / lev * 1.2:.2f}"
-             f" {lev}x ile), girilmedi")
-        return
+    m, risk_usd, qty, notional, lev = plan
+    risk_note = f"risk {risk_usd:g}$ ({mult_text(mult, mtot, mn)}"
+    risk_note += (f"; {why} → 1x)" if m != mult else ")")
     try:
         api.set_isolated(symbol)
     except BinanceError as e:
@@ -420,7 +464,7 @@ def _open_setup(key, symbol, side, entry, stop, tp, tf, touch_ts):
            "qty": format(qty.normalize(), "f"), "status": "pending", "created": time.time(),
            "entry_cid": f"se{base}", "sl_cid": f"ss{base}", "tp_cid": f"st{base}",
            "entry_algo": None, "sl_algo": None, "tp_order": None, "fill": None, "opened": None, "lev": lev,
-           "risk_usd": RISK_USD}
+           "risk_usd": risk_usd, "risk_mult": m}
     # Emir gönderilmeden ÖNCE kaydedilir: cevap gelmeden bağlantı koparsa bile izleme döngüsü pozisyonu bulup korur
     t[key] = rec
     _save_trades(t)
@@ -446,7 +490,7 @@ def _open_setup(key, symbol, side, entry, stop, tp, tf, touch_ts):
         how = f"fiyat girişi geçmişti, piyasa emriyle ({_fmt(px)})"
     _save_trades(t)
     _say(f"{'🟢' if side == 'LONG' else '🔴'} <b>{side} {html.escape(symbol)}</b> ({tf}): giriş emri kondu: {how}, "
-         f"{rec['qty']} adet (~{notional:,.0f} USDT, {lev}x izole, marjin ~{notional / lev:,.0f} USDT), risk {RISK_USD:g}$.\n"
+         f"{rec['qty']} adet (~{notional:,.0f} USDT, {lev}x izole, marjin ~{notional / lev:,.0f} USDT), {risk_note}.\n"
          f"Stop {_fmt(stop)} / TP {_fmt(tp)} giriş dolunca borsaya konacak.")
 
 
@@ -586,13 +630,15 @@ def _finish(rec):
         log.warning("OTO %s kâr-zarar okunamadı: %s", sym, e)
     net = pnl - fee
     risk_usd = float(rec.get("risk_usd", 1.0))   # 15.10 14:24'ten önceki kayıtlar 1$ riskle açıldı
-    r = net / risk_usd if risk_usd else 0.0
+    r = net / risk_usd if risk_usd else 0.0      # işlemin kendi riskine göre R (risk çarpanı bunu toplar)
     rec.update(status="closed", closed=time.time(), pnl=round(net, 4), r=round(r, 3))
-    day = _add_day_r(r)
+    day = _add_day_r(net / RISK_USD if RISK_USD else r)   # günlük sınır dolar bazında (1R = RISK_USD)
     kind = rec.get("exit_kind", "kapandı")
     emoji = {"TP": "🎯", "stop": "🛑", "erken çıkış": "⚠️"}.get(kind, "⚪")
+    nm, ntot, nn = risk_mult(extra=[rec])
     _say(f"{emoji} <b>{rec['side']} {html.escape(sym)}</b>: {kind} → <b>{r:+.2f}R ({net:+.2f}$)</b> "
-         f"(komisyon {fee:.3f}$). Bugün toplam {day:+.2f}R.")
+         f"(risk {risk_usd:g}$, komisyon {fee:.3f}$). Bugün toplam {day:+.2f}R ({day * RISK_USD:+.2f}$).\n"
+         f"Sıradaki işlemin riski: {RISK_USD * nm:g}$ ({mult_text(nm, ntot, nn)}).")
     if day <= -DAILY_LOSS_R:
         _say(f"⛔ Bugün {day:+.2f}R: günlük zarar sınırı (-{DAILY_LOSS_R:g}R) doldu, yarına kadar yeni işlem açılmayacak.")
 
@@ -775,6 +821,9 @@ def status_text():
                      + ("giriş bekliyor" if x["status"] == "pending" else f"açık ({_fmt(x['fill'] or 0)})"))
     days = s.get("days", {})
     lines.append(f"Bugün: {days.get(_today(), 0.0):+.2f}R · Son 30 gün: {sum(days.values()):+.2f}R")
+    m, tot, n = risk_mult()
+    lines.append(f"Sıradaki işlemin riski: {RISK_USD * m:g}$ ({mult_text(m, tot, n)}; artıda {MOMENTUM_UP:g}x, "
+                 f"ekside {MOMENTUM_DOWN:g}x)")
     return "\n".join(lines)
 
 
@@ -792,7 +841,8 @@ def command(text):
             return "🤖 Otomatik işlem <b>AÇILMADI</b>:\n" + "\n".join(f"⚠️ {b}" for b in bad) + f"\n{line}"
         _set_state(enabled=True)
         return (f"🤖 Otomatik işlem <b>AÇILDI</b>. Bakiye {total:.2f} USDT. Bundan sonraki EMİR HAZIR'larda "
-                f"{RISK_USD:g}$ riskle işlem açılacak. Durdurmak için /oto kapat")
+                f"{RISK_USD:g}$ riskle işlem açılacak (son {MOMENTUM_HOURS:g} saatte kapanan işlemler artıdaysa "
+                f"{RISK_USD * MOMENTUM_UP:g}$, ekside {RISK_USD * MOMENTUM_DOWN:g}$). Durdurmak için /oto kapat")
     if "kapa" in low:
         _set_state(enabled=False)
         act = [x for x in trades().values() if x["status"] in ("pending", "open")]
