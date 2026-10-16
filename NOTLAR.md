@@ -805,3 +805,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   başabaş), res lock_on / locked_exit, CSV cikis_turu "kâr kilidi", raporda "🔒 Kâr kilidi N". COMPARE_SETS["kilit"]: canlı ·
   2.2→+1.8 hedef 3 · 2.2→+1.8 hedef 4 · 2.2→+1.5 hedef 4 · 2.2→+1.5 hedef 5. Kilit mumu: stop sonraki mumdan geçerli (canlıda
   bot 5 sn'de bir bakıp stop emrini taşıyabilir). `/backtest 180 kilit seri` + `/backtest 180 kilit eski seri` (7 dönem).
+- KİLİT 5 dönem (16.10 20:06-20:22 UTC; canlı 39.7 / 48.1 / 20.7 / -0.3 / 4.0 = 112.2R): fark 1.8→3R +3.3 / -6.9 / -5.2 /
+  -3.4 / +0.7 (2/5, -11.5) · 1.8→4R +7.8 / -3.8 / -2.5 / -3.9 / +1.9 (2/5, -0.5) · 1.5→4R +11.5 / +1.8 / -4.0 / -2.3 / +0.1
+  (3/5, +7.1) · 1.5→5R +14.4 / -2.8 / -6.0 / -2.8 / +4.1 (2/5, +6.9). Artı neredeyse sadece son 6 aydan. 2.2'ye gelen işlemlerin
+  yarıdan fazlası 3R'ye gitmeden geri dönüyor (1.8→3R: 40 TP → 18 TP + 22 kilit); kilit çıkışı ort +1.5R (1.8 kilit) / +1.3R
+  (1.5 kilit). RED, eski dönem çalıştırılmadı. TP yükseltme yolları (sabit, onay mumuna göre, kâr kilidiyle) bitti → TP 2.2.
