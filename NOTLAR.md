@@ -776,3 +776,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   aynı işlem temas gövdesi için örnekti, o kural RED). 17:29 "kodla": RECLAIM_CLOSE_MIN_ATR (dönüş mumu kapanışı EMA20'nin
   doğru tarafında en az X ATR; altı "weak_reclaim"), CSV donus_kap_ema_atr, COMPARE_SETS["cizgi"] canlı / 0.1 / 0.2 / 0.3 ATR.
   `/backtest 180 çizgi seri`. CHECK_TRADES'e ESP eklendi.
+- ÇİZGİ 5 dönem (`/backtest 180 çizgi seri`, 16.10 14:45-14:55 UTC; canlı 42.6 / 50.5 / 16.4 / 0.0 / 3.8): fark ≥0.1 ATR
+  -1.3 / -2.7 / -6.0 / -0.8 / +3.6 (1/5, -7.2R, -27 iş) · ≥0.2 +0.9 / -6.2 / -8.1 / +1.6 / +1.5 (3/5, -10.3, -46 iş) · ≥0.3
+  +0.2 / -14.2 / -8.9 / -1.3 / +3.0 (2/5, -21.2, -68 iş) → RED. CSV (canlı 106 dönüş): kapanış < 0.1 ATR 27 iş 9 TP +7.2R
+  (0.05-0.1: 18 iş +8.2R); < 0.05 ATR 9 iş 2 TP -1.0R (karışık, az). ESP 0.029 ATR. Çizgiye yakın kapanan dönüşler kötü değil.
