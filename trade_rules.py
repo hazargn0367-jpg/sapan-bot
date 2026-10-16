@@ -53,6 +53,9 @@ PIVOT_WICK_MAX = 0.0         # >0: tepe (LONG) / dip (SHORT) mumunun o yöndeki 
 QUIET_UTC = (0, 0)           # (başlangıç, bitiş) UTC saat: temas bu aralıktaysa işlem yok. (0, 4) = 03:00-07:00 TR
 ROOM_MIN_R = 0.0             # >0: giriş ile önceki tepe (LONG) / dip (SHORT) arası en az bu kadar R olmalı (önünde yer)
 # İşlem sayısını artırma (15.10 21:5x, artır testinden): bazı durumlarda önünde daha az yer yeter / kural 5 esner
+CHOP_BARS = 12               # dalgalı bölge ölçüsü: temastan önceki mum sayısı
+CHOP_FLIPS_MIN = 0           # >0: bu mumlarda en az bu kadar renk değişimi ...
+CHOP_BODY_ATR = 0.0          # ... ve ortalama gövde ≥ bu kadar ATR ise girme (0 = gövde şartı yok)
 TWO_BAR_TOUCH = False        # True: 2 mumlu temas (2. mum dibi kırsa da EMA20'ye değip dönüyorsa iptal değil)
 TWO_BAR_ANY = False          # True: 2 mumlu temas her sırada (dip 1. ya da 2. mumda), onay iki mumun en tepesinin üstü
 TWO_BAR_BODY_ATR = 0.0       # >0: 2 mumlu temasta iki mumun gövdesi en fazla bu kadar ATR (kullanıcı: "gövdeleri büyük olmayacak")
@@ -345,6 +348,24 @@ def wickiness(df, a, b):
     return 1.0 - float(np.abs(C - O).sum()) / rng if rng > 0 else float("nan")
 
 
+def choppiness(df, i, bars=None):
+    """Temastan önceki `bars` mum (temas hariç): (renk değişimi sayısı, ortalama gövde / ATR). Doji önceki rengi sürdürür.
+    Kullanıcı 16.10 04:08 (AXL 04.10 01:15): büyük gövdeli yeşil-kırmızı mumlarla sürekli yön değiştiren dalgalı bölge."""
+    bars = CHOP_BARS if bars is None else bars
+    a, b = max(0, i - bars), i
+    if b - a < 3:
+        return 0, float("nan")
+    O, C = df["Open"].values[a:b], df["Close"].values[a:b]
+    s = np.sign(C - O)
+    for k in range(1, len(s)):
+        if s[k] == 0:
+            s[k] = s[k - 1]
+    flips = int(np.sum((s[1:] != s[:-1]) & (s[1:] != 0) & (s[:-1] != 0)))
+    atr = df["ATR"].values[i]
+    body = float(np.abs(C - O).mean() / atr) if atr > 0 else float("nan")
+    return flips, body
+
+
 def zigzag(df, i, side):
     """Tepe/dipten temasa kadarki düzeltme mumları (temas hariç): (trend yönlü mum oranı, renk değişimi sayısı, mum sayısı)."""
     long = side == "LONG"
@@ -395,6 +416,7 @@ def trend_features(df, i, side, entry=None, risk=None):
         age += 1
         m -= 1
     zz = zigzag(df, i, side)
+    ch = choppiness(df, i)
     f = {
         "bacak_mum": int(p - s),
         "bacak_atr": leg / a,
@@ -407,6 +429,7 @@ def trend_features(df, i, side, entry=None, risk=None):
         "duzeltme": ((H[p] - L[i]) if long else (H[i] - L[p])) / leg if leg > 0 else float("nan"),
         "duzeltme_mum": int(i - p),
         "igne_orani": wickiness(df, i - WICKY_BARS, i),           # temastan önceki 12 mum
+        "dalga_donus": ch[0], "dalga_govde": ch[1],               # temastan önceki 12 mumda renk değişimi, ort. gövde/ATR
         "duz_igne": wickiness(df, p + 1, i),                      # tepe/dipten temasa kadar (düzeltme)
         "temas_govde_atr": abs(C[i] - O[i]) / a,
         "pivot_bant_05": pivot_touches(df, i, side, atr_mult=0.5),
@@ -629,6 +652,11 @@ def simulate(df, i, side, tick, mode=None):
     if WICKY_MAX > 0 and wickiness(df, i - WICKY_BARS, i) > WICKY_MAX:
         res["status"] = "wicky"
         return res
+    if CHOP_FLIPS_MIN > 0:
+        flips, body = choppiness(df, i)
+        if flips >= CHOP_FLIPS_MIN and (CHOP_BODY_ATR <= 0 or body >= CHOP_BODY_ATR):
+            res["status"] = "choppy"
+            return res
     if RECLAIM_BODY_MAX_ATR > 0 and mode == "reclaim" and abs(C[i] - O[i]) > RECLAIM_BODY_MAX_ATR * A[i]:
         res["status"] = "big_touch"
         return res

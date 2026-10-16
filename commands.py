@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 dalga -> temastan önceki 12 mum büyük gövdeyle sürekli yön değiştiriyorsa girme (AXL örneği)
   /backtest 180 iki mum -> 2 mumlu temas her sıra (dip 1. ya da 2. mumda), iki mum EMA20'de döner, onay iki mumun en tepesinin üstü
   /backtest 180 trend -> ikinci strateji adayı: trend takibi (Donchian kırılımı 20/50/100, en likit 30-60 coin, günlük/4s)
   /backtest 180 bybit -> canlı kurallar Bybit'teki bütün USDT vadeli coinlerde; Binance'te olmayanlar ayrı (yeni işlemler)
@@ -124,7 +125,9 @@ def start_backtest(text):
     bybit_mode = "bybit" in low
     if bybit_mode:
         args += ["--exchange", "bybit"]   # veri Bybit'ten; başka set yazılmadıysa "bybit" seti (yeni / ortak coinler)
-    if re.search(r"iki\s*mum", low):
+    if "dalga" in low:
+        args += ["--compare", "dalga"]   # dalgalı bölge (renk değişimi + büyük gövde) filtresi
+    elif re.search(r"iki\s*mum", low):
         args += ["--compare", "ikimum2"]   # 2 mumlu temas her sıra (16.10 02:07; ilk test: ikimum, sadece 2. mum dipte)
     elif re.search(r"\btrend\b", low) and "teyit" not in low:
         args += ["--trend"]   # ikinci strateji adayı: trend takibi (Donchian kırılımı)

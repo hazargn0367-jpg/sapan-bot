@@ -712,3 +712,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   artı, 30 ayda ~13 ek işlem; 2 mumlu işlemlerin kendisi 5/5 artı +15.3R ama değiştirdiği klasik işlemler -9.7R) · ≤ 0.5
   -4.3 / -1.1 / +4.6 / +1.2 / -0.3 (+0.1) · sınırsız -13.0 / -6.9 / +0.2 / +1.9 / +3.9 (-13.9). KARAR: canlıya alınmadı
   (4/5 şartını geçmedi, etki ayda ~+0.2R, işlem sayısı aynı). Canlı değişmedi.
+- 04:08 kullanıcı AXL 04.10 01:15 tekrar: "düzeltme berbat, asla girmem". Eski zigzag ölçüsü tepeden temasa 5 mum →
+  0.25, yakalamadı. 04:10 "kodla": trade_rules.choppiness(df, i): temastan önceki 12 mumda renk değişimi sayısı (doji
+  önceki rengi sürdürür) + ortalama gövde/ATR; CHOP_FLIPS_MIN / CHOP_BODY_ATR / CHOP_BARS, durum "choppy". CSV'de
+  dalga_donus, dalga_govde. COMPARE_SETS["dalga"]: canlı · ≥7 & gövde ≥0.5 · ≥6 & ≥0.6 · ≥7 gövde serbest.
+  `/backtest 180 dalga` (+ önceki ... önceki4). Eşikler CSV'den ayrıca taranacak; AXL/MAGMA/CARV değerlerine bakılacak.

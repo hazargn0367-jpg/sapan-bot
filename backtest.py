@@ -96,6 +96,7 @@ STATUS_TR = {
     "no_entry": "2 mumda girişe gelmedi",
     "chase": "Kapanış girişten çok uzakta (kovalamaca)",
     "wicky": "Temastan önceki mumlar çok iğneli (git-gel)",
+    "choppy": "Temastan önceki mumlar büyük gövdeyle sürekli yön değiştiriyor (dalgalı)",
     "big_touch": "Dönüşte temas mumunun gövdesi çok büyük",
     "wide_pivot": "Dip/tepenin 1 ATR yakınında çok mum (taban)",
     "no_ema200": "EMA100 ile EMA200 sıralı değil",
@@ -678,7 +679,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "STOP_MAX_ATR", "EARLY_EXIT_MAX_ATR", "ENTRY_BUFFER_ATR",
               "EMA200_ORDER", "NEW_HIGH_BARS", "NEW_HIGH_LOOKBACK",
               "ZIGZAG_MAX", "ZIGZAG_MIN_BARS", "PRIOR_TOUCH_SEP_ATR",
-              "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY"]
+              "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY",
+              "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1131,6 +1133,15 @@ COMPARE_SETS["ikimum2"] = [
     C("+ 2 mumlu temas her sıra, gövdeler ≤ 0.5 ATR", **dict(_CANLI_SON, TWO_BAR_ANY=True, TWO_BAR_BODY_ATR=0.5)),
     C("+ 2 mumlu temas her sıra, gövde sınırı yok", **dict(_CANLI_SON, TWO_BAR_ANY=True)),
 ]
+# Dalgalı bölge (kullanıcı 16.10 04:08, AXL 04.10 01:15 "düzeltme berbat, asla girmem"): temastan önceki 12 mumda renk
+# değişimi sayısı + ortalama gövde/ATR. CSV'de dalga_donus, dalga_govde (eşikler sonradan CSV'den de taranır).
+# `/backtest 180 dalga` (+ önceki ... önceki4).
+COMPARE_SETS["dalga"] = [
+    C("Canlı ayar", **_CANLI_SON),
+    C("+ dalgalı yok: ≥7 renk değişimi ve gövde ≥0.5 ATR", **dict(_CANLI_SON, CHOP_FLIPS_MIN=7, CHOP_BODY_ATR=0.5)),
+    C("+ dalgalı yok: ≥6 renk değişimi ve gövde ≥0.6 ATR", **dict(_CANLI_SON, CHOP_FLIPS_MIN=6, CHOP_BODY_ATR=0.6)),
+    C("+ dalgalı yok: ≥7 renk değişimi (gövde serbest)", **dict(_CANLI_SON, CHOP_FLIPS_MIN=7)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1173,7 +1184,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
