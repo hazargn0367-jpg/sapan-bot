@@ -794,3 +794,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +0.1 / +5.7 / +3.6 / +0.6 / +1.8 (5/5, +11.8) · ≥0.65→2.5 +3.9 / +4.2 / +2.7 / +0.3 / +0.3 (5/5, +11.4) · ≥0.5→3 -11.9 /
   +7.2 / +9.6 / -2.4 / +4.8 (3/5, +7.3) · ≥0.65→3 -3.8 / +3.2 / +7.2 / +0.8 / +0.8 (4/5, +8.2). MFE tahminiyle uyumlu (TP 2.5
   tutarlı, TP 3 dalgalı). Kural bu dönemlerden bulundu → karar `/backtest 180 hedef eski seri` (önceki5 + önceki6) sonucuna.
+- HEDEF ESKİ 2 dönem (sınav, hiç bakılmamış; `hedef eski seri`): önceki5 (Kas 23-Nis 24, 46 coin, 59 iş) canlı -0.5 ·
+  önceki6 (May-Eki 23, 33 coin, 36 iş) +6.7. Fark: ≥0.5→2.5 -8.2 / +1.8 · ≥0.65→2.5 -2.1 / +0.9 · ≥0.5→3 -5.7 / +4.8 ·
+  ≥0.65→3 -0.1 / +2.4. önceki5'te ≥0.5→2.5: 2.2'ye gidip 2.5'e gitmeyen 3 işlem (EGLD, GRT, CHR) stopa döndü (-9.6R), 5
+  işlem +0.3R kazandı. 7 dönem toplam: ≥0.5→2.5 +5.4 (6/7) · ≥0.65→2.5 +10.2 (6/7). Sınavda tutmadı (bir kaçan TP = -3.2R,
+  uzayan TP = +0.3R → çok kırılgan). Canlıya alınmadı; TP 2.2 kalır.
