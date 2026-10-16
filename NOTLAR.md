@@ -810,3 +810,12 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   (3/5, +7.1) · 1.5→5R +14.4 / -2.8 / -6.0 / -2.8 / +4.1 (2/5, +6.9). Artı neredeyse sadece son 6 aydan. 2.2'ye gelen işlemlerin
   yarıdan fazlası 3R'ye gitmeden geri dönüyor (1.8→3R: 40 TP → 18 TP + 22 kilit); kilit çıkışı ort +1.5R (1.8 kilit) / +1.3R
   (1.5 kilit). RED, eski dönem çalıştırılmadı. TP yükseltme yolları (sabit, onay mumuna göre, kâr kilidiyle) bitti → TP 2.2.
+- 23:27 kullanıcı "başka yöntem düşün, geçmişi iyice izle". Notların tamamı tarandı; denenmemiş iki yol önerildi:
+  (1) İşlem kalitesine göre risk, 7 dönem (5 + eski 2, canlı ayar CSV'leri; scratchpad boyut.py): klasik onay 1. mum 224 iş
+  +0.32R/iş · dönüş 137 iş +0.30 · klasik onay 2. mum 98 iş +0.07 (eski 2 dönemde -2.4 / -2.4). 1.5 / 1 / 0.5R → 119.8 →
+  151.9R (+32R, 6/7 dönem artı; eski 2 dönem +1.2 / +4.0, fikir 04:38'de 5 dönemden çıkmıştı → sınav geçti), ort. risk ×1.14,
+  en büyük düşüş 16.3 → 19.9R (getiri/düşüş 7.35 → 7.63). 1 / 1 / 0.5: 116.3, düşüş 15.5. Kodlanmadı ("yükle" bekliyor).
+  (2) Erken çıkıştan sonra yeniden giriş. 23:29 "kodla": simulate → _simulate_core + _reentry (REENTRY_BARS mum içinde
+  stopa değmeden giriş seviyesi yeniden geçilirse aynı giriş/stop/TP ile bir kez; aynı mumda giriş+stop → stop; R iki
+  bacağın toplamı; REENTRY_EARLY: ikinci bacakta erken çıkış). CSV yeniden_giris, ilk_bacak_R; raporda "🔁 Yeniden giriş".
+  COMPARE_SETS["yeniden"]: canlı · 4 mum · 8 mum · 4 mum erken yok · 8 mum erken yok. `/backtest 180 yeniden seri` + eski seri.

@@ -150,6 +150,11 @@ TP_BIG_RR = 0.0        # >0: büyük onay mumlu işlemlerde hedef (riskin katı)
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 # Kullanıcı 16.10 22:59 "kodla": TP'ye gelince kapatmak yerine stopu kâra çek (kâr kilidi), hedef daha uzakta.
 BE_LOCK_R = 0.0        # >0: BE_TRIGGER'a gelince stop girişe değil girişin bu kadar R kârına çekilir (örn. 2.2R'de +1.8R)
+# Kullanıcı 16.10 23:29 "kodla": erken çıkıştan sonra yeniden giriş. Erken çıkan işlemlerin ~%22'si sonradan TP'ye
+# gidiyor (HYPER 06.05 örneği). Erken çıkıştan sonraki REENTRY_BARS mum içinde fiyat stopa değmeden giriş seviyesini
+# yeniden geçerse aynı giriş / stop / TP ile bir kez daha girilir. İki bacağın R'si toplanır.
+REENTRY_BARS = 0       # >0: erken çıkıştan sonra kaç mum boyunca yeniden giriş emri bekler
+REENTRY_EARLY = True   # yeniden girişte de erken çıkış kuralı (ilk FAILED_ENTRY_BARS mumda girişin gerisinde kapanış)
 RISK_USD = 15.0        # 1R = kaç dolar (backtest raporlarında; 15.10 14:24 canlı/oto 1R = 15$ ile aynı)
 FEE_TAKER = 0.0005     # Binance vadeli piyasa emri komisyonu (%0.05)
 FEE_MAKER = 0.0002     # Binance vadeli limit emri komisyonu (%0.02)
@@ -558,6 +563,76 @@ def _two_bar_ok(O, H, L, C, A, E20, i, j, long):
 
 
 def simulate(df, i, side, tick, mode=None):
+    """Kurulumu değerlendirir ve işlemi yürütür (ayrıntı: _simulate_core). REENTRY_BARS > 0 ise erken çıkıştan sonra
+    yeniden giriş denenir; varsayılan kapalı (canlı sonuç değişmez)."""
+    res = _simulate_core(df, i, side, tick, mode)
+    if (REENTRY_BARS > 0 and res.get("status") == "be" and res.get("early_exit") and not res.get("early_stop")
+            and not res.get("time_exit") and "exit_bar" in res):
+        res = _reentry(df, res, side)
+    return res
+
+
+def _reentry(df, res, side):
+    """Erken çıkıştan sonra yeniden giriş (tek sefer). Giriş: aynı seviye (stop emri), stop ve TP aynı. Stop seviyesine
+    girişten önce değilirse vazgeçilir. Aynı mumda hem giriş hem stop → temkinli: stop. BE / zaman stopu uygulanmaz."""
+    O, H, L, C, A = (df[k].values for k in ("Open", "High", "Low", "Close", "ATR"))
+    n = len(df)
+    long = side == "LONG"
+    entry, stop, tp, risk, conf = res["entry"], res["stop"], res["tp"], res["risk"], res["confirm"]
+    x = res["exit_bar"]
+    k2 = None
+    for k in range(x + 1, min(n, x + 1 + REENTRY_BARS)):
+        if (H[k] >= entry) if long else (L[k] <= entry):
+            k2 = k
+            break
+        if (L[k] <= stop) if long else (H[k] >= stop):
+            return res   # önce stop seviyesi geldi: yeniden giriş yok
+    if k2 is None:
+        return res
+    fill = max(entry, O[k2]) if long else min(entry, O[k2])
+    out = dict(res)
+    out.pop("early_exit", None)
+    out.update(reentry=True, reentry_bar=k2, refill=fill, r_first=res["r_net"])
+    g1, n1 = res["r_gross"], res["r_net"]
+
+    def close(bar, price, status, early=False):
+        gross = ((price - fill) if long else (fill - price)) / risk
+        fees = (fill * FEE_TAKER + price * (FEE_MAKER if status == "win" else FEE_TAKER)) / risk
+        out.update(exit_bar=bar, exit=price, status=status, r_gross=g1 + gross, r_net=n1 + gross - fees)
+        if early:
+            out["early_exit"] = True
+        return out
+
+    early_ok = [REENTRY_EARLY and FAILED_ENTRY_BARS > 0]
+
+    def failed(bar):
+        if not early_ok[0] or bar - k2 >= FAILED_ENTRY_BARS or not ((C[bar] < entry) if long else (C[bar] > entry)):
+            return False
+        if EARLY_EXIT_MAX_ATR > 0 and ((fill - C[bar]) if long else (C[bar] - fill)) > EARLY_EXIT_MAX_ATR * A[conf]:
+            early_ok[0] = False   # derin geri kapanış: stop / TP beklenir (ilk bacaktaki kural)
+            return False
+        return True
+
+    if (L[k2] <= stop) if long else (H[k2] >= stop):
+        return close(k2, stop, "loss")
+    if (H[k2] >= tp) if long else (L[k2] <= tp):
+        return close(k2, tp, "win")
+    if failed(k2):
+        return close(k2, C[k2], "be", True)
+    for m in range(k2 + 1, n):
+        if (L[m] <= stop) if long else (H[m] >= stop):
+            return close(m, min(stop, O[m]) if long else max(stop, O[m]), "loss")
+        if (H[m] >= tp) if long else (L[m] <= tp):
+            return close(m, tp, "win")
+        if failed(m):
+            return close(m, C[m], "be", True)
+    for k in ("exit_bar", "exit", "r_gross", "r_net"):
+        out.pop(k, None)
+    out["status"] = "open"
+    return out
+
+
+def _simulate_core(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
     status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | spike_top | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |

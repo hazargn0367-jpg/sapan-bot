@@ -434,6 +434,8 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
                     row["cikis_turu"] = "kâr kilidi"   # BE_TRIGGER'a gelip kâra çekilen stoptan çıktı
                 elif r["status"] == "be":
                     row["cikis_turu"] = "başabaş stop"   # 1R'ye gelip stop girişe çekildikten sonra girişten çıktı
+                if r.get("reentry"):   # erken çıkıştan sonra yeniden giriş: R iki bacağın toplamı
+                    row.update(yeniden_giris=fmt_time(ts[r["reentry_bar"]]), ilk_bacak_R=round(r["r_first"], 3))
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
                            R_brut=round(r["r_gross"], 3), R_net=round(r["r_net"], 3),
                            dolar=round(r["r_net"] * tr.RISK_USD, 2),
@@ -703,7 +705,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "ZIGZAG_MAX", "ZIGZAG_MIN_BARS", "PRIOR_TOUCH_SEP_ATR",
               "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
-              "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R"]
+              "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
+              "REENTRY_BARS", "REENTRY_EARLY"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1232,6 +1235,15 @@ COMPARE_SETS["kilit"] = [
     C("2.2R'de stop +1.5R'ye, hedef 4R", **dict(_CANLI_SON, RR=4.0, BE_TRIGGER=2.2, BE_LOCK_R=1.5)),
     C("2.2R'de stop +1.5R'ye, hedef 5R", **dict(_CANLI_SON, RR=5.0, BE_TRIGGER=2.2, BE_LOCK_R=1.5)),
 ]
+# Kullanıcı 16.10 23:29 "kodla": erken çıkıştan sonra yeniden giriş (aynı giriş / stop / TP, tek sefer). 5 dönemde erken
+# çıkan 131 işlemin 29'u sonradan TP'ye gitti. `/backtest 180 yeniden seri` + `/backtest 180 yeniden eski seri`.
+COMPARE_SETS["yeniden"] = [
+    C("Canlı ayar", **_CANLI_SON),
+    C("Erken çıkıştan sonra 4 mumda yeniden giriş", **dict(_CANLI_SON, REENTRY_BARS=4)),
+    C("8 mumda yeniden giriş", **dict(_CANLI_SON, REENTRY_BARS=8)),
+    C("4 mumda yeniden giriş, ikincide erken çıkış yok", **dict(_CANLI_SON, REENTRY_BARS=4, REENTRY_EARLY=False)),
+    C("8 mumda yeniden giriş, ikincide erken çıkış yok", **dict(_CANLI_SON, REENTRY_BARS=8, REENTRY_EARLY=False)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1274,7 +1286,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None, "kontrol": None, "cizgi": None, "hedef": None, "kilit": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None, "kontrol": None, "cizgi": None, "hedef": None, "kilit": None, "yeniden": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -1354,6 +1366,9 @@ def tp_stop_line(t):
     parts = [f"✅ TP {wins}", f"❌ Stop {stops}"]
     if locked:
         parts.append(f"🔒 Kâr kilidi {locked}")
+    re_n = int(t["yeniden_giris"].notna().sum()) if "yeniden_giris" in t else 0
+    if re_n:
+        parts.append(f"🔁 Yeniden giriş {re_n}")
     if early:
         parts.append(f"↩️ Erken çıkış {early}")
     if other:

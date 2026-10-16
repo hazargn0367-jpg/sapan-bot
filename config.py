@@ -15,7 +15,7 @@ LIVE_TF = os.environ.get("LIVE_TF", "15m")
 
 
 # Yüklenen sürüm: açılış mesajında ve /durum'da görünür (yeni kod devreye girdi mi anlaşılsın diye)
-VERSION = "16.10 23:10 · CANLI 15m + OTOMATİK İŞLEM 1R=15$ · canlı kurallar aynı (12:50) · test: /backtest 180 kilit seri + kilit eski seri (2.2R'de stop kâra, hedef 3-5R)"
+VERSION = "16.10 23:40 · CANLI 15m + OTOMATİK İŞLEM 1R=15$ · canlı kurallar aynı (12:50) · test: /backtest 180 yeniden seri + yeniden eski seri (erken çıkıştan sonra yeniden giriş)"
 GIT_COMMIT = os.environ.get("RENDER_GIT_COMMIT", "")[:7]
 
 
