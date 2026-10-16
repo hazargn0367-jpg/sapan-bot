@@ -143,6 +143,10 @@ ENTRY_MODE = "classic"       # "both": temas mumu EMA20'nin doğru tarafında ka
                              # "reclaim" (dönüş varyasyonu): temas EMA20'nin YANLIŞ tarafında kapatır, sonraki mum
                              # EMA20'nin doğru tarafında kapatır, ondan sonraki mum o mumun tepesini (LONG) kapanışla geçer = onay
 RR = 2.0               # hedef: riskin kaç katı
+# Kullanıcı 16.10 22:08 "işleme göre R hedefini yükseltsek": onay mumu büyükse (güçlü kapanış) TP daha uzakta.
+# MFE tahmini (5 dönem): onay gövdesi ≥ 0.5-0.65 ATR → TP 2.5 +10.5-11R (5/5). Gerçek test: /backtest 180 hedef seri.
+TP_BIG_CONF_ATR = 0.0  # >0: onay mumunun gövdesi en az bu kadar ATR ise TP_BIG_RR kullanılır
+TP_BIG_RR = 0.0        # >0: büyük onay mumlu işlemlerde hedef (riskin katı)
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 RISK_USD = 15.0        # 1R = kaç dolar (backtest raporlarında; 15.10 14:24 canlı/oto 1R = 15$ ile aynı)
 FEE_TAKER = 0.0005     # Binance vadeli piyasa emri komisyonu (%0.05)
@@ -747,8 +751,11 @@ def simulate(df, i, side, tick, mode=None):
         entry, stop = L[conf] - tick - ebuf, H[conf] + tick + buf
     risk = abs(entry - stop)
     base_risk = risk - buf - ebuf  # ATR sınırları stop/giriş payları eklenmeden önceki mesafeye uygulanır
-    tp = entry + RR * risk if long else entry - RR * risk
-    res.update(confirm=conf, entry=entry, stop=stop, tp=tp, risk=risk, atr=A[conf])
+    rr = RR
+    if TP_BIG_CONF_ATR > 0 and TP_BIG_RR > 0 and A[conf] > 0 and abs(C[conf] - O[conf]) >= TP_BIG_CONF_ATR * A[conf]:
+        rr = TP_BIG_RR   # güçlü onay mumu: hedef daha uzakta
+    tp = entry + rr * risk if long else entry - rr * risk
+    res.update(confirm=conf, entry=entry, stop=stop, tp=tp, risk=risk, atr=A[conf], rr=rr)
 
     if base_risk > ATR_MAX_MULT * A[conf]:
         res["status"] = "atr"
@@ -756,7 +763,7 @@ def simulate(df, i, side, tick, mode=None):
     if STOP_MAX_ATR > 0 and risk > STOP_MAX_ATR * A[conf]:
         risk = STOP_MAX_ATR * A[conf]
         stop = entry - risk if long else entry + risk
-        tp = entry + RR * risk if long else entry - RR * risk
+        tp = entry + rr * risk if long else entry - rr * risk
         res.update(stop=stop, tp=tp, risk=risk, stop_capped=True)
     if MIN_ATR_MULT > 0 and base_risk < MIN_ATR_MULT * A[conf]:
         res["status"] = "atr_min"
@@ -817,7 +824,7 @@ def simulate(df, i, side, tick, mode=None):
             return res
         risk = abs(fill - stop)
         if not CLOSE_ENTRY_KEEP_TP:
-            tp = fill + RR * risk if long else fill - RR * risk
+            tp = fill + rr * risk if long else fill - rr * risk
         res.update(risk=risk, tp=tp, close_entry=True)
     else:
         fill = max(entry, O[k_in]) if long else min(entry, O[k_in])

@@ -417,6 +417,7 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
                 row["giris_ema_atr"] = round(sg * (r["entry"] - e20c) / ac, 3)
                 row["onay_govde_atr"] = round(abs(df["Close"].values[cj] - df["Open"].values[cj]) / ac, 3)
             row["onay_mum"] = int(cj - i)
+            row["tp_kat"] = r.get("rr")   # bu işlemde TP riskin kaç katı (onay mumuna göre değişebilir)
             if "reclaim_gap" in r:   # dönüş mumu kapanışı EMA20'den kaç ATR ötede (kullanıcı 16.10 ESP: "tam çizgiye kapamış")
                 row["donus_kap_ema_atr"] = round(r["reclaim_gap"], 3)
             if "Stoch_K" in df.columns:
@@ -700,7 +701,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "ZIGZAG_MAX", "ZIGZAG_MIN_BARS", "PRIOR_TOUCH_SEP_ATR",
               "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
-              "RECLAIM_CLOSE_MIN_ATR"]
+              "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1210,6 +1211,16 @@ COMPARE_SETS["cizgi"] = [
     C("+ dönüş mumu ≥ 0.2 ATR", **dict(_CANLI_SON, RECLAIM_CLOSE_MIN_ATR=0.2)),
     C("+ dönüş mumu ≥ 0.3 ATR", **dict(_CANLI_SON, RECLAIM_CLOSE_MIN_ATR=0.3)),
 ]
+# Kullanıcı 16.10 22:08 "işleme göre R hedefini yükseltsek, bazıları 3-4R görmüş". MFE tahmini (5 dönem, giriş anında
+# bilinen 16 ölçü taranarak): onay mumu gövdesi ≥ 0.5 / 0.65 ATR ise TP 2.5 → +11.0 / +10.5R (5/5), TP 3 +11.8 / +12.0.
+# Taranarak bulunduğu için hiç bakılmamış 2 eski dönemde de sınanır: `/backtest 180 hedef seri` + `/backtest 180 hedef eski seri`.
+COMPARE_SETS["hedef"] = [
+    C("Canlı ayar (TP 2.2)", **_CANLI_SON),
+    C("Onay gövdesi ≥ 0.5 ATR → TP 2.5", **dict(_CANLI_SON, TP_BIG_CONF_ATR=0.5, TP_BIG_RR=2.5)),
+    C("Onay gövdesi ≥ 0.65 ATR → TP 2.5", **dict(_CANLI_SON, TP_BIG_CONF_ATR=0.65, TP_BIG_RR=2.5)),
+    C("Onay gövdesi ≥ 0.5 ATR → TP 3", **dict(_CANLI_SON, TP_BIG_CONF_ATR=0.5, TP_BIG_RR=3.0)),
+    C("Onay gövdesi ≥ 0.65 ATR → TP 3", **dict(_CANLI_SON, TP_BIG_CONF_ATR=0.65, TP_BIG_RR=3.0)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1252,7 +1263,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None, "kontrol": None, "cizgi": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None, "kontrol": None, "cizgi": None, "hedef": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

@@ -21,6 +21,8 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 hedef seri -> onay mumu büyükse (gövde ≥ 0.5 / 0.65 ATR) TP 2.5 / 3, diğerleri 2.2
+  /backtest 180 hedef eski seri -> aynı test hiç bakılmamış 2 eski dönemde (önceki5 + önceki6, 2023-2024); "eski" her testte çalışır
   /backtest 180 çizgi seri -> dönüş mumu EMA20'nin en az 0.1 / 0.2 / 0.3 ATR ötesinde kapatmalı (tam çizgide kapatan dönüş yok)
   /backtest 180 temel seri -> herhangi bir karşılaştırma testinin sonuna "seri" yazılırsa 5 dönem arka arkaya çalışır, sonunda özet
   /backtest 180 temel -> temas tanımının temel ayarları: stoch 40/60 · stoch yok · ters mum 3/4 · tepe 45 mum · tolerans %0.15
@@ -116,6 +118,8 @@ def start_backtest(text):
     low = text.lower()
     if yil:
         args += ["--ago", str(int(yil.group(1)) * 365)]
+    elif re.search(r"\beski\b", low):
+        args += ["--ago", str(5 * days)]   # hiç bakılmamış eski dönemler: önceki5 (+ seride önceki6)
     elif "önceki4" in low or "onceki4" in low:
         args += ["--ago", str(4 * days)]   # dört dönem önce (5. bağımsız dönem)
     elif "önceki3" in low or "onceki3" in low:
@@ -130,6 +134,8 @@ def start_backtest(text):
         args += ["--exchange", "bybit"]   # veri Bybit'ten; başka set yazılmadıysa "bybit" seti (yeni / ortak coinler)
     if re.search(r"\bkontrol\b", low):
         args += ["--compare", "kontrol"]   # 16.10 canlıya alınan gövde + düzeltme kuralı kontrolü
+    elif re.search(r"\bhedef\b", low):
+        args += ["--compare", "hedef"]   # onay mumu büyükse TP 2.5 / 3 (16.10 22:09)
     elif re.search(r"\b[çc]izgi\b", low):
         args += ["--compare", "cizgi"]   # dönüş mumu EMA20'den en az 0.1 / 0.2 / 0.3 ATR ötede kapatmalı (ESP 30.08)
     elif re.search(r"\banaliz\b", low):
@@ -227,7 +233,8 @@ def start_backtest(text):
     elif any(w in low for w in ("hepsi", "karşılaştır", "karsilastir")):
         args += ["--compare", "hepsi"]
     if re.search(r"\bseri\b", low) and "--compare" in args:
-        args += ["--seri", "5"]   # 5 dönem arka arkaya (bugün, önceki ... önceki4) + sonunda özet
+        # 5 dönem arka arkaya (bugün, önceki ... önceki4) + sonunda özet; "eski seri": önceki5 + önceki6
+        args += ["--seri", "2" if re.search(r"\beski\b", low) else "5"]
     if bybit_mode and "--compare" not in args and "--preset" not in args:
         args += ["--compare", "bybit"]
     if "fark" in low:

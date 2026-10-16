@@ -783,3 +783,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 16.10 22:01 kullanıcı "TP 2.3 / 2.4 / 2.5 / 3 / 4?" MFE tahmini (yeni canlı, kontrol CSV 5 dönem, TP olanlardan X'e
   gitmeyen stop -1.09 sayıldı): 2.3 +2.3 (4/5) · 2.4 +7.5 (4/5) · 2.5 -8.9 · 2.75 -11.5 · 3 -10.2 · 3.5 -2.7 · 4 -9.2 · 5 -28.5.
   TP olanların %96'sı 2.4'e, %89'u 2.5'e, %78'i 3'e gidiyor. 2.4 → 2.5 uçurumu 8 işlem (şans). Kullanıcı: "kalsın" → TP 2.2.
+- 22:08 kullanıcı "işleme göre R hedefini yükseltsek (bazıları 3-4R görmüş)". MFE tahmini, giriş anında bilinen 16 ölçünün
+  alt/üst üçte biri × TP 3/4 (64 deneme): en tutarlısı onay mumu gövdesi. Onay gövdesi ≥0.5 ATR (208 iş) TP 2.5 +11.0 (5/5),
+  TP 3 +11.8 (3/5) · ≥0.65 (120 iş) TP 2.5 +10.5 (5/5), TP 3 +12.0 (4/5) · ≥0.8 TP 2.5 +5.1 (5/5). SHORT TP 3 +11.0 (3/5,
+  zayıf). Küçük onay mumlarında yüksek TP kötü (genel TP 2.5'in eksi çıkma sebebi). 64 denemeden seçildiği için şans riski.
+- 22:09 "kodla": TP_BIG_CONF_ATR / TP_BIG_RR (onay gövdesi ≥ X ATR → TP Y; res["rr"], CSV tp_kat). COMPARE_SETS["hedef"]:
+  canlı · ≥0.5→2.5 · ≥0.65→2.5 · ≥0.5→3 · ≥0.65→3. commands "eski": --ago 5×gün, seride 2 dönem (önceki5 + önceki6, hiç
+  bakılmamış 2023-2024). `/backtest 180 hedef seri` (5 dönem, kuralı bulduğumuz) + `/backtest 180 hedef eski seri` (sınav).
