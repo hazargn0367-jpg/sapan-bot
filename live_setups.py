@@ -78,6 +78,10 @@ LIVE_RULES = dict(
     # Kullanıcı 15.10 (CARV örneği): kural 2'deki önceki temas, fiyat EMA20'den 1.5 ATR ayrıldıktan sonra olmalı.
     # 3 dönem: +36.5 / +37.0 / +13.0 → +45.1 / +41.0 / +17.2 (18 ay +86.4 → +103.4R, düşüş 17.7 → 11.7R, işlem ~%28 az)
     PRIOR_TOUCH_SEP_ATR=1.5,
+    # Kullanıcı 16.10 12:40 "mantıklıysa yükle". 5 dönem (Nis 24-Eki 26): ikisi birlikte 31 iş elenir, -14.4R, 5/5 dönem
+    # eksi (-1.8 / -5.3 / -3.7 / -2.5 / -1.0); TP %31.6 → %33.8, ayda ~1 işlem az, ~+0.5R/ay.
+    BODY_AVG_MAX_ATR=0.8,       # temastan önceki 12 mumun ortalama gövdesi ≥ 0.8 ATR ise girme (sert sallanma)
+    CORR_BARS_MAX=10,           # tepeden temasa ≥ 10 mum (yavaş, uzun düzeltme) ise girme (SUI 27.09 örneği)
 )
 MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
 # Bildirimlerde 1R kaç dolar (kullanıcı 15.10: "1R'ım 1 dolar olacak"). Backtest raporları 25$ ile kalır.
@@ -126,6 +130,8 @@ def rules_summary():
         f"önünde ≥ {tr.ROOM_MIN_R:g}R yer" if tr.ROOM_MIN_R > 0 else None,
         f"EMA20-EMA100 ≥ {tr.EMA_FAN_MIN:g} ATR" if tr.EMA_FAN_MIN > 0 else None,
         f"iğneli git-gel yok (iğne ≤ %{100 * tr.WICKY_MAX:.0f})" if tr.WICKY_MAX > 0 else None,
+        f"sert sallanma yok (12 mum ort. gövde < {tr.BODY_AVG_MAX_ATR:g} ATR)" if tr.BODY_AVG_MAX_ATR > 0 else None,
+        f"düzeltme {tr.CORR_BARS_MAX} mumdan kısa" if tr.CORR_BARS_MAX > 0 else None,
         (f"dip/tepe tabanı yok ({tr.PIVOT_BAND2_ATR:g} ATR bantta ≤ {tr.PIVOT_BAND2_MAX - 1} mum)"
          if tr.PIVOT_BAND2_ATR > 0 else None),
         (f"erken çıkış uyarısı (giriş mumu / sonraki mum girişin gerisinde kapatırsa)"

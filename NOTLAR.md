@@ -760,3 +760,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   "Küçük mum" (gövde < 0.45 / 0.5) fark yaratmıyor (artı). Yavaşlık ölçüsü (derinlik ATR / mum) < 0.4: 14 iş -1.2 karışık.
   Gövde ≥ 0.8 ATR ile birlikte: 31 iş elenir, -14.4R, 5/5 dönem eksi (-1.8 / -5.3 / -3.7 / -2.5 / -1.0); kalan 361 iş
   TP %31.6 → %33.8, 99.3 → 113.6R (+%14). Kullanıcının kararı bekleniyor.
+- 12:40 kullanıcı "mantıklıysa yükle" → CANLI DEĞİŞTİ: LIVE_RULES += BODY_AVG_MAX_ATR=0.8 (temastan önceki 12 mumun ort.
+  gövdesi ≥ 0.8 ATR → "big_bodies"), CORR_BARS_MAX=10 (tepeden/dipten temasa ≥ 10 mum → "slow_corr"; tepe = LOOKBACK içinde
+  en yüksek/düşük, trend_features ile aynı). Beklenen: ayda ~1 işlem az, ~+0.5R/ay, TP %31.6 → %33.8. Kontrol:
+  `/backtest 180 kontrol seri` (yeni canlı / eski canlı, 5 dönem).

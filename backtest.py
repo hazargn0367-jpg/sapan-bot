@@ -97,6 +97,8 @@ STATUS_TR = {
     "chase": "Kapanış girişten çok uzakta (kovalamaca)",
     "wicky": "Temastan önceki mumlar çok iğneli (git-gel)",
     "choppy": "Temastan önceki mumlar büyük gövdeyle sürekli yön değiştiriyor (dalgalı)",
+    "big_bodies": "Temastan önceki 12 mumun gövdeleri çok büyük (sert sallanma)",
+    "slow_corr": "Düzeltme çok uzun sürmüş (tepeden temasa 10+ mum)",
     "big_touch": "Dönüşte temas mumunun gövdesi çok büyük",
     "wide_pivot": "Dip/tepenin 1 ATR yakınında çok mum (taban)",
     "no_ema200": "EMA100 ile EMA200 sıralı değil",
@@ -694,7 +696,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "EMA200_ORDER", "NEW_HIGH_BARS", "NEW_HIGH_LOOKBACK",
               "ZIGZAG_MAX", "ZIGZAG_MIN_BARS", "PRIOR_TOUCH_SEP_ATR",
               "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY",
-              "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR"]
+              "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1191,6 +1193,11 @@ COMPARE_SETS["temel"] = [
 ]
 # Sadece canlı ayar: CSV'deki ölçüleri sonradan incelemek için hızlı 5 dönem (`/backtest 180 analiz seri`).
 COMPARE_SETS["analiz"] = [C("Canlı ayar", **_CANLI_SON)]
+# 16.10 12:40 canlıya alınan iki kuralın kontrolü: eski canlı (iki kural yok) / yeni canlı. `/backtest 180 kontrol seri`.
+COMPARE_SETS["kontrol"] = [
+    C("Yeni canlı (gövde ≥0.8 ATR yok, düzeltme ≥10 mum yok)", **_CANLI_SON),
+    C("Eski canlı (iki kural yok)", **dict(_CANLI_SON, BODY_AVG_MAX_ATR=0.0, CORR_BARS_MAX=0)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1233,7 +1240,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None, "kontrol": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):

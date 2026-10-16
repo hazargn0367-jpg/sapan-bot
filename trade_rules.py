@@ -53,6 +53,8 @@ PIVOT_WICK_MAX = 0.0         # >0: tepe (LONG) / dip (SHORT) mumunun o yöndeki 
 QUIET_UTC = (0, 0)           # (başlangıç, bitiş) UTC saat: temas bu aralıktaysa işlem yok. (0, 4) = 03:00-07:00 TR
 ROOM_MIN_R = 0.0             # >0: giriş ile önceki tepe (LONG) / dip (SHORT) arası en az bu kadar R olmalı (önünde yer)
 # İşlem sayısını artırma (15.10 21:5x, artır testinden): bazı durumlarda önünde daha az yer yeter / kural 5 esner
+BODY_AVG_MAX_ATR = 0.0       # >0: temastan önceki CHOP_BARS mumun ortalama gövdesi ≥ bu kadar ATR ise girme (sert sallanan piyasa)
+CORR_BARS_MAX = 0            # >0: tepeden (SHORT: dipten) temasa en az bu kadar mum geçtiyse girme (yavaş, uzun düzeltme)
 CHOP_BARS = 12               # dalgalı bölge ölçüsü: temastan önceki mum sayısı
 CHOP_FLIPS_MIN = 0           # >0: bu mumlarda en az bu kadar renk değişimi ...
 CHOP_BODY_ATR = 0.0          # ... ve ortalama gövde ≥ bu kadar ATR ise girme (0 = gövde şartı yok)
@@ -652,6 +654,17 @@ def simulate(df, i, side, tick, mode=None):
     if WICKY_MAX > 0 and wickiness(df, i - WICKY_BARS, i) > WICKY_MAX:
         res["status"] = "wicky"
         return res
+    # Kullanıcı 16.10: büyük gövdeli sallanma (HOME / gece incelemesi) ve yavaş uzun düzeltme (SUI 27.09 14:30). 5 dönem:
+    # gövde ≥ 0.8 ATR 26 iş -8.9R, düzeltme ≥ 10 mum 7 iş 0 TP -6.7R; birlikte 31 iş -14.4R, 5/5 dönem eksi.
+    if BODY_AVG_MAX_ATR > 0 and choppiness(df, i)[1] >= BODY_AVG_MAX_ATR:
+        res["status"] = "big_bodies"
+        return res
+    if CORR_BARS_MAX > 0:
+        st_ = max(0, i - st.LOOKBACK)
+        pv = st_ + int(np.argmax(H[st_:i]) if long else np.argmin(L[st_:i]))
+        if i - pv >= CORR_BARS_MAX:
+            res["status"] = "slow_corr"
+            return res
     if CHOP_FLIPS_MIN > 0:
         flips, body = choppiness(df, i)
         if flips >= CHOP_FLIPS_MIN and (CHOP_BODY_ATR <= 0 or body >= CHOP_BODY_ATR):
