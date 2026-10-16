@@ -21,6 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
+  /backtest 180 kilit seri -> TP 2.2'de kapatmak yerine stop +1.8 / +1.5R'ye (kâr kilidi), hedef 3 / 4 / 5R (+ "kilit eski seri")
   /backtest 180 hedef seri -> onay mumu büyükse (gövde ≥ 0.5 / 0.65 ATR) TP 2.5 / 3, diğerleri 2.2
   /backtest 180 hedef eski seri -> aynı test hiç bakılmamış 2 eski dönemde (önceki5 + önceki6, 2023-2024); "eski" her testte çalışır
   /backtest 180 çizgi seri -> dönüş mumu EMA20'nin en az 0.1 / 0.2 / 0.3 ATR ötesinde kapatmalı (tam çizgide kapatan dönüş yok)
@@ -134,6 +135,8 @@ def start_backtest(text):
         args += ["--exchange", "bybit"]   # veri Bybit'ten; başka set yazılmadıysa "bybit" seti (yeni / ortak coinler)
     if re.search(r"\bkontrol\b", low):
         args += ["--compare", "kontrol"]   # 16.10 canlıya alınan gövde + düzeltme kuralı kontrolü
+    elif re.search(r"\bkilit\b", low):
+        args += ["--compare", "kilit"]   # 2.2R'de stop kâra (+1.8 / +1.5R), hedef 3 / 4 / 5R (16.10 22:59)
     elif re.search(r"\bhedef\b", low):
         args += ["--compare", "hedef"]   # onay mumu büyükse TP 2.5 / 3 (16.10 22:09)
     elif re.search(r"\b[çc]izgi\b", low):

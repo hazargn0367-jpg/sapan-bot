@@ -148,6 +148,8 @@ RR = 2.0               # hedef: riskin kaç katı
 TP_BIG_CONF_ATR = 0.0  # >0: onay mumunun gövdesi en az bu kadar ATR ise TP_BIG_RR kullanılır
 TP_BIG_RR = 0.0        # >0: büyük onay mumlu işlemlerde hedef (riskin katı)
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
+# Kullanıcı 16.10 22:59 "kodla": TP'ye gelince kapatmak yerine stopu kâra çek (kâr kilidi), hedef daha uzakta.
+BE_LOCK_R = 0.0        # >0: BE_TRIGGER'a gelince stop girişe değil girişin bu kadar R kârına çekilir (örn. 2.2R'de +1.8R)
 RISK_USD = 15.0        # 1R = kaç dolar (backtest raporlarında; 15.10 14:24 canlı/oto 1R = 15$ ile aynı)
 FEE_TAKER = 0.0005     # Binance vadeli piyasa emri komisyonu (%0.05)
 FEE_MAKER = 0.0002     # Binance vadeli limit emri komisyonu (%0.02)
@@ -840,6 +842,7 @@ def simulate(df, i, side, tick, mode=None):
 
     # Başabaş: fiyat +BE_TRIGGER R'ye gelince stop girişe çekilir (sonraki mumdan itibaren)
     be_level = (fill + BE_TRIGGER * risk) if long else (fill - BE_TRIGGER * risk)
+    lock_level = (fill + BE_LOCK_R * risk) if long else (fill - BE_LOCK_R * risk)   # BE_LOCK_R=0 → giriş (başabaş)
     cur_stop, be_on = stop, False
 
     def reached_be(bar):
@@ -881,7 +884,8 @@ def simulate(df, i, side, tick, mode=None):
             res["early_exit"] = True
             return close_trade(k_in, C[k_in], "be")
         if reached_be(k_in):
-            cur_stop, be_on = fill, True
+            cur_stop, be_on = lock_level, True
+            res["lock_on"] = BE_LOCK_R > 0
 
     time_moved = False
     for m in range(k_in + 1, n):
@@ -899,6 +903,8 @@ def simulate(df, i, side, tick, mode=None):
         hit_tp = (H[m] >= tp) if long else (L[m] <= tp)
         if hit_stop:
             price = min(cur_stop, O[m]) if long else max(cur_stop, O[m])
+            if be_on and res.get("lock_on"):
+                res["locked_exit"] = True   # kâr kilidi: TP'ye gelmeden kilitli stopa döndü
             return close_trade(m, price, "be" if be_on else "loss")
         if hit_tp:
             return close_trade(m, tp, "win")
@@ -906,7 +912,8 @@ def simulate(df, i, side, tick, mode=None):
             res["early_exit"] = True
             return close_trade(m, C[m], "be")
         if not be_on and reached_be(m):
-            cur_stop, be_on = fill, True
+            cur_stop, be_on = lock_level, True
+            res["lock_on"] = BE_LOCK_R > 0
 
     res["status"] = "open"
     return res

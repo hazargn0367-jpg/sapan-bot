@@ -799,3 +799,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   ≥0.65→3 -0.1 / +2.4. önceki5'te ≥0.5→2.5: 2.2'ye gidip 2.5'e gitmeyen 3 işlem (EGLD, GRT, CHR) stopa döndü (-9.6R), 5
   işlem +0.3R kazandı. 7 dönem toplam: ≥0.5→2.5 +5.4 (6/7) · ≥0.65→2.5 +10.2 (6/7). Sınavda tutmadı (bir kaçan TP = -3.2R,
   uzayan TP = +0.3R → çok kırılgan). Canlıya alınmadı; TP 2.2 kalır.
+- 22:56 kullanıcı "başka kurala göre artırsak". TP yükseltmenin yapısal sorunu: 2.2'ye gelip dönen işlem -3.2R. Öneri: kâr
+  kilidi (2.2R'ye gelince stop +1.8 / +1.5R'ye, hedef 3-5R; dönen işlem ~-0.4R). Eski "2R'de stop girişe + TP 4" (eşleşik
+  +3.6 / -6.9) stopu 0'a çekiyordu. 22:59 "kodla": BE_LOCK_R (BE_TRIGGER'a gelince stop girişin BE_LOCK_R kârına; 0 = eski
+  başabaş), res lock_on / locked_exit, CSV cikis_turu "kâr kilidi", raporda "🔒 Kâr kilidi N". COMPARE_SETS["kilit"]: canlı ·
+  2.2→+1.8 hedef 3 · 2.2→+1.8 hedef 4 · 2.2→+1.5 hedef 4 · 2.2→+1.5 hedef 5. Kilit mumu: stop sonraki mumdan geçerli (canlıda
+  bot 5 sn'de bir bakıp stop emrini taşıyabilir). `/backtest 180 kilit seri` + `/backtest 180 kilit eski seri` (7 dönem).
