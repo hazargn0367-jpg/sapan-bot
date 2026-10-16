@@ -764,3 +764,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   gövdesi ≥ 0.8 ATR → "big_bodies"), CORR_BARS_MAX=10 (tepeden/dipten temasa ≥ 10 mum → "slow_corr"; tepe = LOOKBACK içinde
   en yüksek/düşük, trend_features ile aynı). Beklenen: ayda ~1 işlem az, ~+0.5R/ay, TP %31.6 → %33.8. Kontrol:
   `/backtest 180 kontrol seri` (yeni canlı / eski canlı, 5 dönem).
+- KONTROL 5 dönem (canlı kodla, `/backtest 180 kontrol seri`, 16.10 09:57-10:06 UTC): yeni canlı − eski canlı = +1.9 / +5.2 /
+  +3.7 / +2.6 / +1.0 → 5/5 artı, toplam +14.4R. 31 işlem elendi (-14.3R, içinde sadece 2 TP), eklenen yok. Yeni canlı
+  dönem toplamları: 44.9 / 50.4 / 14.5 / -0.1 / 3.8 = 113.5R (30 ay, ~3.8R/ay, 364 işlem ~12/ay). Son 6 ay 106 işlem
+  (~17.7/ay) TP %38.7, +44.9R. Analizle birebir tuttu; kural canlıda doğru çalışıyor.
