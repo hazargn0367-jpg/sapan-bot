@@ -717,3 +717,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   önceki rengi sürdürür) + ortalama gövde/ATR; CHOP_FLIPS_MIN / CHOP_BODY_ATR / CHOP_BARS, durum "choppy". CSV'de
   dalga_donus, dalga_govde. COMPARE_SETS["dalga"]: canlı · ≥7 & gövde ≥0.5 · ≥6 & ≥0.6 · ≥7 gövde serbest.
   `/backtest 180 dalga` (+ önceki ... önceki4). Eşikler CSV'den ayrıca taranacak; AXL/MAGMA/CARV değerlerine bakılacak.
+- DALGA 5 dönem (canlıya göre): ≥7 & gövde ≥0.5 -5.2 / 0.0 / +0.2 / +3.4 / +1.4 · ≥6 & ≥0.6 +0.2 / +4.1 / -4.7 / +2.3 /
+  -0.4 · ≥7 -5.2 / -0.8 / -2.0 / +1.4 / -0.7 → renk değişimi sayısı RED. AXL dalga_donus 5, gövde 0.67 (yakalanmadı).
+  CSV'den (canlı işlemlerin dalga_govde değeri): temastan önceki 12 mumun ort. gövdesi ≥ 0.8 ATR olanlar 26 iş, -8.9R,
+  5/5 dönem eksi (-0.7 / -4.1 / -2.7 / -0.3 / -1.0; eşik ilk 3 dönemden seçildi, son 2'de de eksi). ≥0.7: 65 iş -10.0R
+  (4/5) · ≥0.85: 11 iş -4.9R (4/5). ADAY: gövde ≥ 0.8 ATR ise girme (+~0.3R/ay, ayda ~1 işlem az). HOME 18.09 0.81.
+  Kullanıcının "yükle"sini bekliyor (canlı için ayrı parametre: ortalama gövde sınırı).
+- 04:28 HOME 18.09 20:15 dönüş, erken çıkış -0.19R ama mfe 7.5R (TP olacaktı). Sığ kapanışta (< 0.03/0.05/0.1/0.15 ATR)
+  erken çıkmasaydık: 0.0 / -6.8 / -13.0 / -11.7R → erken çıkış kalır.
