@@ -726,3 +726,15 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 04:28 HOME 18.09 20:15 dönüş, erken çıkış -0.19R ama mfe 7.5R (TP olacaktı). Sığ kapanışta (< 0.03/0.05/0.1/0.15 ATR)
   erken çıkmasaydık: 0.0 / -6.8 / -13.0 / -11.7R → erken çıkış kalır.
 - 04:34 kullanıcı: gövde ≥0.8 kuralını yükleme ("faydası yok"). Canlı değişmedi.
+- 16.10 04:38 kullanıcı (yatarken): "en baştan analizleri incele, kaçırdığımız bir şey var mı, kâr ve işlem sayısı, ya da
+  güzel bir fikir". İnceleme:
+  * HİÇ TEST EDİLMEMİŞ: temas sinyalinin temel ayarları (strategy.py, satıcıdan): Stoch(5,3) LONG < 30 / SHORT > 70,
+    düzeltmede en fazla 2 ters mum (MAX_EXCEPTION_CANDLES), tepe en fazla 30 mum önce (RECENT), temas toleransı %0.03,
+    EMA_GAP %0.1. Ayrıca tepeden sonraki İLK temas dışında sinyal yok (L[after:i] > E20 şartı). İşlem sayısının asıl
+    kaynağı bunlar. Kodlandı: config "sig" (sinyal bulunurken strategy sabitlerinin üzerine yazılır, _st_override),
+    sinyal kümesi ve toplu sinyal sayımı (touch_by) ayar başına. COMPARE_SETS["temel"]: canlı · stoch 40/60 · stoch yok ·
+    ters mum ≤3 · ≤4 · tepe ≤45 mum · tolerans %0.15. `/backtest 180 temel` (+ önceki ... önceki4). YÜKLENDİ (test).
+  * Haftanın günü: tutarlı etki yok (Paz toplam -0.8, 4/6 eksi ama küçük).
+  * İşlem kalitesine göre risk (6 görünüm): klasik onay 1. mum 1.5R / 2. mum 0.5R / dönüş 1R → toplam 111.5 → 141.7R
+    (+%27, 5/6 görünümde daha iyi), en büyük düşüşler %15-30 artar (getiri/düşüş 11.3 → 12.4). Kodlanmadı; öneri.
+  * TP düşürme (kazanma oranı için): eski testte TP 1.5 -9.9 vs 2.2 +12.8 → hayır. Kısmi TP 6/6 eksi → hayır.

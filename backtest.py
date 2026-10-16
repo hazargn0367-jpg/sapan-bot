@@ -684,6 +684,26 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
+def _sig_key(cfg):
+    """Ayarın temas (sinyal) tanımı farkı: strategy.py sabitlerinin üzerine yazılanlar ("sig")."""
+    return tuple(sorted((cfg.get("sig") or {}).items()))
+
+
+class _st_override:
+    """strategy.py sabitlerini geçici değiştirir (sadece sinyal bulma sırasında)."""
+    def __init__(self, sig):
+        self.sig = dict(sig)
+
+    def __enter__(self):
+        self.old = {k: getattr(st, k) for k in self.sig}
+        for k, v in self.sig.items():
+            setattr(st, k, v)
+
+    def __exit__(self, *a):
+        for k, v in self.old.items():
+            setattr(st, k, v)
+
+
 class _SkipBinance(Exception):
     """Bybit testinde Binance coin bilgisi bloğu atlanır."""
 
@@ -1142,6 +1162,19 @@ COMPARE_SETS["dalga"] = [
     C("+ dalgalı yok: ≥6 renk değişimi ve gövde ≥0.6 ATR", **dict(_CANLI_SON, CHOP_FLIPS_MIN=6, CHOP_BODY_ATR=0.6)),
     C("+ dalgalı yok: ≥7 renk değişimi (gövde serbest)", **dict(_CANLI_SON, CHOP_FLIPS_MIN=7)),
 ]
+# Temas (sinyal) tanımının hiç test edilmemiş temel ayarları (16.10 gece incelemesi, kullanıcı "kaçırdığımız bir şey var
+# mı, işlem sayısı"): Stoch eşiği, düzeltmedeki ters mum sayısı, tepenin yakınlığı, EMA20 temas toleransı. Bunlar
+# sistemin satıcısından gelen sabitler (strategy.py); temas sinyalini belirledikleri için işlem sayısını doğrudan
+# etkiler. "sig": sadece sinyal bulunurken strategy sabitlerinin üzerine yazılır; toplu sinyal sayımı da o tanımla.
+COMPARE_SETS["temel"] = [
+    C("Canlı ayar", **_CANLI_SON),
+    C("Stoch eşiği 40 / 60 (şimdi 30 / 70)", **_CANLI_SON, sig={"STOCH_LONG_MAX": 40, "STOCH_SHORT_MIN": 60}),
+    C("Stoch şartı yok", **_CANLI_SON, sig={"STOCH_LONG_MAX": 101, "STOCH_SHORT_MIN": -1}),
+    C("Düzeltmede en fazla 3 ters mum (şimdi 2)", **_CANLI_SON, sig={"MAX_EXCEPTION_CANDLES": 3}),
+    C("Düzeltmede en fazla 4 ters mum", **_CANLI_SON, sig={"MAX_EXCEPTION_CANDLES": 4}),
+    C("Tepe en fazla 45 mum önce (şimdi 30)", **_CANLI_SON, sig={"RECENT": 45}),
+    C("EMA20 temas toleransı %0.15 (şimdi %0.03)", **_CANLI_SON, sig={"TOLERANCE_LONG": 1.0015, "TOLERANCE_SHORT": 0.9985}),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1184,7 +1217,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -1617,7 +1650,9 @@ def main():
     rank = {sym: k + 1 for k, sym in enumerate(symbols)}  # 24 saatlik hacim sırası (1 = en büyük)
     from collections import Counter
     status_counts = Counter()   # tekli testte bütün setup'ların durumları (huni)
-    touch_counts = Counter()    # (mum, yön) -> temas veren coin sayısı (toplu sinyal filtresi, canlıdaki gibi)
+    from collections import defaultdict
+    touch_by = defaultdict(Counter)   # sinyal tanımı -> (mum, yön) -> temas veren coin sayısı (toplu sinyal filtresi)
+    touch_counts = touch_by[()]       # canlı tanım
     n_ok = 0
     btc_map = None
     examples_txt = []
@@ -1635,15 +1670,22 @@ def main():
                 if symbol == "BTCUSDT" and tf == BASE_TF:
                     btc_map = btc_trend_map(df)
                 ts_ = df["timestamp"].values
-                signals = [(i, sd) for i, sd in find_signals(df) if ts_[i] >= p0]  # ısınma payındaki temaslar sayılmaz
-                touch_counts.update((int(ts_[i]), side) for i, side in signals)
+                sigsets = {}
+                for key in [()] + [_sig_key(c) for c in configs]:
+                    if key in sigsets:
+                        continue
+                    with _st_override(key):
+                        sg = [(i, sd) for i, sd in find_signals(df) if ts_[i] >= p0]  # ısınma payındaki temaslar sayılmaz
+                    sigsets[key] = sg
+                    touch_by[key].update((int(ts_[i]), side) for i, side in sg)
+                signals = sigsets[()]
                 on_bn = bybit.norm(symbol) in BINANCE_SET if EXCHANGE == "bybit" else True
                 for ci, cfg in enumerate(configs):
                     only = cfg.get("coins", DEFAULT_COINS)
                     if (only == "binance" and not on_bn) or (only == "new" and on_bn):
                         continue
                     apply_cfg(cfg)
-                    new = run_df(df, symbol, tf, tick, signals,
+                    new = run_df(df, symbol, tf, tick, sigsets[_sig_key(cfg)],
                                  with_ctx=(ci == chart_idx), trades_only=True,
                                  status_counter=None if args.compare else status_counts)
                     for r in new:
@@ -1718,7 +1760,7 @@ def main():
     for cfg in configs:
         results[cfg["ad"]] = apply_portfolio(results[cfg["ad"]], cfg.get("max_open", 0),
                                              cfg.get("cluster_max", 0), cfg.get("btc", False), btc_map,
-                                             touch_counts=touch_counts)
+                                             touch_counts=touch_by[_sig_key(cfg)])
     minutes = (time.time() - t0) / 60
     coins_txt = f"{n_ok}/{len(symbols)}" if n_ok < len(symbols) else f"{len(symbols)}"
     if n_ok == 0:
