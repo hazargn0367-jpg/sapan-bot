@@ -852,3 +852,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   IP'leri Binance trusted IPs'e ekle, /oto ile kontrol. HATA: _ip_loop ilk kontrolde (yeniden başlatmadan hemen sonra) yeni
   IP'yi sessizce kaydediyordu → uyarı hiç gelmedi. Düzeltildi (daha önce IP kaydı varsa ilk kontrolde de uyar); SADECE
   sonraki dalında, YÜKLENMEDİ (yükleme IP'yi yine değiştirebilir; kullanıcı salıya kadar yazmayacak) → salı yüklenecek.
+- 17.10 01:35 kullanıcı: "bu sistem EMA50 ve EMA100 için de geçerli; salı (kota sıfırlanınca) test edelim". YAPILACAK (salı,
+  "kodla" beklenecek): aynı kurulum (trend EMA20>50>100, tepe/dip, düzeltme, stoch, temas mumu, onay, giriş/stop/TP 2.2, canlı
+  kuralların hepsi) ama temas EMA50'ye / EMA100'e; tepeden sonra o EMA'ya ilk temas. Ayrı varyasyon olarak 5 dönem + eski 2.
+  Salı sorulacak: EMA50 temasında fiyat EMA20'nin altına inmiş olacak → trend sıralaması yine şart mı; EMA20 temasıyla aynı
+  düzeltmede ikisi de olursa hangisi; dönüş varyasyonu EMA50/100'de de olsun mu.
