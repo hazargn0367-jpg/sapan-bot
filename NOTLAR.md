@@ -819,3 +819,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   stopa değmeden giriş seviyesi yeniden geçilirse aynı giriş/stop/TP ile bir kez; aynı mumda giriş+stop → stop; R iki
   bacağın toplamı; REENTRY_EARLY: ikinci bacakta erken çıkış). CSV yeniden_giris, ilk_bacak_R; raporda "🔁 Yeniden giriş".
   COMPARE_SETS["yeniden"]: canlı · 4 mum · 8 mum · 4 mum erken yok · 8 mum erken yok. `/backtest 180 yeniden seri` + eski seri.
+- YENİDEN GİRİŞ 5 dönem (16.10 20:38-20:50 UTC; canlı 39.7 / 48.3 / 20.7 / -0.3 / 4.0): fark 4 mum -17.8 / -5.4 / -5.7 /
+  +9.0 / -1.8 (1/5, -21.7) · 8 mum -22.9 (1/5) · 4 mum ikincide erken yok -30.9 · 8 mum -32.1. Erken çıkanların ~%85'i 4 mum
+  içinde girişi yeniden geçiyor (112 yeniden giriş): 22 TP, 57 stop, ikinci bacak ort -0.20R (erken yoksa -0.28R). Erken
+  çıkış sonrası fiyat girişin etrafında dolanıyor; yeniden geçmek devam işareti değil. RED, eski dönem çalıştırılmadı.
