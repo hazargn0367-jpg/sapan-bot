@@ -755,3 +755,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   < 0.5 ATR: 40 iş %22, -6.9 / +8.9 / -3.0 / +4.3 / -5.8 (eşiğe çok duyarlı: < 0.6 → +23R) → kural yok. Temas stoch LONG < 10:
   23 iş TP %9 -9.8R (4/5 eksi) ama SHORT > 90 simetriği +6.1 → tek yönlü, az işlem → kural yok. Onay gövdesi > 1 ATR 15 iş
   -0.12R/iş. Sonuç: onay mumunun EMA20'ye yakınlığı kazanma oranını belirgin değiştirmiyor.
+- 16.10 12:32 kullanıcı SUI 27.09 14:30 LONG stop: "düzeltmeyi çok yavaş, küçük küçük mumlarla yapmış". SUI düzeltme 12 mum,
+  gövde 0.48. 5 dönem (analiz CSV): düzeltme ≥ 10 mum 7 iş, 0 TP (6 stop + 1 erken), -6.7R, 4/5 dönem eksi (5.'de yok).
+  "Küçük mum" (gövde < 0.45 / 0.5) fark yaratmıyor (artı). Yavaşlık ölçüsü (derinlik ATR / mum) < 0.4: 14 iş -1.2 karışık.
+  Gövde ≥ 0.8 ATR ile birlikte: 31 iş elenir, -14.4R, 5/5 dönem eksi (-1.8 / -5.3 / -3.7 / -2.5 / -1.0); kalan 361 iş
+  TP %31.6 → %33.8, 99.3 → 113.6R (+%14). Kullanıcının kararı bekleniyor.
