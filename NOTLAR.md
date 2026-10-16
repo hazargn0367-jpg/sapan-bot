@@ -725,3 +725,4 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Kullanıcının "yükle"sini bekliyor (canlı için ayrı parametre: ortalama gövde sınırı).
 - 04:28 HOME 18.09 20:15 dönüş, erken çıkış -0.19R ama mfe 7.5R (TP olacaktı). Sığ kapanışta (< 0.03/0.05/0.1/0.15 ATR)
   erken çıkmasaydık: 0.0 / -6.8 / -13.0 / -11.7R → erken çıkış kalır.
+- 04:34 kullanıcı: gövde ≥0.8 kuralını yükleme ("faydası yok"). Canlı değişmedi.
