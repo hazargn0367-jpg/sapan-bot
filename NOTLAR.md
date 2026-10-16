@@ -825,3 +825,13 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   çıkış sonrası fiyat girişin etrafında dolanıyor; yeniden geçmek devam işareti değil. RED, eski dönem çalıştırılmadı.
   Kullanıcı "1. veya 2. mumda tekrar gelirse": yeniden girişlerin 100/112'si erken çıkıştan hemen sonraki mumda, 9'u 2.
   mumda. Sadece 1. mum: ikinci bacak -14.6R (21 TP / 49 stop, 1/5 artı) · ≤2. mum -22.2R → aynı sonuç, ayrı test gereksiz.
+- 23:55 kullanıcı "başka bir şey araştır". 7 dönem canlı ayar (459 iş; scratchpad arastir*.py, momentum.py). DİKKAT: "önceki
+  işlem" ölçülerinde işlemin kendisi (giriş mumunda TP / erken çıkış → çıkış = giriş zamanı) sayılmamalı (ilk hesapta bu
+  hata sahte sonuç verdi; düzeltildi). Bulgular: aynı coinin önceki işlemi (30 gün) etkisiz (24 iş); temas saati (TR 4'er saat)
+  tutarsız (20-24 +0.08R/iş 3/7); girişte açık işlem etkisiz. GÜÇLÜ ADAY: son 24 saatte kapanan (diğer) işlemlerin toplamı
+  > 0 → sonraki işlem 73 iş +0.78R/iş TP %52, 7/7 dönem artı; < 0 → 100 iş +0.09 (3/7); yok → 286 iş +0.19. 12 / 36 / 48 saat
+  ve aynı yön de aynı yönde (tekdüze). Rejim sürekliliği (sistem altcoin trendlerinde kazanıyor). Eski rejim testleri (son
+  5/10/20 işlem, 7/14/30 gün) filtre olarak denenmişti → kısa pencere + boyut olarak yeni. Boyut (42 ay): >0 → 2R toplam
+  119.8 → 176.8 (7/7 artı, ort risk 1.16, düşüş 16.3 → 16.5, getiri/düşüş 7.35 → 10.7) · >0 2R / <0 0.5R / yok 1R 172.3
+  (7/7, düşüş 14.3, getiri/düşüş 12.0). Kâr P0'da yoğun (+29 / 57). Bu 7 dönemden bulundu → sınav: `/backtest 180 analiz
+  4 sene önce` (Nis-Eki 2022) + `5 sene önce` (Nis-Eki 2021); kod gerekmez (3 sene önce önceki6 ile çakışıyor).
