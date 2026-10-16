@@ -835,3 +835,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   119.8 → 176.8 (7/7 artı, ort risk 1.16, düşüş 16.3 → 16.5, getiri/düşüş 7.35 → 10.7) · >0 2R / <0 0.5R / yok 1R 172.3
   (7/7, düşüş 14.3, getiri/düşüş 12.0). Kâr P0'da yoğun (+29 / 57). Bu 7 dönemden bulundu → sınav: `/backtest 180 analiz
   4 sene önce` (Nis-Eki 2022) + `5 sene önce` (Nis-Eki 2021); kod gerekmez (3 sene önce önceki6 ile çakışıyor).
+- SINAV 2 eski dönem (analiz, canlı ayar): Nis-Eki 2022 42 iş (36 coin) TP 8 -5.2R · Nis-Eki 2021 28 iş (26 coin) TP 5 -4.0R.
+  Sistem 2021-2022'de de eksi (2023-2025 başa baş, kâr Eyl 2025'ten beri). Son 24 saat kuralı: ">0" grubunda sadece 1 + 1
+  işlem (-1.1 / +2.2) → sınanamadı; "<0" 8 + 1 iş -3.4R (yönü uyumlu). Boyut: >0 2R → 2022 -6.3 (-1.1), 2021 -1.8 (+2.2) ·
+  2 / 0.5 / 1 → -4.7 (+0.5), -1.8 (+2.2) → 9 dönemin 9'unda eşit veya daha iyi. Kural kötü rejimde kendiliğinden az devreye
+  giriyor (art arda kazanç yok). Kalite boyutu: 2022 +0.1, 2021 -2.8 (k1 -0.36/iş, k2 +0.17) → 9 dönemde 6/9, ZAYIFLADI, önerilmiyor.
