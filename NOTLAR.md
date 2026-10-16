@@ -823,3 +823,5 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   +9.0 / -1.8 (1/5, -21.7) · 8 mum -22.9 (1/5) · 4 mum ikincide erken yok -30.9 · 8 mum -32.1. Erken çıkanların ~%85'i 4 mum
   içinde girişi yeniden geçiyor (112 yeniden giriş): 22 TP, 57 stop, ikinci bacak ort -0.20R (erken yoksa -0.28R). Erken
   çıkış sonrası fiyat girişin etrafında dolanıyor; yeniden geçmek devam işareti değil. RED, eski dönem çalıştırılmadı.
+  Kullanıcı "1. veya 2. mumda tekrar gelirse": yeniden girişlerin 100/112'si erken çıkıştan hemen sonraki mumda, 9'u 2.
+  mumda. Sadece 1. mum: ikinci bacak -14.6R (21 TP / 49 stop, 1/5 artı) · ≤2. mum -22.2R → aynı sonuç, ayrı test gereksiz.
