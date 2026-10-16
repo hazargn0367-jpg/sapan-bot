@@ -790,3 +790,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 22:09 "kodla": TP_BIG_CONF_ATR / TP_BIG_RR (onay gövdesi ≥ X ATR → TP Y; res["rr"], CSV tp_kat). COMPARE_SETS["hedef"]:
   canlı · ≥0.5→2.5 · ≥0.65→2.5 · ≥0.5→3 · ≥0.65→3. commands "eski": --ago 5×gün, seride 2 dönem (önceki5 + önceki6, hiç
   bakılmamış 2023-2024). `/backtest 180 hedef seri` (5 dönem, kuralı bulduğumuz) + `/backtest 180 hedef eski seri` (sınav).
+- HEDEF 5 dönem (gerçek backtest, 16.10 19:20-19:32 UTC; canlı 42.8 / 50.2 / 18.5 / 0.0 / 3.8 = 115.3R): fark ≥0.5→2.5
+  +0.1 / +5.7 / +3.6 / +0.6 / +1.8 (5/5, +11.8) · ≥0.65→2.5 +3.9 / +4.2 / +2.7 / +0.3 / +0.3 (5/5, +11.4) · ≥0.5→3 -11.9 /
+  +7.2 / +9.6 / -2.4 / +4.8 (3/5, +7.3) · ≥0.65→3 -3.8 / +3.2 / +7.2 / +0.8 / +0.8 (4/5, +8.2). MFE tahminiyle uyumlu (TP 2.5
+  tutarlı, TP 3 dalgalı). Kural bu dönemlerden bulundu → karar `/backtest 180 hedef eski seri` (önceki5 + önceki6) sonucuna.
