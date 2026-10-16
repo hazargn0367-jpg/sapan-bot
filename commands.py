@@ -127,7 +127,9 @@ def start_backtest(text):
     bybit_mode = "bybit" in low
     if bybit_mode:
         args += ["--exchange", "bybit"]   # veri Bybit'ten; başka set yazılmadıysa "bybit" seti (yeni / ortak coinler)
-    if re.search(r"\btemel\b", low):
+    if re.search(r"\banaliz\b", low):
+        args += ["--compare", "analiz"]   # sadece canlı ayar, CSV ölçüleri için (seri ile 5 dönem)
+    elif re.search(r"\btemel\b", low):
         args += ["--compare", "temel"]   # temas sinyalinin temel ayarları (stoch, ters mum, tepe yakınlığı, tolerans)
     elif "dalga" in low:
         args += ["--compare", "dalga"]   # dalgalı bölge (renk değişimi + büyük gövde) filtresi

@@ -742,3 +742,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   tek süreçte çalıştırır (main() tekrar çağrılır, SERI_MODE'da grafik yok), her dönemin raporu + CSV'si gelir, sonunda
   seri_summary: her ayarın ilk ayara göre dönem farkları, toplam, artı dönem sayısı, işlem farkı (✅ ≥ n-1 artı ve
   toplam artı). commands: karşılaştırma komutunun sonuna "seri" → --seri 5. Toplam süre aynı, komut tek.
+- TEMEL 2 dönem (Nis-Eki 26 / Eki 25-Nis 26; seri kullanıcı isteğiyle yarıda bırakıldı): stoch 40/60 +27/+21 iş
+  -16.2 / -6.2 · stoch yok +47/+45 iş -18.0 / +0.9 · ters mum ≤3 -7.1 / -0.3 · ≤4 -5.1 / +0.6 · tepe ≤45 mum etkisiz (0
+  iş) · tolerans %0.15 -16.8 / -7.6. Temas tanımının temel ayarları (satıcınınki) doğru; gevşetmek TP oranını %36'dan
+  %29-32'ye düşürüyor. RED.
+- 05:04 kullanıcı: "onay mumunun dibi EMA20'ye değen ya da çok yakın kapatanların kazanma oranı". CSV'ye yeni ölçüler
+  (run_df): onay_uc_ema_atr (onay mumunun dibi - EMA20, ATR; SHORT tepe, işaret ters), onay_kap_ema_atr, giris_ema_atr,
+  onay_govde_atr, onay_mum (temastan kaç mum sonra), temas_stoch. COMPARE_SETS["analiz"] = sadece canlı ayar.
+  `/backtest 180 analiz seri` (5 dönem, hızlı).

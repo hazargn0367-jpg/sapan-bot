@@ -402,6 +402,20 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
                 k = tr.btc_corr(df, i)
                 row["btc_kor"] = round(k, 3) if k == k else None
             row["mfe_r"] = round(tr.mfe_r(df, r, side), 2)
+            # Onay mumunun EMA20'ye göre yeri (kullanıcı 16.10 05:04: "onay mumunun dibi EMA20'ye değen ya da çok yakın
+            # kapatanların kazanma oranı"). LONG'da + = EMA20'nin üstünde; SHORT'ta işaret ters (+ = EMA20'nin altında).
+            cj = r["confirm"]
+            sg = 1 if side == "LONG" else -1
+            e20c, ac = float(df["EMA20"].values[cj]), float(df["ATR"].values[cj])
+            if ac > 0:
+                ext = df["Low"].values[cj] if side == "LONG" else df["High"].values[cj]
+                row["onay_uc_ema_atr"] = round(sg * (ext - e20c) / ac, 3)              # onay mumunun dibi (SHORT: tepesi)
+                row["onay_kap_ema_atr"] = round(sg * (df["Close"].values[cj] - e20c) / ac, 3)   # onay kapanışı
+                row["giris_ema_atr"] = round(sg * (r["entry"] - e20c) / ac, 3)
+                row["onay_govde_atr"] = round(abs(df["Close"].values[cj] - df["Open"].values[cj]) / ac, 3)
+            row["onay_mum"] = int(cj - i)
+            if "Stoch_K" in df.columns:
+                row["temas_stoch"] = round(float(df["Stoch_K"].values[i]), 1)
             row["sivri_atr"] = round(tr.spike_top(df, i, side), 2)
             f = tr.trend_features(df, i, side, entry=r["entry"], risk=r["risk"])
             row.update({k: (round(v, 3) if isinstance(v, float) else v) for k, v in f.items() if not k.startswith("_")})
@@ -1175,6 +1189,8 @@ COMPARE_SETS["temel"] = [
     C("Tepe en fazla 45 mum önce (şimdi 30)", **_CANLI_SON, sig={"RECENT": 45}),
     C("EMA20 temas toleransı %0.15 (şimdi %0.03)", **_CANLI_SON, sig={"TOLERANCE_LONG": 1.0015, "TOLERANCE_SHORT": 0.9985}),
 ]
+# Sadece canlı ayar: CSV'deki ölçüleri sonradan incelemek için hızlı 5 dönem (`/backtest 180 analiz seri`).
+COMPARE_SETS["analiz"] = [C("Canlı ayar", **_CANLI_SON)]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),
@@ -1217,7 +1233,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
