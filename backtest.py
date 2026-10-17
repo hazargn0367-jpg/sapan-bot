@@ -1056,6 +1056,14 @@ COMPARE_SETS["stop"] = [
     C("+ derin kapanışta (> 0.35 ATR) erken çıkış yok", **dict(_YENI, EARLY_EXIT_MAX_ATR=0.35)),
     C("+ derin kapanışta (> 0.5 ATR) erken çıkış yok", **dict(_YENI, EARLY_EXIT_MAX_ATR=0.5)),
 ]
+# Stop payı testi (kullanıcı 17.10 12:02, EMA20): canlı pay 0.3 ATR; 0.15 / 0 ve "pay 0 + erken çıkış yok" (FAILED_ENTRY_BARS=0).
+# Örnek: DATAIPUSDT 17.10.2026 06:30 SHORT, bot erken çıktı, stop onay tepesinde (0.1808) olsaydı 2R TP olurdu.
+COMPARE_SETS["pay"] = [
+    C("Canlı ayar (stop payı 0.3 ATR)", **_YENI),
+    C("stop payı 0.15 ATR", **dict(_YENI, STOP_BUFFER_ATR=0.15)),
+    C("stop payı 0 (onay mumunun ucu)", **dict(_YENI, STOP_BUFFER_ATR=0.0)),
+    C("stop payı 0 + erken çıkış yok", **dict(_YENI, STOP_BUFFER_ATR=0.0, FAILED_ENTRY_BARS=0)),
+]
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /
 # -11.4: 31 stop kurtarıp 29 TP'yi girişten çıkarıyordu). Şimdiki canlı sistemle (iki kural + derin kapanışta erken çıkış
 # yok) 1R / 1.5R / 2R'de stop girişe. BE_TRIGGER: o seviyeye gelen mumdan SONRAKİ mumdan itibaren stop = dolum.
@@ -1286,7 +1294,7 @@ COMPARE_SETS["toplu"] = [
 ]
 CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
-             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None, "kontrol": None, "cizgi": None, "hedef": None, "kilit": None, "yeniden": None}  # grafikleri çizilecek ayar (listedeki sırası)
+             "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None, "kontrol": None, "cizgi": None, "hedef": None, "kilit": None, "yeniden": None, "pay": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
 
 def apply_cfg(cfg):
@@ -1312,7 +1320,7 @@ CHECK_TRADES = [
     ("TWTUSDT", "15.08.2026 16:45", "dönüş: 10/10 temiz trend (TP)"),
     ("AXSUSDT", "01.08.2026 02:00", "girmezdim (yapı)"),
     ("ADAUSDT", "01.08.2026 13:30", "iyi işlem"),
-    ("ESPUSDT", "30.08.2026 11:30", "dönüş: dönüş mumu tam çizgide kapattı (girmezdim)"),
+    ("ESPUSDT", "30.08.2026 11:30", "dönüş: dönüş mumu tam çizgide kapattı (girmezdim)"),    ("DATAIPUSDT", "17.10.2026 06:30", "SHORT: bot erken çıktı, stop onay tepesinde (0.1808) olsaydı 2R TP"),
 ]
 SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ/ERKEN", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
                 "touch_tail": "elendi(ters iğne)", "not_clean": "elendi(temiz değil)", "btc_corr": "elendi(BTC'ye benzer)", "spike_top": "elendi(sivri tepe)",

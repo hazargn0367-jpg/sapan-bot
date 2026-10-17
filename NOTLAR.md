@@ -857,3 +857,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   kuralların hepsi) ama temas EMA50'ye / EMA100'e; tepeden sonra o EMA'ya ilk temas. Ayrı varyasyon olarak 5 dönem + eski 2.
   Salı sorulacak: EMA50 temasında fiyat EMA20'nin altına inmiş olacak → trend sıralaması yine şart mı; EMA20 temasıyla aynı
   düzeltmede ikisi de olursa hangisi; dönüş varyasyonu EMA50/100'de de olsun mu.
+- 17.10 12:02 kullanıcı EMA50/100 sorularını cevapladı: (1) EMA20>50>100 sırası tepe öncesi/anında şart, temas mumunda aranmaz; (2) EMA20'ye
+  değip dönmüşse düzeltme bozulur → ayrı EMA50 sinyali yok, EMA50'ye değene kadar EMA20'deki düzeltme kuralları geçerli;
+  (3) klasik + dönüş birlikte. Bu testin kodu "kodla" bekliyor (yorum: normal EMA20 teması = sıçrama = iptal; EMA20'yi kapanışla
+  delip geçen mumlar serbest). Önce stop payı testi istendi (EMA20): COMPARE_SETS["pay"] = canlı (pay 0.3) · 0.15 · 0 · 0 + erken
+  çıkış yok (FAILED_ENTRY_BARS=0); `/backtest 180 pay seri` + `/backtest 180 pay eski seri` (7 dönem). CHECK_TRADES'e DATAIPUSDT
+  17.10 06:30 SHORT (bot erken çıktı, stop onay tepesinde 0.1808 olsa 2R TP). SADECE sonraki dalında, YÜKLENMEDİ.
+  Yüklenince: IP uyarısı düzeltmesi de devreye girer, Render çıkış IP'si değişebilir → yükledikten sonra /oto kontrol et,
+  /ip'deki yeni IP'yi Binance trusted IPs'e ekle.
