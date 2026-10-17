@@ -347,10 +347,24 @@ def candidate_bars(df):
     e20, e50, e100 = df["EMA20"], df["EMA50"], df["EMA100"]
     up = (e20 > e50 * (1 + st.EMA_GAP)) & (e50 > e100 * (1 + st.EMA_GAP))
     down = (e20 < e50 * (1 - st.EMA_GAP)) & (e50 < e100 * (1 - st.EMA_GAP))
+    if "EMA20_REAL" in df.columns:   # EMA50/100 temas testi: trend sırası tepe mumunda aranır (strategy._variant_ok)
+        up = down = pd.Series(True, index=df.index)
     long_c = up & (df["Low"] <= e20 * st.TOLERANCE_LONG) & (df["Stoch_K"] < st.STOCH_LONG_MAX)
     short_c = down & (df["High"] >= e20 * st.TOLERANCE_SHORT) & (df["Stoch_K"] > st.STOCH_SHORT_MIN)
     idx = np.flatnonzero((long_c | short_c).values)
     return idx[idx >= WARMUP]
+
+
+def line_df(df, n):
+    """Temas çizgisi EMA20 yerine EMA50 / EMA100 olan görünüm (kullanıcı 17.10): EMA20 sütunu temas çizgisini taşır, gerçek EMA20
+    EMA20_REAL'de. Kurallar (temas mumu, onay, dönüş, kural 5...) "EMA20" sütununu okuduğu için çizgiye göre çalışır.
+    n=20: aynı tablo (canlı davranış birebir). Sığ kopya: ek bellek yok."""
+    if n == 20:
+        return df
+    d = df.copy(deep=False)
+    d["EMA20_REAL"] = df["EMA20"]
+    d["EMA20"] = df["EMA%d" % n]
+    return d
 
 
 def find_signals(df):
@@ -1064,6 +1078,21 @@ COMPARE_SETS["pay"] = [
     C("stop payı 0 (onay mumunun ucu)", **dict(_YENI, STOP_BUFFER_ATR=0.0)),
     C("stop payı 0 + erken çıkış yok", **dict(_YENI, STOP_BUFFER_ATR=0.0, FAILED_ENTRY_BARS=0)),
 ]
+# EMA50 / EMA100 temas testi (kullanıcı 17.10 12:17): aynı kurulum (tepe, düzeltme, stoch, temas mumu, onay, giriş/stop/TP 2.2,
+# canlı kuralların hepsi, klasik + dönüş birlikte) ama temas EMA50 / EMA100'e. Trend sırası tepe mumunda; tepeden temasa kadar
+# daha sığ EMA'ya değip dönen mum (sıçrama) varsa iptal. Kural 2 (trend teyidi) ve bacak ölçüleri gerçek EMA20'de kalır.
+# "(ek)" satırları kullanıcının istemediği ama derin düzeltmeyi kesen iki canlı sınırı gevşetir: ≥10 mum yavaş düzeltme kuralı
+# kapalı + en fazla 4 ters mum (şimdi 2). Sadece fark görülsün diye; karar canlı sınırlarla satırlara göre.
+COMPARE_SETS["ema"] = [
+    C("Canlı ayar (EMA20 teması)", **_YENI),
+    C("EMA50 teması", **_YENI, sig={"TOUCH_EMA": 50}),
+    C("EMA100 teması", **_YENI, sig={"TOUCH_EMA": 100}),
+    C("EMA50 (ek: yavaş düzeltme sınırı yok, ters mum ≤4)", **dict(_YENI, CORR_BARS_MAX=0),
+      sig={"TOUCH_EMA": 50, "MAX_EXCEPTION_CANDLES": 4}),
+    C("EMA100 (ek: yavaş düzeltme sınırı yok, ters mum ≤4)", **dict(_YENI, CORR_BARS_MAX=0),
+      sig={"TOUCH_EMA": 100, "MAX_EXCEPTION_CANDLES": 4}),
+]
+COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /
 # -11.4: 31 stop kurtarıp 29 TP'yi girişten çıkarıyordu). Şimdiki canlı sistemle (iki kural + derin kapanışta erken çıkış
 # yok) 1R / 1.5R / 2R'de stop girişe. BE_TRIGGER: o seviyeye gelen mumdan SONRAKİ mumdan itibaren stop = dolum.
@@ -1292,7 +1321,7 @@ COMPARE_SETS["toplu"] = [
     C("Toplu sinyal sınırı 12 coin", **_LIVE_NO_CLUSTER, cluster_max=12),
     C("Toplu sinyal filtresi kapalı", **_LIVE_NO_CLUSTER),
 ]
-CHART_CFG = {"hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
+CHART_CFG = {"ema": 1, "ema100": 2, "hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
              "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None, "kontrol": None, "cizgi": None, "hedef": None, "kilit": None, "yeniden": None, "pay": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
@@ -1759,7 +1788,8 @@ def main():
                     if key in sigsets:
                         continue
                     with _st_override(key):
-                        sg = [(i, sd) for i, sd in find_signals(df) if ts_[i] >= p0]  # ısınma payındaki temaslar sayılmaz
+                        sg = [(i, sd) for i, sd in find_signals(line_df(df, dict(key).get("TOUCH_EMA", 20)))
+                              if ts_[i] >= p0]  # ısınma payındaki temaslar sayılmaz
                     sigsets[key] = sg
                     touch_by[key].update((int(ts_[i]), side) for i, side in sg)
                 signals = sigsets[()]
@@ -1769,7 +1799,7 @@ def main():
                     if (only == "binance" and not on_bn) or (only == "new" and on_bn):
                         continue
                     apply_cfg(cfg)
-                    new = run_df(df, symbol, tf, tick, sigsets[_sig_key(cfg)],
+                    new = run_df(line_df(df, (cfg.get("sig") or {}).get("TOUCH_EMA", 20)), symbol, tf, tick, sigsets[_sig_key(cfg)],
                                  with_ctx=(ci == chart_idx), trades_only=True,
                                  status_counter=None if args.compare else status_counts)
                     for r in new:

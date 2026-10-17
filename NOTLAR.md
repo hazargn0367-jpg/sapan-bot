@@ -865,3 +865,14 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   17.10 06:30 SHORT (bot erken çıktı, stop onay tepesinde 0.1808 olsa 2R TP). SADECE sonraki dalında, YÜKLENMEDİ.
   Yüklenince: IP uyarısı düzeltmesi de devreye girer, Render çıkış IP'si değişebilir → yükledikten sonra /oto kontrol et,
   /ip'deki yeni IP'yi Binance trusted IPs'e ekle.
+- 17.10 12:17 kullanıcı EMA50/100 yorumunu onayladı ("evet") ve "grafikleri de at" dedi. KODLANDI (sadece sonraki dalı, YÜKLENMEDİ):
+  strategy.TOUCH_EMA (20 canlı / 50 / 100, "sig" ile), backtest.line_df: tablonun EMA20 sütunu temas çizgisi olur, gerçek EMA20
+  EMA20_REAL'de (sığ kopya) → temas mumu, onay, dönüş, kural 5 vb. çizgiye göre çalışır. strategy._variant_ok: (1) EMA20>50>100 sırası
+  TEPE/DİP mumunda aranır, (2) tepeden temasa kadar daha sığ EMA'ya değip kendi tarafında kapatan mum (sıçrama) varsa iptal
+  (EMA50 temasında EMA20, EMA100 temasında EMA20+EMA50); kapanışla delip geçen mumlar serbest. Kural 2 (trend teyidi) ve bacak
+  ölçüleri GERÇEK EMA20'de kalır (trade_rules._real_ema20). Grafikte gerçek EMA20 çizilir. Toplu sinyal sayımı varyasyonun kendi
+  temaslarıyla. candidate_bars varyasyonda trend şartı koymaz (strategy kontrol eder).
+  Doğrulama: EMA20 modu eski kodla birebir (6 sentetik seri, 191 sinyal + işlem satırları); 40 sentetik seride EMA50 241 / EMA100 17 sinyal,
+  bağımsız kural kontrolünde 0 ihlal. COMPARE_SETS["ema"]: canlı · EMA50 · EMA100 · iki "(ek)" satırı (yavaş düzeltme sınırı yok +
+  ters mum ≤4; canlı sınırlar derin düzeltmeyi kesebilir diye). Komutlar: `/backtest 180 ema seri` + `/backtest 180 ema eski seri`
+  (7 dönem); grafikler için tek dönem `/backtest 180 ema` (EMA50 satırı) ve `/backtest 180 ema yüz` (EMA100 satırı).

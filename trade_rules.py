@@ -172,11 +172,16 @@ def add_atr(df):
     return df
 
 
+def _real_ema20(df):
+    """EMA50/100 temas testinde tablonun EMA20 sütunu temas çizgisidir; trend teyidi ve bacak ölçüleri gerçek EMA20'yi kullanır."""
+    return (df["EMA20_REAL"] if "EMA20_REAL" in df.columns else df["EMA20"]).values
+
+
 def prior_touch_ok(df, i, side, sep_atr=None):
     """Trend teyidi: trend başladıktan ve fiyat EMA20'den ayrıldıktan sonra,
     son tepeden (LONG) / dipten (SHORT) önce en az bir kez EMA20'ye temas edilmiş mi?"""
     long = side == "LONG"
-    E20, E50, E100 = df["EMA20"].values, df["EMA50"].values, df["EMA100"].values
+    E20, E50, E100 = _real_ema20(df), df["EMA50"].values, df["EMA100"].values
     H, L = df["High"].values, df["Low"].values
 
     def aligned(j):
@@ -405,7 +410,7 @@ def trend_features(df, i, side, entry=None, risk=None):
     Bacak: son tepeden (LONG) / dipten (SHORT) önceki son EMA20 temasından sonraki mumlar, tepe mumu dahil."""
     long = side == "LONG"
     O, H, L, C, A = (df[c].values for c in ("Open", "High", "Low", "Close", "ATR"))
-    E20, E50, E100 = (df[c].values for c in ("EMA20", "EMA50", "EMA100"))
+    E20, E50, E100 = _real_ema20(df), df["EMA50"].values, df["EMA100"].values
     start = max(0, i - st.LOOKBACK)
     p = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
     lo = max(start, p - LEG_LOOK)

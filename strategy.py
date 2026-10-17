@@ -29,6 +29,7 @@ MAX_EXCEPTION_CANDLES = 2  # Geri çekilmede izin verilen ters mum sayısı
 TOLERANCE_LONG = 1.0003    # EMA20 temas toleransı (%0.03)
 TOLERANCE_SHORT = 0.9997
 MIN_CANDLES = 180
+TOUCH_EMA = 20             # 20 (canlı) / 50 / 100: temasın aranacağı EMA (sadece backtest testi, 17.10; canlı hep 20)
 
 
 def add_indicators(df):
@@ -45,12 +46,37 @@ def add_indicators(df):
     return df
 
 
-COLS = ("Open", "High", "Low", "Close", "EMA20", "EMA50", "EMA100", "Stoch_K", "timestamp")
+COLS = ("Open", "High", "Low", "Close", "EMA20", "EMA50", "EMA100", "Stoch_K", "timestamp", "EMA20_REAL")
 
 
 def arrays(df):
     """Hız için sütunlar numpy dizisi olarak (kopya yok). Aynı tabloda çok mum incelenecekse bir kez hazırlanır."""
     return {k: df[k].to_numpy() for k in COLS if k in df.columns}
+
+
+def _variant_ok(a, i, pivot, long):
+    """EMA50 / EMA100 temas testi (tablonun EMA20 sütunu temas çizgisini taşır, gerçek EMA20 EMA20_REAL'de; backtest.line_df).
+    1) EMA20 > EMA50 > EMA100 sırası temas mumunda değil TEPE/DİP mumunda aranır.
+    2) Tepeden temasa kadar daha sığ bir EMA'ya değip kendi tarafında kapatan mum (sıçrama) varsa düzeltme bozulmuştur;
+       EMA'yı kapanışla delip geçen mumlar serbest. EMA50 temasında EMA20, EMA100 temasında EMA20 ve EMA50 kontrol edilir."""
+    e20, e50, e100 = a["EMA20_REAL"], a["EMA50"], a["EMA100"]
+    if long:
+        if not (e20[pivot] > e50[pivot] * (1 + EMA_GAP) and e50[pivot] > e100[pivot] * (1 + EMA_GAP)):
+            return False
+    elif not (e20[pivot] < e50[pivot] * (1 - EMA_GAP) and e50[pivot] < e100[pivot] * (1 - EMA_GAP)):
+        return False
+    lo, hi = pivot + 1, i
+    if hi <= lo:
+        return True
+    L, H, C = a["Low"][lo:hi], a["High"][lo:hi], a["Close"][lo:hi]
+    shallow = [e20[lo:hi]] + ([e50[lo:hi]] if TOUCH_EMA >= 100 else [])
+    for e in shallow:
+        if long:
+            if ((L <= e * TOLERANCE_LONG) & (C > e)).any():
+                return False
+        elif ((H >= e * TOLERANCE_SHORT) & (C < e)).any():
+            return False
+    return True
 
 
 def _check_long(a, i):
@@ -71,6 +97,8 @@ def _check_long(a, i):
 
     after = peak_idx + 1
     if i - 1 >= after and not (L[after:i] > E20[after:i]).all():
+        return None
+    if "EMA20_REAL" in a and not _variant_ok(a, i, peak_idx, True):
         return None
 
     if int((C[after:i + 1] > O[after:i + 1]).sum()) > MAX_EXCEPTION_CANDLES:
@@ -100,6 +128,8 @@ def _check_short(a, i):
     after = valley_idx + 1
     if i - 1 >= after and not (H[after:i] < E20[after:i]).all():
         return None
+    if "EMA20_REAL" in a and not _variant_ok(a, i, valley_idx, False):
+        return None
 
     if int((C[after:i + 1] < O[after:i + 1]).sum()) > MAX_EXCEPTION_CANDLES:
         return None
@@ -114,6 +144,13 @@ def evaluate_at(df, i, arr=None):
     i: kontrol edilecek mumun sırası. Sinyal varsa dict, yoksa None.
     arr: arrays(df) (aynı tabloda çok mum incelenirken bir kez hazırlanıp verilir)."""
     a = arr if arr is not None else arrays(df)
+    if "EMA20_REAL" in a:   # EMA50 / EMA100 temas testi: trend sırası tepe mumunda aranır (_variant_ok)
+        sig = _check_long(a, i) or _check_short(a, i)
+        if sig:
+            sig["price"] = float(a["Close"][i])
+            sig["stoch"] = float(a["Stoch_K"][i])
+            sig["timestamp"] = a["timestamp"][i] if "timestamp" in a else None
+        return sig
     ema20, ema50, ema100 = a["EMA20"][i], a["EMA50"][i], a["EMA100"][i]
 
     uptrend = ema20 > ema50 * (1 + EMA_GAP) and ema50 > ema100 * (1 + EMA_GAP)

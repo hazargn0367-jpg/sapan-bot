@@ -26,6 +26,8 @@ def context(df, r):
     # .copy(): pandas 3'te dilim, ana tablonun verisini paylaşır (copy-on-write); kopyalanmazsa her işlemin bağlamı
     # coinin bütün (aylarca) mum tablosunu bellekte tutar: 500 coinlik testte yüzlerce MB
     ctx = df.iloc[lo:hi][cols].copy().reset_index(drop=True)
+    if "EMA20_REAL" in df.columns:   # EMA50/100 temas testi: grafikte gerçek EMA20 çizilir (EMA20 sütunu temas çizgisi)
+        ctx["EMA20"] = df["EMA20_REAL"].iloc[lo:hi].to_numpy()
     rel = {k: r[k] - lo for k in ("touch", "confirm", "entry_bar", "exit_bar", "reclaim") if k in r}
     return ctx, rel
 
