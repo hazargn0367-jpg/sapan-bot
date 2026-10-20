@@ -962,3 +962,13 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 20.10 21:08 kullanıcı: 1R 15$ kalsın, KASIM ORTASI canlı sonuca göre bakılacak. Plan (önerildi): 1R ≈ bakiyenin %3.5'i (430$ → 15$, 600$ → 20$, 850$ → 30$,
   1.400$ → 50$, 2.900$ → 100$); sadece artı aydan sonra yükselt, bakiye düşerse 1R'yi de düşür, kârın bir kısmını çek. Otomatik % risk kodlanmadı.
   100$ riske geçerken AUTO_MAX_NOTIONAL (4000 × çarpan) dar stoplu işlemleri sınırlar → yükseltilmeli. Backtest 12 ay (10 coin, 3x/0.5x): 15$ +2.448$, düşüş -203$.
+- 20.10 21:56 Binance 418 (IP engeli, ~10 dk; bizim kullanım 53-391/2400 → Render'ın paylaşılan çıkış IP'si). 22:17 "kodla": CANLI DEĞİŞTİ: ws_klines.py
+  (ek kütüphane yok, ssl+socket ile küçük RFC 6455 istemcisi): wss://fstream.binance.com/market/stream?streams=<coin>@kline_15m (2026-04-23'ten beri kline
+  /market yolunda), bağlantı başına 100 coin (500 coin = 5 bağlantı), sadece "x":true (kapanmış) mumlar saklanır (coin başına 64), ping'e pong, kopunca 5 sn
+  (art arda kopmada 5 dk'ya kadar) yeniden bağlanma, 23 saatte bir yenileme; yeni coin gelince yeniden abonelik (çıkanlar %30'a kadar abone kalır).
+  live_setups.fetch_candles artık sadece KAPANMIŞ mumlar tutar (açık mum zaman damgasıyla atılır): eksik mumlar önce akıştan (istek yok), akışta boşluk varsa
+  son 40 mum REST (1 ağırlık), yoksa tam REST. REST engeli sürerken akış sağlıklıysa tarama sadece akışla yapılır (bildirim gider; otomatik işlem emri REST
+  ister, engel kalkana kadar "giriş emri konamadı" mesajı gelir). Her taramada rastgele 1 coinin son mumu REST ile karşılaştırılır (/durum: "REST kontrolü N
+  uyumlu"). /durum'da "📡 WebSocket" satırı. LIVE_WS=0 (Render env) kapatır. Sahte sunucuyla test: parçalı mesaj, 126 uzunluk, ping/pong, kapanış →
+  yeniden bağlanma, abonelik değişimi, 20.000 mesaj 0.05 sn; fetch_candles senaryoları (tam / akış / boşlukta REST / engelde sadece akış).
+  Gerçek Binance'e bu ortamdan erişim yok → canlıda ilk saatlerde /durum ile izlenecek.

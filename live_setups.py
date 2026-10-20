@@ -172,39 +172,110 @@ def refresh_universe():
                     pass
                 for k in [k for k in _kcache if k not in set(syms)]:
                     _kcache.pop(k, None)
+                f = feed()
+                if f is not None:
+                    f.set_symbols(syms)
                 log.info("Setup taraması: %d coin", len(syms))
         except Exception as e:
             log.error("Coin listesi alınamadı: %s", e)
     return _state["symbols"]
 
 
-_kcache = {}          # coin -> son ~500 mum (açık mum dahil): her taramada sadece yeni mumlar çekilir
+_kcache = {}          # coin -> son ~500 KAPANMIŞ mum: her taramada sadece yeni mumlar eklenir
 INCREMENTAL_LIMIT = 40   # 40 mum = Binance'te 1 ağırlık (499 mum = 2): taramanın yükü yarıya iner
+USE_WS = os.environ.get("LIVE_WS", "1") != "0"   # 20.10 22:17: kapanmış mumlar WebSocket'ten (REST ağırlığı yok); LIVE_WS=0 kapatır
+_feed = None
+_ws_stats = {"ws": 0, "rest": 0, "full": 0, "check_ok": 0, "check_bad": 0, "check_last": ""}
+
+
+def feed():
+    """WebSocket mum akışı (ilk çağrıda kurulur)."""
+    global _feed
+    if not USE_WS:
+        return None
+    if _feed is None:
+        import ws_klines
+        _feed = ws_klines.KlineFeed(LIVE_TF)
+    return _feed
+
+
+def _closed_only(df, want_last):
+    return df[df["timestamp"] <= want_last].reset_index(drop=True) if df is not None else None
 
 
 def fetch_candles(symbol):
-    """Son KLINE_LIMIT mum. Bellekte varsa sadece son 40 mum çekilip eklenir (açık mum her seferinde yenilenir)."""
+    """Son KLINE_KEEP KAPANMIŞ mum. Bellekte varsa eksik mumlar önce WebSocket akışından eklenir (istek yok);
+    akışta eksik / boşluk varsa son 40 mum REST'ten (1 ağırlık), bellekte yoksa ya da çok eskiyse tamamı REST'ten."""
     old = _kcache.get(symbol)
     step = TF_SEC * 1000
-    if old is not None and len(old) and (time.time() * 1000 - int(old["timestamp"].iloc[-1])) < (INCREMENTAL_LIMIT - 5) * step:
-        new = get_klines(symbol, LIVE_TF, limit=INCREMENTAL_LIMIT)
-        if new is None:
-            return None
-        df = (pd.concat([old, new]).drop_duplicates("timestamp", keep="last")
-              .sort_values("timestamp").tail(KLINE_KEEP).reset_index(drop=True))
-    else:
-        df = get_klines(symbol, LIVE_TF)
-        if df is None:
-            return None
+    want_last = (int(time.time() * 1000) // step - 1) * step   # son kapanmış mumun açılış zamanı
+    if old is not None and len(old):
+        last = int(old["timestamp"].iloc[-1])
+        if last >= want_last:
+            return old
+        f = feed()
+        if f is not None:
+            rows = [r for r in f.closed_after(symbol, last) if r[0] <= want_last]
+            if (rows and rows[0][0] == last + step and rows[-1][0] == want_last
+                    and all(b[0] - a[0] == step for a, b in zip(rows, rows[1:]))):
+                add = pd.DataFrame(rows, columns=["timestamp", "Open", "High", "Low", "Close"])
+                add["timestamp"] = add["timestamp"].astype(old["timestamp"].dtype)
+                df = pd.concat([old, add]).tail(KLINE_KEEP).reset_index(drop=True)
+                _kcache[symbol] = df
+                _ws_stats["ws"] += 1
+                return df
+        if _state.get("ws_only"):
+            return None   # REST engeli: akışta olmayan coin bu taramada atlanır
+        if want_last - last < (INCREMENTAL_LIMIT - 5) * step:
+            new = _closed_only(get_klines(symbol, LIVE_TF, limit=INCREMENTAL_LIMIT), want_last)
+            if new is None:
+                return None
+            df = (pd.concat([old, new]).drop_duplicates("timestamp", keep="last")
+                  .sort_values("timestamp").tail(KLINE_KEEP).reset_index(drop=True))
+            _kcache[symbol] = df
+            _ws_stats["rest"] += 1
+            return df
+    if _state.get("ws_only"):
+        return None
+    df = _closed_only(get_klines(symbol, LIVE_TF), want_last)
+    if df is None:
+        return None
     _kcache[symbol] = df
+    _ws_stats["full"] += 1
     return df
+
+
+def _ws_check(symbols):
+    """Her taramada rastgele bir coinin WebSocket'ten gelen son mumu REST ile karşılaştırılır (1 ağırlık)."""
+    import random
+    f = feed()
+    if f is None or not symbols:
+        return
+    step = TF_SEC * 1000
+    want_last = (int(time.time() * 1000) // step - 1) * step
+    sym = random.choice(list(symbols))
+    rows = [r for r in f.closed_after(sym, want_last - step) if r[0] == want_last]
+    if not rows:
+        return
+    rest = get_klines(sym, LIVE_TF, limit=3)
+    if rest is None:
+        return
+    m = rest[rest["timestamp"] == want_last]
+    if m.empty:
+        return
+    a = rows[0][1:]
+    b = tuple(float(m[c].iloc[0]) for c in ("Open", "High", "Low", "Close"))
+    ok = all(abs(x - y) <= 1e-9 * max(1.0, abs(y)) for x, y in zip(a, b))
+    _ws_stats["check_ok" if ok else "check_bad"] += 1
+    if not ok:
+        _ws_stats["check_last"] = f"{sym} {fmt(want_last)} WS {a} / REST {b}"
+        log.warning("WebSocket mumu REST ile uyuşmuyor: %s", _ws_stats["check_last"])
 
 
 def closed_candles(symbol):
     df = fetch_candles(symbol)
     if df is None or len(df) < 250:
         return None
-    df = df.iloc[:-1]  # son satır hâlâ açık olan mum
     return prepare(df)
 
 
@@ -363,22 +434,37 @@ def follow_up(symbol, df):
 def run_cycle():
     apply_rules()
     wait = exchanges.blocked_for()
+    _state["ws_only"] = False
     if wait > 120:
-        # Binance IP'yi engellemiş: istek atmak engeli uzatır, bu tarama atlanır
-        _stats["last_error"] = (f"{time.strftime('%H:%M')} Binance engeli: tarama atlandı "
-                                f"(~{wait / 60:.0f} dk daha)")
-        log.warning("Binance engeli sürüyor (%d sn), tarama atlandı", wait)
-        return
-    if not _state.get("probed"):
+        f = _feed
+        if f is not None and f.healthy() and _state["symbols"]:
+            # Binance REST engeli sürerken WebSocket akışı çalışıyor: tarama REST'siz (sadece akıştaki mumlarla) yapılır.
+            # Otomatik işlem emirleri REST ister, engel kalkana kadar konamayabilir; bildirim yine gider.
+            _state["ws_only"] = True
+            _stats["last_error"] = (f"{time.strftime('%H:%M')} Binance REST engeli (~{wait / 60:.0f} dk): tarama "
+                                    f"sadece WebSocket verisiyle yapıldı")
+            log.warning("Binance engeli sürüyor (%d sn), tarama sadece WebSocket verisiyle", wait)
+        else:
+            # Binance IP'yi engellemiş: istek atmak engeli uzatır, bu tarama atlanır
+            _stats["last_error"] = (f"{time.strftime('%H:%M')} Binance engeli: tarama atlandı "
+                                    f"(~{wait / 60:.0f} dk daha)")
+            log.warning("Binance engeli sürüyor (%d sn), tarama atlandı", wait)
+            return
+    if not _state.get("probed") and not _state["ws_only"]:
         _state["probed"] = True
         exchanges.probe_weight()
         if exchanges.blocked_for() > 120:
             _stats["last_error"] = f"{time.strftime('%H:%M')} Binance engeli: tarama atlandı"
             return
-    symbols = refresh_universe()
+    symbols = _state["symbols"] if _state["ws_only"] else refresh_universe()
     if not symbols:
         return
     t0 = time.time()
+    for k in ("ws", "rest", "full"):
+        _ws_stats[k] = 0
+    f = feed()
+    if f is not None:
+        f.set_symbols(symbols)   # akış kopmuş / hiç kurulmamışsa (coin listesi aynı kalsa da) ilk taramada kurulur
     watch = {k[0] for k in _active}
     todo = list(dict.fromkeys(list(symbols) + sorted(watch)))
     # Bot yeniden başladıysa ilk taramada son saatlerdeki bildirilmiş setup'lar takibe geri alınır
@@ -441,13 +527,20 @@ def run_cycle():
         send_message(f"⏸ Zaten {MAX_OPEN} işlem açık/giriş bekliyor, yeni setup bildirilmedi: "
                      + ", ".join(html.escape(x) for x in limit_skipped))
     ok = sum(1 for r in results if r[1] is not None)
+    try:
+        if not _state.get("ws_only"):
+            _ws_check(symbols)
+    except Exception as e:
+        log.debug("WebSocket kontrolü yapılamadı: %s", e)
     _stats.update(cycles=_stats["cycles"] + 1, last_run=time.time(), scanned=len(todo), ok=ok,
                   touches=sum(counts.values()), ready=len(candidates), cluster=cluster_skipped,
                   sent=sent, secs=time.time() - t0, total_sent=_stats["total_sent"] + sent)
     if sent:
         _stats["last_sent"] = time.time()
-    log.info("Setup taraması bitti: %d/%d coin, %d temas, %d aday, %d yeni emir, %d takipte, %.0f sn",
-             ok, len(todo), sum(counts.values()), len(candidates), sent, len(_active), time.time() - t0)
+    log.info("Setup taraması bitti: %d/%d coin, %d temas, %d aday, %d yeni emir, %d takipte, %.0f sn "
+             "(mumlar: WebSocket %d, REST %d, tam %d)",
+             ok, len(todo), sum(counts.values()), len(candidates), sent, len(_active), time.time() - t0,
+             _ws_stats["ws"], _ws_stats["rest"], _ws_stats["full"])
 
 
 def status_text():
@@ -471,6 +564,15 @@ def status_text():
     ]
     if running:
         lines.append(running.strip())
+    f = _feed
+    if f is not None:
+        lines.append(f"📡 WebSocket: {f.status()} · son tarama mumları WS {_ws_stats['ws']} / REST {_ws_stats['rest']}"
+                     f" / tam {_ws_stats['full']} · REST kontrolü {_ws_stats['check_ok']} uyumlu"
+                     + (f", {_ws_stats['check_bad']} UYUMSUZ ({html.escape(_ws_stats['check_last'])})" if _ws_stats["check_bad"] else ""))
+        if f.last_error:
+            lines.append(f"   son WebSocket hatası: {html.escape(f.last_error)}")
+    elif not USE_WS:
+        lines.append("📡 WebSocket kapalı (LIVE_WS=0), mumlar REST'ten")
     if _stats["last_error"]:
         lines.append(f"⚠️ Son hata: {_stats['last_error']}")
     return "\n".join(lines)
