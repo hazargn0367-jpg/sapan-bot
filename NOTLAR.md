@@ -959,3 +959,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   AUTO_RISK_USD / ALERT_RISK_USD varsayılanı 20 → 15 (3x = 45$, 0.5x = 7.5$, günlük sınır 5R = 75$), trade_rules.RISK_USD 15 (backtest raporları). toplu2 setinin ilk satırı
   artık "Önceki canlı (5+)" (cluster_max=5 sabit); diğer setlerin "canlı" satırları 10 coin. Render Environment'ta AUTO_RISK_USD tanımlıysa o geçer.
   Beklenen (backtest, 1R=15$, 3x/0.5x): son 18 ay ayda ~+167$ (en iyi ~+490$, en kötü ~-133$), ~20 iş/ay, maks düşüş ~-15.5R ≈ -233$. Kasım ortası değerlendirilecek.
+- 20.10 21:08 kullanıcı: 1R 15$ kalsın, KASIM ORTASI canlı sonuca göre bakılacak. Plan (önerildi): 1R ≈ bakiyenin %3.5'i (430$ → 15$, 600$ → 20$, 850$ → 30$,
+  1.400$ → 50$, 2.900$ → 100$); sadece artı aydan sonra yükselt, bakiye düşerse 1R'yi de düşür, kârın bir kısmını çek. Otomatik % risk kodlanmadı.
+  100$ riske geçerken AUTO_MAX_NOTIONAL (4000 × çarpan) dar stoplu işlemleri sınırlar → yükseltilmeli. Backtest 12 ay (10 coin, 3x/0.5x): 15$ +2.448$, düşüş -203$.
