@@ -30,6 +30,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 üst seri -> 15dk sinyalde 1s / 4s trend onayı şartı (canlı · 1s · 1s hafif · 4s · 4s hafif · ikisi) (+ "üst eski seri")
   /backtest 180 ikinci seri -> tepeden sonra 2. / 3. EMA20 temasına da izin (işlem sayısı artar mı, R düşer mi) (+ "ikinci eski seri"; CSV'de temas_no)
   /backtest 180 ema seri -> temas EMA50 / EMA100 + yapı kuralları (kural 8 ve son salınım tepesi/dibi; iğne/kapanış); tek dönem `ema` grafikler EMA50 (son salınım, iğne), `ema yüz` EMA100 (+ "ema eski seri")
+  /backtest 180 analiz seri -> sadece canlı ayar, 5 dönem; CSV'de hacim ölçüleri (hac_bacak, hac_duz, hac_oran, hac_onay ...). İlk çalıştırma veriyi hacimle yeniden indirir (uzun sürer)
   /backtest 180 geniş seri -> stop payı 0.3 (canlı) / 0.45 / 0.6 / 0.8 ATR ve stop temas mumunun dibinde (+ "geniş eski seri")
   /backtest 180 pay seri -> stop payı 0.3 (canlı) / 0.15 / 0 / 0 + erken çıkış yok (+ "pay eski seri" = 2 eski dönem)
   /backtest 180 çizgi seri -> dönüş mumu EMA20'nin en az 0.1 / 0.2 / 0.3 ATR ötesinde kapatmalı (tam çizgide kapatan dönüş yok)

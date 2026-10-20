@@ -56,20 +56,21 @@ def _dt(ms):
 
 
 def parse_zip(content):
-    """Arşiv zip'i -> (açılış zamanı, kapanış zamanı, OHLC). Başlık satırı olan/olmayan iki biçim de,
+    """Arşiv zip'i -> (açılış zamanı, kapanış zamanı, OHLC + hacim [5 sütun]). Başlık satırı olan/olmayan iki biçim de,
     milisaniye/mikrosaniye zaman damgası da okunur."""
     with zipfile.ZipFile(io.BytesIO(content)) as zf:
         raw = zf.read(zf.namelist()[0])
     head = raw[:1]
     skip = 0 if head.isdigit() else 1  # başlık satırı
     if not raw.strip() or (skip and b"\n" not in raw):
-        return np.empty(0, np.int64), np.empty(0, np.int64), np.empty((0, 4))
-    d = pd.read_csv(io.BytesIO(raw), header=None, skiprows=skip, usecols=[0, 1, 2, 3, 4, 6],
-                    dtype={0: np.int64, 1: np.float64, 2: np.float64, 3: np.float64, 4: np.float64, 6: np.int64})
+        return np.empty(0, np.int64), np.empty(0, np.int64), np.empty((0, 5))
+    d = pd.read_csv(io.BytesIO(raw), header=None, skiprows=skip, usecols=[0, 1, 2, 3, 4, 5, 6],
+                    dtype={0: np.int64, 1: np.float64, 2: np.float64, 3: np.float64, 4: np.float64, 5: np.float64,
+                           6: np.int64})
     ts, ct = d[0].to_numpy(np.int64), d[6].to_numpy(np.int64)
     if len(ts) and ts[0] > 10 ** 14:  # mikrosaniye
         ts, ct = ts // 1000, ct // 1000
-    return ts, ct, d[[1, 2, 3, 4]].to_numpy(np.float64)
+    return ts, ct, d[[1, 2, 3, 4, 5]].to_numpy(np.float64)
 
 
 def _download(url, why=None):
@@ -224,16 +225,17 @@ def get_range(symbol, interval, start_ms, end_ms, api_max_wait=None, now_ms=None
         if not df.empty:
             ts = df["timestamp"].values.astype(np.int64)
             parts.append((ts, ts + (int(interval.rstrip("m")) * 60_000 - 1 if interval.endswith("m") else 0),
-                          df[["Open", "High", "Low", "Close"]].values.astype(np.float64)))
+                          df[["Open", "High", "Low", "Close", "Volume"]].values.astype(np.float64)))
 
     if not parts:
-        return pd.DataFrame({"timestamp": np.array([], dtype=np.int64), "Open": [], "High": [], "Low": [], "Close": []})
+        return pd.DataFrame({"timestamp": np.array([], dtype=np.int64), "Open": [], "High": [], "Low": [], "Close": [],
+                             "Volume": []})
     ts = np.concatenate([p[0] for p in parts])
     ct = np.concatenate([p[1] for p in parts])
     ohlc = np.vstack([p[2] for p in parts])
     keep = (ts >= start_ms) & (ts < end_ms) & (ct < now_ms)
     df = pd.DataFrame({"timestamp": ts[keep], "Open": ohlc[keep, 0], "High": ohlc[keep, 1],
-                       "Low": ohlc[keep, 2], "Close": ohlc[keep, 3]})
+                       "Low": ohlc[keep, 2], "Close": ohlc[keep, 3], "Volume": ohlc[keep, 4]})
     return df.drop_duplicates("timestamp").sort_values("timestamp").reset_index(drop=True)
 
 

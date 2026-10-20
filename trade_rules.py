@@ -526,6 +526,39 @@ def spike_top(df, i, side):
     return float(move / a)
 
 
+def volume_features(df, i, conf, s, p, side):
+    """Hacim ölçüleri (20.10, sadece CSV/analiz; kural değil). Hepsi bacak başlangıcından önceki 96 mumun ortanca hacmine
+    oranla (coinler arası karşılaştırılabilir). i: temas, conf: onay, s: bacak başı, p: tepe/dip (trend_features)."""
+    if "Volume" not in df.columns:
+        return {}
+    V = df["Volume"].values.astype(float)
+    O, C = df["Open"].values, df["Close"].values
+    ref = V[max(0, s - 96):s]
+    if len(ref) < 20:
+        ref = V[max(0, i - 96):i]
+    base = float(np.nanmedian(ref)) if len(ref) else float("nan")
+    if not base > 0:
+        return {}
+    nan = float("nan")
+    leg = V[s + 1:p + 1]
+    cor = V[p + 1:i]
+    long = side == "LONG"
+    cor_counter = ((C[p + 1:i] < O[p + 1:i]) if long else (C[p + 1:i] > O[p + 1:i]))   # düzeltme yönündeki mumlar
+    out = {
+        "hac_bacak": float(np.nanmean(leg)) / base if len(leg) else nan,         # tepeye çıkan bacağın ort. hacmi
+        "hac_tepe": V[p] / base,                                                  # tepe/dip mumunun hacmi
+        "hac_duz": float(np.nanmean(cor)) / base if len(cor) else nan,           # düzeltmenin (tepe→temas) ort. hacmi
+        "hac_duz_max": float(np.nanmax(V[p + 1:i + 1])) / base if i > p else nan,  # düzeltme + temastaki en büyük hacim
+        "hac_temas": V[i] / base,
+        "hac_onay": V[conf] / base if conf is not None and conf < len(V) else nan,
+        "hac_son20": float(np.nanmean(V[max(0, i - 20):i])) / base,
+    }
+    out["hac_oran"] = out["hac_bacak"] / out["hac_duz"] if out["hac_duz"] and out["hac_duz"] > 0 else nan
+    tot = float(np.nansum(cor))
+    out["hac_duz_ters"] = float(np.nansum(cor[cor_counter])) / tot if tot > 0 else nan   # düzeltmede düzeltme yönlü mumların hacim payı
+    return {k: (round(v, 3) if v == v else None) for k, v in out.items()}
+
+
 def htf_ok(df, i, side):
     """HTF_MODE: üst zaman diliminde trend aynı yönde mi (sütunlar backtest.add_htf'ten: HTF1 / HTF4 = tam sıra, HTF1W / HTF4W = hafif;
     +1 yukarı, -1 aşağı, 0 yok / veri yok). Sütun yoksa (canlı) filtre uygulanmaz."""

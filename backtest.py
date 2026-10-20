@@ -203,10 +203,20 @@ def _cache_path(symbol):
     return os.path.join(KLINE_CACHE, f"{symbol}_{BASE_TF}.npz")
 
 
+CACHE_COLS = 6   # zaman, OHLC, hacim (20.10: hacim eklendi; 5 sütunlu eski kayıtlar bir kez yeniden indirilir)
+
+
 def _to_arr(df):
     if df is None or df.empty:
-        return np.empty((0, 5))
-    return df[["timestamp", "Open", "High", "Low", "Close"]].to_numpy(dtype=np.float64)
+        return np.empty((0, CACHE_COLS))
+    if "Volume" not in df.columns:   # hacmi olmayan kaynak (ör. Bybit): NaN
+        df = df.assign(Volume=np.nan)
+    return df[["timestamp", "Open", "High", "Low", "Close", "Volume"]].to_numpy(dtype=np.float64)
+
+
+def _empty_df():
+    return pd.DataFrame({"timestamp": np.array([], dtype=np.int64), "Open": [], "High": [], "Low": [], "Close": [],
+                         "Volume": []})
 
 
 def load_15m(symbol, days, ago=0):
@@ -219,13 +229,15 @@ def load_15m(symbol, days, ago=0):
         # (kayıt kesintisiz tutulduğu için aradaki yılların hepsi indirilip diske yazılırdı)
         df = _fetch_range(symbol, start_ms, end_ms)
         if df is None or df.empty:
-            return pd.DataFrame({"timestamp": np.array([], dtype=np.int64), "Open": [], "High": [], "Low": [], "Close": []})
+            return _empty_df()
         return df[(df["timestamp"] >= start_ms) & (df["timestamp"] < end_ms)].reset_index(drop=True)
     path = _cache_path(symbol)
     arr = span = None
     try:
         with np.load(path) as z:
             arr, span = z["data"], [int(z["span"][0]), int(z["span"][1])]
+        if arr.ndim != 2 or arr.shape[1] != CACHE_COLS:   # eski (hacimsiz) kayıt: baştan indirilir
+            arr = span = None
     except (OSError, ValueError, KeyError):
         pass
     if arr is None:
@@ -245,7 +257,7 @@ def load_15m(symbol, days, ago=0):
         _save_cache(path, arr, span)
     sel = arr[(arr[:, 0] >= start_ms) & (arr[:, 0] < end_ms)]
     return pd.DataFrame({"timestamp": sel[:, 0].astype(np.int64), "Open": sel[:, 1], "High": sel[:, 2],
-                         "Low": sel[:, 3], "Close": sel[:, 4]})
+                         "Low": sel[:, 3], "Close": sel[:, 4], "Volume": sel[:, 5]})
 
 
 DISK_MIN_FREE = 150 * 1024 * 1024  # diskte bundan az yer kalırsa veri kaydedilmez (canlı günlük de aynı diskte)
@@ -323,9 +335,13 @@ def resample_tf(df15, minutes):
         "Open": g["Open"].first(), "High": g["High"].max(),
         "Low": g["Low"].min(), "Close": g["Close"].last(), "n": g["Open"].count(),
     })
+    cols = ["timestamp", "Open", "High", "Low", "Close"]
+    if "Volume" in d.columns:
+        out["Volume"] = g["Volume"].sum(min_count=1)
+        cols.append("Volume")
     out = out[out["n"] == minutes // base_min].drop(columns="n")
     out["timestamp"] = (out.index - pd.Timestamp(0, tz="UTC")) // pd.Timedelta(milliseconds=1)
-    return out.reset_index(drop=True)[["timestamp", "Open", "High", "Low", "Close"]]
+    return out.reset_index(drop=True)[cols]
 
 
 def add_htf(df):
@@ -469,6 +485,7 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
             row["sivri_atr"] = round(tr.spike_top(df, i, side), 2)
             f = tr.trend_features(df, i, side, entry=r["entry"], risk=r["risk"])
             row.update({k: (round(v, 3) if isinstance(v, float) else v) for k, v in f.items() if not k.startswith("_")})
+            row.update(tr.volume_features(df, i, r["confirm"], f["_s"], f["_p"], side))   # hacim ölçüleri (20.10)
             if r["status"] in ("win", "loss", "be"):
                 if r.get("early_exit") or r.get("time_exit"):
                     row["cikis_turu"] = "erken çıkış" if r.get("early_exit") else "zaman stopu"
@@ -1575,6 +1592,11 @@ def _old_examples(results):
 # TP ile stop olan işlemleri ayıran ölçüler: (sütun, ad, ondalık)
 FARK_OLCULER = [
     ("btc_kor", "BTC'ye benzerlik (son 24 saat, 1 = birebir BTC gibi)", 2),
+    ("hac_oran", "Hacim: bacak / düzeltme (büyük = düzeltme hacimsiz)", 2),
+    ("hac_duz", "Hacim: düzeltmenin ortalaması (bacak öncesine göre)", 2),
+    ("hac_duz_max", "Hacim: düzeltmedeki en büyük mum", 2),
+    ("hac_onay", "Hacim: onay mumu", 2),
+    ("hac_duz_ters", "Hacim: düzeltmede düzeltme yönlü mumların payı", 2),
     ("onu_r", "Önceki tepe/dibe mesafe (R)", 2),
     ("bacak_govde", "Bacağın gövde oranı (1 = hepsi iğnesiz düz gövde)", 2),
     ("bacak_atr", "Bacak boyu (ATR)", 1),

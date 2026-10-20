@@ -244,20 +244,20 @@ def get_klines_range(symbol, interval, start_ms, end_ms, yield_live=True, max_wa
         cursor = int(batch[-1][0]) + 1
         parts.append((np.array([k[0] for k in batch], dtype=np.int64),
                       np.array([k[6] for k in batch], dtype=np.int64),
-                      np.array([k[1:5] for k in batch], dtype=np.float64)))
+                      np.array([k[1:6] for k in batch], dtype=np.float64)))   # OHLC + hacim
         del batch, res
         if n_batch < limit:
             break
 
     if not parts:
-        return pd.DataFrame({"timestamp": np.array([], dtype=np.int64), "Open": [], "High": [], "Low": [], "Close": []})
+        return pd.DataFrame({"timestamp": np.array([], dtype=np.int64), "Open": [], "High": [], "Low": [], "Close": [], "Volume": []})
     ts = np.concatenate([p[0] for p in parts])
     close_time = np.concatenate([p[1] for p in parts])
     ohlc = np.vstack([p[2] for p in parts])
     keep = close_time < int(time.time() * 1000)  # açık mumu at
     return pd.DataFrame({
         "timestamp": ts[keep], "Open": ohlc[keep, 0], "High": ohlc[keep, 1],
-        "Low": ohlc[keep, 2], "Close": ohlc[keep, 3],
+        "Low": ohlc[keep, 2], "Close": ohlc[keep, 3], "Volume": ohlc[keep, 4],
     }).drop_duplicates("timestamp").reset_index(drop=True)
 
 
