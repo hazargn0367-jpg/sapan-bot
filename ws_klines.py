@@ -209,7 +209,7 @@ class KlineFeed:
                         break
             except (OSError, _WSClosed, ValueError) as e:
                 if gen == self._gen:
-                    self.last_error = f"{time.strftime('%H:%M')} {type(e).__name__}: {e}"[:200]
+                    self.last_error = f"{time.strftime('%H:%M', time.gmtime(time.time() + 3 * 3600))} {type(e).__name__}: {e}"[:200]
                     log.warning("WebSocket bağlantısı %d koptu: %s", idx, e)
             finally:
                 self._conns.pop((gen, idx), None)

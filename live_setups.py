@@ -441,12 +441,12 @@ def run_cycle():
             # Binance REST engeli sürerken WebSocket akışı çalışıyor: tarama REST'siz (sadece akıştaki mumlarla) yapılır.
             # Otomatik işlem emirleri REST ister, engel kalkana kadar konamayabilir; bildirim yine gider.
             _state["ws_only"] = True
-            _stats["last_error"] = (f"{time.strftime('%H:%M')} Binance REST engeli (~{wait / 60:.0f} dk): tarama "
+            _stats["last_error"] = (f"{fmt(time.time() * 1000, '%H:%M')} Binance REST engeli (~{wait / 60:.0f} dk): tarama "
                                     f"sadece WebSocket verisiyle yapıldı")
             log.warning("Binance engeli sürüyor (%d sn), tarama sadece WebSocket verisiyle", wait)
         else:
             # Binance IP'yi engellemiş: istek atmak engeli uzatır, bu tarama atlanır
-            _stats["last_error"] = (f"{time.strftime('%H:%M')} Binance engeli: tarama atlandı "
+            _stats["last_error"] = (f"{fmt(time.time() * 1000, '%H:%M')} Binance engeli: tarama atlandı "
                                     f"(~{wait / 60:.0f} dk daha)")
             log.warning("Binance engeli sürüyor (%d sn), tarama atlandı", wait)
             return
@@ -454,7 +454,7 @@ def run_cycle():
         _state["probed"] = True
         exchanges.probe_weight()
         if exchanges.blocked_for() > 120:
-            _stats["last_error"] = f"{time.strftime('%H:%M')} Binance engeli: tarama atlandı"
+            _stats["last_error"] = f"{fmt(time.time() * 1000, '%H:%M')} Binance engeli: tarama atlandı"
             return
     symbols = _state["symbols"] if _state["ws_only"] else refresh_universe()
     if not symbols:
@@ -601,6 +601,6 @@ def maybe_run():
         run_cycle()
     except Exception as e:
         log.exception("Setup taraması hatası: %s", e)
-        _stats["last_error"] = f"{time.strftime('%H:%M')} {type(e).__name__}: {e}"[:200]
+        _stats["last_error"] = f"{fmt(time.time() * 1000, '%H:%M')} {type(e).__name__}: {e}"[:200]
     finally:
         _stats["running_since"] = None
