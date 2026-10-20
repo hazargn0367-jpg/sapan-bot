@@ -931,3 +931,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   EMA20 işlemiyle aynı coinde çakışan geri test girilmez; toplu sinyal + en fazla 2 açık ikisine birlikte. Sabitler strategy.RETEST / RT_* ("sig" ile).
   COMPARE_SETS["kirilim"]: canlı · sadece kırılım · canlı + kırılım · + uzantı ≥2 ATR · + önünde ≥1R yer · + geri test ≤12 mum. `/backtest 180 kırılım seri` + `kırılım eski seri`.
   CSV: varyasyon "kırılım", kirilim (kırılım mumu), seviye. Doğrulama (sentetik): canlı birebir, kesilmiş veride aynı sinyaller (ileriye bakma yok), uçtan uca sahte veriyle çalıştı.
+- 20.10 13:01 kırılım + geri test sonucu (`kırılım seri`, 4 dönem geldi Eki 24 – Eki 26): canlı +34.5 / +60.5 / +19.3 / -3.6 = +110.7R (327 iş, 0.34R/iş) ·
+  sadece kırılım +66.6R ama 2675 iş, 0.02R/iş (TP %24) · canlı + kırılım +107.3R (2835 iş; kırılım işlemleri 2 açık işlem sınırını doldurup EMA20 işlemlerini 327 → 183'e
+  düşürdü, EMA20 kısmı +47.8R) · uzantı ≥2 ATR +93.8R · önünde ≥1R yer +36.5R · geri test ≤12 mum +119.0R (2588 iş, 0.05R/iş, 1 dönemde canlıdan kötü).
+  Kırılım SHORT her dönem artı (+16.7 / +14.6 / +43.9 / +12.0, 1497 iş, ~0.06R/iş), LONG -27.7R. İşlem başı R komisyon/kaymaya çok yakın → RED. Canlıya alınmadı.
