@@ -925,3 +925,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   1s +86.3R (296, 0.29) · 1s hafif +107.1R (360, 0.30, canlıyla aynı) · 4s +68.8R (181, 0.38, 3/5 artı) · 4s hafif +76.2R (232, 0.33) · 1s+4s +71.4R (177, 0.40).
   4s işlem başı R'yi artırıyor ama işlemlerin yarısını atıyor, toplam -35R. 1s'in elediği 69 işlem +20R. Son 1 ayın 10 kayıp LONG'unu (-8.3R) 1s hiç elemedi, 4s yarısını.
   RED: 10R/ay hedefine işlem sayısı azaldığı için zarar. Canlıya alınmadı.
+- 20.10 12:15 "kodla" → (2) kırılım + geri test (ayrı sinyal, retest.py, sadece backtest): salınım tepesi (iki yanında 5 mumdan uç) → tepeden sonra seviyenin üstünde kapatan
+  ilk mum (≤100 mum, EMA20>50>100, kapanış EMA20 üstünde, gövde ≥0.3 ATR) → fiyat seviyeden ≥1 ATR uzaklaşır → ≤24 mum içinde dip seviyenin 0.2 ATR yakınına iner
+  (arada seviyenin altında kapanış yok) → onay/giriş/stop/TP/erken çıkış EMA20 sistemiyle aynı (stop = min(geri test dibi, onay dibi) − 0.3 ATR). SHORT tersi.
+  EMA20 işlemiyle aynı coinde çakışan geri test girilmez; toplu sinyal + en fazla 2 açık ikisine birlikte. Sabitler strategy.RETEST / RT_* ("sig" ile).
+  COMPARE_SETS["kirilim"]: canlı · sadece kırılım · canlı + kırılım · + uzantı ≥2 ATR · + önünde ≥1R yer · + geri test ≤12 mum. `/backtest 180 kırılım seri` + `kırılım eski seri`.
+  CSV: varyasyon "kırılım", kirilim (kırılım mumu), seviye. Doğrulama (sentetik): canlı birebir, kesilmiş veride aynı sinyaller (ileriye bakma yok), uçtan uca sahte veriyle çalıştı.

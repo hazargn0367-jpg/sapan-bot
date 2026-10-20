@@ -31,6 +31,15 @@ TOLERANCE_SHORT = 0.9997
 MIN_CANDLES = 180
 TOUCH_NTH = 1              # 1 (canlı): tepeden sonra sadece İLK EMA20 teması · 2 / 3: aynı bacakta 2. / 3. temasa da izin (20.10 testi)
 TOUCH_EMA = 20             # 20 (canlı) / 50 / 100: temasın aranacağı EMA (sadece backtest testi, 17.10; canlı hep 20)
+# Kırılım + geri test sinyali (retest.py, sadece backtest, 20.10): RETEST "" kapalı / "only" sadece kırılım / "add" EMA20 sinyallerine ek
+RETEST = ""
+RT_K = 5             # salınım tepesi/dibi: iki yanındaki 5 mumdan uç
+RT_BREAK_MAX = 100   # tepeden kırılıma en fazla mum
+RT_BODY_ATR = 0.3    # kırılım mumu gövdesi en az (ATR)
+RT_EXT = 1.0         # kırılımdan sonra seviyeden en az bu kadar ATR uzaklaşmalı
+RT_TOL = 0.2         # geri test: dip seviyenin bu kadar ATR yakınına inmeli
+RT_MAX = 24          # kırılımdan geri teste en fazla mum
+RT_ROOM = 0.0        # >0: giriş ile kırılım sonrası tepe arası en az bu kadar R
 
 
 def add_indicators(df):

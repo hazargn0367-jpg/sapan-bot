@@ -493,6 +493,43 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
     return rows
 
 
+def run_retest(df, symbol, tf, tick, rts, busy=()):
+    """Kırılım + geri test işlemleri (retest.py). busy: aynı coinde EMA20 işlemlerinin (giriş, çıkış) mum aralıkları; çakışan
+    geri test girilmez (coinde tek pozisyon)."""
+    import retest
+    rows = []
+    next_free = 0
+    ts = df["timestamp"].values
+    spans = sorted(busy)
+    for r_, side, level, b in rts:
+        if r_ < next_free:
+            continue
+        res = retest.simulate(df, r_, side, level, b, tick)
+        if res["status"] not in TRADED:
+            continue
+        e0 = res["entry_bar"]
+        e1 = res.get("exit_bar", len(df))
+        if any(a0 <= e1 and e0 <= a1 for a0, a1 in spans):
+            continue
+        row = {"coin": symbol, "zaman_dilimi": tf, "yon": side, "temas": fmt_time(ts[r_]), "temas_utc": fmt_utc(ts[r_]),
+               "durum": res["status"], "_touch_ts": int(ts[r_]), "temas_no": 0, "sonuc": STATUS_TR[res["status"]],
+               "varyasyon": "kırılım", "kirilim": fmt_time(ts[b]), "seviye": level,
+               "onay": fmt_time(ts[res["confirm"]]), "giris": res["entry"], "stop": res["stop"], "tp": res["tp"],
+               "atr": res["atr"], "risk_atr": res["risk"] / res["atr"],
+               "giris_zamani": fmt_time(ts[e0]), "_entry_ts": int(ts[e0]), "dolum": res["fill"],
+               "risk_yuzde": 100 * res["risk"] / res["fill"], "mfe_r": round(tr.mfe_r(df, res, side), 2), "tp_kat": res["rr"]}
+        if res["status"] in ("win", "loss", "be"):
+            if res.get("early_exit"):
+                row["cikis_turu"] = "erken çıkış"
+            row.update(cikis_zamani=fmt_time(ts[e1]), cikis=res["exit"], R_brut=round(res["r_gross"], 3),
+                       R_net=round(res["r_net"], 3), dolar=round(res["r_net"] * tr.RISK_USD, 2), _exit_ts=int(ts[e1]))
+            next_free = e1 + 1
+        else:
+            next_free = len(df)
+        rows.append(row)
+    return rows
+
+
 def explain_example(df, symbol, tf, tick, when):
     """Örnek saati hem Türkiye saati hem UTC olarak dener
     (TradingView kriptoda varsayılan olarak UTC gösterir)."""
@@ -1143,6 +1180,17 @@ COMPARE_SETS["ust"] = [
     C("+ 4s trend aynı yönde (20>50>100)", **_YENI, HTF_MODE="4h"),
     C("+ 4s hafif (20>50)", **_YENI, HTF_MODE="4h_w"),
     C("+ 1s ve 4s ikisi de", **_YENI, HTF_MODE="1h4h"),
+]
+# Kırılım + geri test (kullanıcı 20.10 "kodla", fikir 2: işlem sayısını artıracak ayrı sinyal; retest.py). EMA20 işlemiyle aynı coinde
+# çakışan geri test girilmez; toplu sinyal / en fazla 2 açık işlem ikisine birlikte uygulanır. CSV'de varyasyon "kırılım", kirilim, seviye.
+# Kabul: 5 dönemde ≥4 artı (canlı + kırılım, canlıdan fazla), toplam R artar, 2 eski dönemde eksiye düşmez.
+COMPARE_SETS["kirilim"] = [
+    C("Canlı ayar", **_YENI),
+    C("Sadece kırılım + geri test", **_YENI, sig={"RETEST": "only"}),
+    C("Canlı + kırılım", **_YENI, sig={"RETEST": "add"}),
+    C("Canlı + kırılım (uzantı ≥ 2 ATR)", **_YENI, sig={"RETEST": "add", "RT_EXT": 2.0}),
+    C("Canlı + kırılım (önünde ≥ 1R yer)", **_YENI, sig={"RETEST": "add", "RT_ROOM": 1.0}),
+    C("Canlı + kırılım (geri test en geç 12 mum)", **_YENI, sig={"RETEST": "add", "RT_MAX": 12}),
 ]
 COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /
@@ -1842,6 +1890,7 @@ def main():
                     btc_map = btc_trend_map(df)
                 ts_ = df["timestamp"].values
                 sigsets = {}
+                rtsets = {}
                 for key in [()] + [_sig_key(c) for c in configs]:
                     if key in sigsets:
                         continue
@@ -1850,6 +1899,12 @@ def main():
                               if ts_[i] >= p0]  # ısınma payındaki temaslar sayılmaz
                     sigsets[key] = sg
                     touch_by[key].update((int(ts_[i]), side) for i, side in sg)
+                    if dict(key).get("RETEST"):
+                        import retest
+                        with _st_override(key):
+                            rt = [x for x in retest.find(df) if ts_[x[0]] >= p0]
+                        rtsets[key] = rt
+                        touch_by[key].update((int(ts_[x[0]]), x[1]) for x in rt)
                 signals = sigsets[()]
                 on_bn = bybit.norm(symbol) in BINANCE_SET if EXCHANGE == "bybit" else True
                 for ci, cfg in enumerate(configs):
@@ -1860,6 +1915,14 @@ def main():
                     new = run_df(line_df(df, (cfg.get("sig") or {}).get("TOUCH_EMA", 20)), symbol, tf, tick, sigsets[_sig_key(cfg)],
                                  with_ctx=(ci == chart_idx), trades_only=True,
                                  status_counter=None if args.compare else status_counts)
+                    rmode = (cfg.get("sig") or {}).get("RETEST")
+                    if rmode:
+                        with _st_override(_sig_key(cfg)):
+                            if rmode == "only":
+                                new = []
+                            busy = [(df["timestamp"].searchsorted(r["_entry_ts"]),
+                                     df["timestamp"].searchsorted(r.get("_exit_ts", 2**62))) for r in new if "_entry_ts" in r]
+                            new = new + run_retest(df, symbol, tf, tick, rtsets[_sig_key(cfg)], busy)
                     for r in new:
                         r["hacim_sirasi"] = rank.get(symbol, 0)
                         if EXCHANGE == "bybit":
