@@ -1003,3 +1003,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 21.10 00:21 "kodla": erken çıkış yeniden (RONIN 25.04 / SEI 09.05 erken çıkıp mfe ~5R): 10 coin CSV'de 224 erken çıkış -52.4R, %26'sı stopa değmeden 2.2R'ye gidiyor,
   kural olmasa tahmini -60.8R (fayda +8R; 14.10'da çok daha büyüktü). COMPARE_SETS["cikis"]: canlı · erken çıkış yok · 1 mum · derin eşik 0.2 · 0.5 ATR.
   `/backtest 180 çıkış seri` + `çıkış eski seri`. Binance engeli (01:30) bitince arşiv düzeltmesiyle birlikte yüklenecek.
+- 21.10 02:06 ERKEN ÇIKIŞ YENİDEN sonucu (`çıkış seri`, 5 dönem, canlı = toplu 10): canlı +37.4 / +68.6 / +25.0 / +4.3 / +15.3 = +150.6R (495 iş, 1x düşüş 12.0, 3x 231.6R
+  düşüş 15.5) · erken çıkış yok +139.9R (3/5 iyi ama düşüş 18.0 / 3x 26.2, stop 150 → 277) · 1 mum +146.6R · derin eşik 0.2 +132.9 · 0.5 +136.4. Canlı en iyi toplam ve
+  en iyi kazanç/düşüş → DEĞİŞİKLİK YOK. Erken çıkış kârı az artırıyor ama düşüşü belirgin azaltıyor (bugün kuralın asıl değeri bu).
