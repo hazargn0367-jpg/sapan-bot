@@ -991,3 +991,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   (onayda ters iğne) uygulanmaz; diğer kurallar (ATR, %0.5, 1R yer, erken çıkış) aynı. ENTRY_WINDOW PARAM_KEYS'e eklendi. COMPARE_SETS["hemen"]: canlı · klasik erken ·
   klasik + dönüş erken · klasik erken + giriş 1 mum. `/backtest 180 hemen seri` + `hemen eski seri`. Canlıya alınırsa canlı tarama değişmeden çalışır (onay = son kapanan
   temas mumu). Sentetik: canlı birebir, giriş = temas tepesi + 1 tık, giriş temastan sonra.
+- 20.10 23:56 ONAY BEKLEMEDEN GİRİŞ sonucu (`hemen seri`, 5 dönem May 24 – Eki 26, canlı = toplu 10): canlı +38.6 / +68.6 / +22.8 / +4.3 / +15.2 = +149.5R (494 iş,
+  TP %34, 0.30R/iş) · klasik erken +113.7R (1366 iş, TP %26, 0.08R/iş, 1/5 iyi) · klasik + dönüş erken +30.0R (1874 iş, 0.02R/iş, 0/5) · klasik erken giriş 1 mum +79.4R
+  (0/5). Onay mumu kapanışı en güçlü filtrelerden biri: kaldırınca işlem ~3 kat, işlem başı R ~1/4. RED, eski seri gereksiz.
+  20.10 itibarıyla denenen ve reddedilen: 2./3. temas, 1s/4s trend, kırılım-geri test, toplu filtre kapalı, TP önceki tepe, en fazla 3 işlem, yoğun rejim, geniş stop,
+  hacim, erken giriş, LONG/SHORT boyut. Kabul edilen: toplu sınırı 10 coin (canlıda).
