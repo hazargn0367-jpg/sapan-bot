@@ -975,3 +975,5 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 20.10 22:40 stop payı 2 testi (sadece backtest): trade_rules.STOP_AT_TOUCH (stop onay yerine temas mumunun — dönüşte temas..onay — dibinin altında; tepe için tersi).
   COMPARE_SETS["pay2"] (canlı = bugünkü canlı, toplu 10 coin): 0.3 (canlı) · 0.45 · 0.6 · 0.8 ATR · temas dibi + 0.3. `/backtest 180 geniş seri` + `geniş eski seri`.
   Sentetikte temas dibi varyasyonu kurulumların yarısını 1.5 ATR stop sınırına takıyor (beklenen). Canlı birebir aynı (sentetik).
+- 20.10 22:58 GENİŞ STOP PAYI sonucu (3 dönem, Nis 25 – Eki 26, canlı = toplu 10 coin): 0.3 (canlı) +38.5 / +66.6 / +25.0 = +130.1R (352 iş, TP %36, 0.37R/iş) ·
+  0.45 +121.3R (1/3 iyi) · 0.6 +82.6R · 0.8 +64.7R · temas dibi +43.9R (231 iş, TP %29). En iyi 0.3 ATR (0 → 0.15 → 0.3 artış, sonra düşüş) → RED, değişiklik yok.
