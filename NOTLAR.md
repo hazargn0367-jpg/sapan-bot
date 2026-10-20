@@ -982,3 +982,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   uzun), resample_tf hacmi toplar, Bybit'te hacim NaN. trade_rules.volume_features (bacak başından önceki 96 mumun ortanca hacmine oranla): hac_bacak (s+1..p ort.),
   hac_tepe, hac_duz (p+1..i-1 ort.), hac_duz_max, hac_temas, hac_onay, hac_son20, hac_oran (bacak/düzeltme), hac_duz_ters (düzeltmede düzeltme yönlü mumların hacim
   payı). CSV'ye ve fark analizi listesine eklendi. Canlı birebir (sentetik). Komut: `/backtest 180 analiz seri` (canlı ayar, 5 dönem) → TP/stop karşılaştırması.
+- 20.10 23:25 HACİM sonucu (`analiz seri`, canlı ayar 5 dönem May 24 – Eki 26, 495 iş +151.6R): TP / stop / erken çıkış ortancaları neredeyse aynı (hac_oran 1.34 /
+  1.25 / 1.38, hac_duz 1.98 / 1.91 / 1.98, hac_onay 1.14 / 1.11 / 1.09). Her ölçünün üçte bir gruplarının HEPSİ artı; eksi grup yok. En büyük fark hac_duz_ters < 0.79
+  (0.46 vs 0.23R/iş) ama dönemlerde tutarsız (0.31/0.32 · 0.71/0.43 · 0.45/0.15 · 0.73/-0.19 · 0.06/0.35). bacak/tepe/son20 orta grup en iyi (tekdüze değil → gürültü).
+  Sonuç: hacim TP ile stopu ayırmıyor → RED, kural yok. Hacim sütunları CSV'de kalıyor.
