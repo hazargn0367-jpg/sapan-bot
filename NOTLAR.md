@@ -945,3 +945,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   15.10'daki toplu2 testi (o günkü kurallar, Nis-Eki 26) filtre kapalı -11R demişti; bugünkü kurallarla aynı dönem ~0 → değer kurallara/döneme duyarlı.
   ADAY, gerçek testle doğrulanmalı (kod gerekmez, toplu2 seti LIVE_RULES'u kullanıyor): `/backtest 180 toplu seri` + `/backtest 180 toplu eski seri`.
   Kabul olursa canlıda live_setups.CLUSTER_MAX=0; düşüş büyüdüğü için 1R küçültülmeli (430$'da -20R × 20$ = bakiyenin %93'ü).
+- 20.10 16:27 TOPLU SERİ (gerçek backtest, 5 dönem May 24 – Eki 26, bugünkü canlı kurallar), sabit risk: canlı (5+) +32.4 / +60.5 / +17.2 / -3.6 / +2.0 = +108.5R (366 iş) ·
+  8 coin +116.6R (3/5 iyi) · **10 coin +36.4 / +67.4 / +25.9 / +3.2 / +15.2 = +148.1R (489 iş, 5/5 canlıdan iyi, R/iş 0.30 aynı, TP %34, 1x düşüş 17.1 → 11.9)** ·
+  kapalı +157.8R (763 iş, 3/5, R/iş 0.21; CSV yeniden kurulumu ~+165 tahmin etmişti) · kapalı + en fazla 5 +185.1R (4/5, 862 iş).
+  3x/0.5x: canlı 171.8R (son 18 ay 8.9R/ay, düşüş 13.6) · 10 coin 222.0R (5/5, son 18 ay 11.1R/ay, 10/18 ay ≥10R, düşüş 15.5, en kötü ay -8.8) · kapalı 289.0 (düşüş 20.6).
+  Eşik tekdüze değil (8 < 10) → şans payı var. Karar `/backtest 180 toplu eski seri` (2023-2024) sonucuna; aday: CLUSTER_MAX 10.
