@@ -1228,6 +1228,16 @@ COMPARE_SETS["hemen"] = [
     C("Klasik + dönüşte onay beklenmez", **dict(_YENI, ENTRY_EARLY=2)),
     C("Klasikte onay beklenmez, giriş 2 → 1 mum", **dict(_YENI, ENTRY_EARLY=1, ENTRY_WINDOW=1)),
 ]
+# Erken çıkış yeniden (kullanıcı 21.10 00:21, RONIN 25.04 / SEI 09.05 erken çıkıp +5R gitti): 10 coin CSV tahmininde kuralın faydası küçülmüş (+8R / 7 dönem;
+# 14.10'da 12 ayda +73R idi), sonradan eklenen kurallar kötü işlemlerin bir kısmını zaten eliyor. Bugünkü canlıyla gerçek test.
+# Kabul: 5 dönemde ≥4 canlıdan iyi, toplam artar, 2 eski dönemde eksiye düşmez.
+COMPARE_SETS["cikis"] = [
+    C("Canlı ayar (erken çıkış 2 mum, derin kapanışta 0.35 ATR'den sonra yok)", **_YENI),
+    C("Erken çıkış yok", **dict(_YENI, FAILED_ENTRY_BARS=0)),
+    C("Erken çıkış sadece giriş mumunda (1 mum)", **dict(_YENI, FAILED_ENTRY_BARS=1)),
+    C("Erken çıkış 2 mum, derin eşik 0.2 ATR", **dict(_YENI, EARLY_EXIT_MAX_ATR=0.2)),
+    C("Erken çıkış 2 mum, derin eşik 0.5 ATR", **dict(_YENI, EARLY_EXIT_MAX_ATR=0.5)),
+]
 COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /
 # -11.4: 31 stop kurtarıp 29 TP'yi girişten çıkarıyordu). Şimdiki canlı sistemle (iki kural + derin kapanışta erken çıkış

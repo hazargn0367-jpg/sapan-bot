@@ -1000,3 +1000,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   kayıtlar geçersiz sayıldı, analiz seri + hemen seri her coinin arşivden önceki (listelenmeden önceki) kısmını API'ye sordu (önceden kayıt aralığı bunu önlüyordu).
   Düzeltme (sonraki dalında, ENGEL BİTİNCE yüklenecek: engel sürerken yeniden başlatma canlı mum kaydını siler, REST'siz yeniden kurulamaz): archive.get_range ilk arşiv
   dosyasından önceki boşluğu API'ye hiç sormaz (skipped_lead). Engel sırasında canlı tarama WebSocket ile sürüyor (ws_only), otomatik emir konamaz.
+- 21.10 00:21 "kodla": erken çıkış yeniden (RONIN 25.04 / SEI 09.05 erken çıkıp mfe ~5R): 10 coin CSV'de 224 erken çıkış -52.4R, %26'sı stopa değmeden 2.2R'ye gidiyor,
+  kural olmasa tahmini -60.8R (fayda +8R; 14.10'da çok daha büyüktü). COMPARE_SETS["cikis"]: canlı · erken çıkış yok · 1 mum · derin eşik 0.2 · 0.5 ATR.
+  `/backtest 180 çıkış seri` + `çıkış eski seri`. Binance engeli (01:30) bitince arşiv düzeltmesiyle birlikte yüklenecek.
