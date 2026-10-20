@@ -84,6 +84,7 @@ STATUS_TR = {
     "pivot_leg": "Tepe/dip tek mumluk fırlamayla yapılmış (temiz trend yok)",
     "not_clean": "Trend temiz değil (bacak / EMA açılımı şartı tutmadı)",
     "btc_corr": "Coin BTC'ye çok benzer hareket ediyor (korelasyon)",
+    "htf": "Üst zaman diliminde (1s / 4s) trend ters ya da yok",
     "touch_prev": "Temas mumu önceki mumun dibini (SHORT) / tepesini (LONG) geçti",
     "spike_top": "Sivri tepe: tepe / dip 2 dev mumla yapılmış",
     "skip_btc": "BTC ters yönde (portföy koruması)",
@@ -325,6 +326,25 @@ def resample_tf(df15, minutes):
     out = out[out["n"] == minutes // base_min].drop(columns="n")
     out["timestamp"] = (out.index - pd.Timestamp(0, tz="UTC")) // pd.Timedelta(milliseconds=1)
     return out.reset_index(drop=True)[["timestamp", "Open", "High", "Low", "Close"]]
+
+
+def add_htf(df):
+    """Üst zaman dilimi trend sütunları (HTF_MODE testi): 1s / 4s mumlar 15dk'dan birleştirilir, EMA20/50/100 hesaplanır, her 15dk mumuna
+    o mumun KAPANIŞINDA kapanmış olan son üst mum eşlenir (ileriye bakma yok: üst mum açılış + süre <= 15dk mumun kapanışı)."""
+    ts = df["timestamp"].values.astype("int64")
+    base = df[["timestamp", "Open", "High", "Low", "Close"]]
+    for name, mins in (("HTF1", 60), ("HTF4", 240)):
+        h = resample_tf(base, mins)
+        c = h["Close"]
+        e20, e50, e100 = (c.ewm(span=n, adjust=False).mean() for n in (20, 50, 100))
+        ok = pd.Series(np.arange(len(h)) >= 100, index=h.index)   # EMA100 oturmadan sinyal yok
+        full = np.where(ok & (e20 > e50) & (e50 > e100), 1, np.where(ok & (e20 < e50) & (e50 < e100), -1, 0))
+        weak = np.where(ok & (e20 > e50), 1, np.where(ok & (e20 < e50), -1, 0))
+        close_ts = h["timestamp"].values.astype("int64") + mins * 60000   # üst mumun kapanış anı
+        pos = np.searchsorted(close_ts, ts + BAR_MS, side="right") - 1   # 15dk mumun kapanışında kapanmış son üst mum
+        for col, arr in ((name, full), (name + "W", weak)):
+            df[col] = np.where(pos >= 0, arr[np.clip(pos, 0, None)], 0).astype("int8") if len(h) else 0
+    return df
 
 
 def prepare(df):
@@ -730,7 +750,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
-              "REENTRY_BARS", "REENTRY_EARLY"]
+              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1114,6 +1134,16 @@ COMPARE_SETS["ikinci"] = [
     C("+ 2. temasa da izin", **_YENI, sig={"TOUCH_NTH": 2}),
     C("+ 3. temasa kadar izin", **_YENI, sig={"TOUCH_NTH": 3}),
 ]
+# 1s / 4s trend onayı (kullanıcı 20.10, "3 le 4 ü deneyelim"): 15dk sinyalde son kapanmış 1s (4s) mumda EMA20>50>100 aynı yönde şart.
+# "hafif" = sadece EMA20 > EMA50. Kabul: 5 dönemde ≥4 artı, toplam R canlıdan yüksek (ya da işlem başı R belirgin yüksek), 2 eski dönem eksi değil.
+COMPARE_SETS["ust"] = [
+    C("Canlı ayar", **_YENI),
+    C("+ 1s trend aynı yönde (20>50>100)", **_YENI, HTF_MODE="1h"),
+    C("+ 1s hafif (20>50)", **_YENI, HTF_MODE="1h_w"),
+    C("+ 4s trend aynı yönde (20>50>100)", **_YENI, HTF_MODE="4h"),
+    C("+ 4s hafif (20>50)", **_YENI, HTF_MODE="4h_w"),
+    C("+ 1s ve 4s ikisi de", **_YENI, HTF_MODE="1h4h"),
+]
 COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /
 # -11.4: 31 stop kurtarıp 29 TP'yi girişten çıkarıyordu). Şimdiki canlı sistemle (iki kural + derin kapanışta erken çıkış
@@ -1374,7 +1404,7 @@ CHECK_TRADES = [
     ("ESPUSDT", "30.08.2026 11:30", "dönüş: dönüş mumu tam çizgide kapattı (girmezdim)"),    ("DATAIPUSDT", "17.10.2026 06:30", "SHORT: bot erken çıktı, stop onay tepesinde (0.1808) olsaydı 2R TP"),
 ]
 SHORT_STATUS = {"win": "TP", "loss": "STOP", "be": "BAŞABAŞ/ERKEN", "structure_break": "elendi(yapı)", "support": "elendi(destek)",
-                "touch_tail": "elendi(ters iğne)", "not_clean": "elendi(temiz değil)", "btc_corr": "elendi(BTC'ye benzer)", "spike_top": "elendi(sivri tepe)",
+                "touch_tail": "elendi(ters iğne)", "not_clean": "elendi(temiz değil)", "btc_corr": "elendi(BTC'ye benzer)", "htf": "elendi(üst trend)", "spike_top": "elendi(sivri tepe)",
                 "no_room": "elendi(yer)", "open": "açık"}
 
 
@@ -1646,10 +1676,14 @@ def main():
         tfs = ["5m"]  # 5 dakikalık test tek başına çalışır
         set_base_tf("5m")
     global WARMUP_FACTOR
+    use_htf = False
     WARMUP_FACTOR = max(1, max(config.tf_minutes(t) for t in tfs) // (BAR_MS // 60000))
     if args.compare:
         configs = COMPARE_SETS[args.compare]
         chart_idx = CHART_CFG.get(args.compare, 0)
+        use_htf = any(c.get("HTF_MODE") for c in configs)
+        if use_htf:
+            WARMUP_FACTOR = max(WARMUP_FACTOR, 6)   # 4s EMA100 oturması için ~19 gün geriden başla
     elif args.preset == "donus":
         import live_setups
         rules = dict(live_setups.LIVE_RULES, ENTRY_MODE="reclaim")
@@ -1800,6 +1834,8 @@ def main():
             tick = ticks.get(symbol, 0.0)
             for tf in tfs:
                 df = prepare(df15 if tf == BASE_TF else resample_tf(df15, config.tf_minutes(tf)))
+                if use_htf and tf == BASE_TF:
+                    add_htf(df)
                 if tf in btc_close and symbol != "BTCUSDT":
                     df["BTC_Close"] = btc_close[tf].reindex(df["timestamp"].values).values
                 if symbol == "BTCUSDT" and tf == BASE_TF:

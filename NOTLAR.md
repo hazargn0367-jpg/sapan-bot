@@ -915,3 +915,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   (varsayılan AUTO_RISK_USD), trade_rules.RISK_USD 20, AUTO_MOMENTUM_UP varsayılanı 3.0 (aşağı 0.5, pencere 24 saat). Render Environment'ta bu değişkenler tanımlıysa onlar geçer.
   Riskler (430$): normal 20$ (%4.7), 3x 60$ (%14), 0.5x 10$, 2 işlem 3x ikisi stop -120$ (%28), günlük sınır 5R = -100$, testteki en kötü düşüş ~10R = -200$ (%47).
   Backtest raporları artık 1R = 20$.
+- 20.10 11:50 "kodla" → (3) 1s / 4s trend onayı testi: trade_rules.HTF_MODE ("" kapalı canlı / "1h" / "1h_w" / "4h" / "4h_w" / "1h4h"), backtest.add_htf (15dk'dan 1s ve 4s mum
+  birleştirilir, EMA20/50/100; her 15dk muma o mumun KAPANIŞINDA kapanmış son üst mum eşlenir, ileriye bakma yok; 4s EMA100 için ilk 100 üst mum sinyal vermez, WARMUP_FACTOR 6).
+  Tam = EMA20>50>100 (SHORT tersi), hafif = sadece EMA20>EMA50. Sütunlar HTF1 / HTF1W / HTF4 / HTF4W; durum "htf" (CSV: elendi(üst trend)). Sütun yoksa (canlı) filtre yok.
+  COMPARE_SETS["ust"]: canlı · 1s · 1s hafif · 4s · 4s hafif · 1s+4s; `/backtest 180 üst seri` + `üst eski seri`. Kabul: 5 dönemde ≥4 artı, toplam R canlıdan yüksek ya da R/iş
+  belirgin yüksek, 2 eski dönem eksi değil. Doğrulama (sentetik): HTF kapalı = önceki kodla birebir; kesilmiş veride aynı değerler (ileriye bakma yok); filtre işliyor.
+  SADECE sonraki dalında, YÜKLENMEDİ (canlı bot 1s/4s veri çekmiyor; kabul olursa ayrı "kodla" gerekir).

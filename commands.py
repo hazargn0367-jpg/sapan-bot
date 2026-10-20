@@ -25,6 +25,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 kilit seri -> TP 2.2'de kapatmak yerine stop +1.8 / +1.5R'ye (kâr kilidi), hedef 3 / 4 / 5R (+ "kilit eski seri")
   /backtest 180 hedef seri -> onay mumu büyükse (gövde ≥ 0.5 / 0.65 ATR) TP 2.5 / 3, diğerleri 2.2
   /backtest 180 hedef eski seri -> aynı test hiç bakılmamış 2 eski dönemde (önceki5 + önceki6, 2023-2024); "eski" her testte çalışır
+  /backtest 180 üst seri -> 15dk sinyalde 1s / 4s trend onayı şartı (canlı · 1s · 1s hafif · 4s · 4s hafif · ikisi) (+ "üst eski seri")
   /backtest 180 ikinci seri -> tepeden sonra 2. / 3. EMA20 temasına da izin (işlem sayısı artar mı, R düşer mi) (+ "ikinci eski seri"; CSV'de temas_no)
   /backtest 180 ema seri -> temas EMA50 / EMA100 + yapı kuralları (kural 8 ve son salınım tepesi/dibi; iğne/kapanış); tek dönem `ema` grafikler EMA50 (son salınım, iğne), `ema yüz` EMA100 (+ "ema eski seri")
   /backtest 180 pay seri -> stop payı 0.3 (canlı) / 0.15 / 0 / 0 + erken çıkış yok (+ "pay eski seri" = 2 eski dönem)
@@ -171,6 +172,8 @@ def start_backtest(text):
         args += ["--compare", "gemini"]
     elif re.search(r"\bgiri[şs]\b", low):
         args += ["--compare", "giris"]
+    elif re.search(r"\b[üu]st\b", low):   # 20.10: 1s / 4s trend onayı
+        args += ["--compare", "ust"]
     elif re.search(r"\bikinci\b", low):   # 20.10: 2. / 3. EMA20 temasına da izin
         args += ["--compare", "ikinci"]
     elif re.search(r"\bema\b", low):   # 17.10: temas EMA50 / EMA100 ("yüz": grafikler EMA100 satırından; rakam RR sanılmasın)

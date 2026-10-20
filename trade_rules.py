@@ -137,6 +137,8 @@ PIVOT_BAND2_MAX = 5          # fazla mum uç verdiyse girme (dipte/tepede taban 
                              # -2.5 / -3.6 / -13.7R. 12 mum iğne >0.58 (WICKY_MAX) -3.3 / -6.5 / -2.7R (15.10)
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
+HTF_MODE = ""                # üst zaman dilimi trend onayı (kullanıcı 20.10, sadece backtest): "1h" / "4h" / "1h4h" = son KAPANMIŞ 1s / 4s mumda
+                             # EMA20 > EMA50 > EMA100 (SHORT'ta tersi) şart; "1h_w" / "4h_w" = hafif (sadece EMA20 > EMA50). "" = kapalı.
 BTC_CORR_BARS = 96           # benzerlik penceresi (15dk'da 96 mum = 24 saat)
 SPIKE_TOP_ATR = 0.0          # >0: tepeyi (LONG) / dibi (SHORT) yapan son 2 mumun boyu, tepeden önceki ATR'nin bu
                              # katı ya da fazlasıysa girme (sivri tepe: düz giderken 2 dev mumla yapılan tepe)
@@ -523,6 +525,19 @@ def spike_top(df, i, side):
     return float(move / a)
 
 
+def htf_ok(df, i, side):
+    """HTF_MODE: üst zaman diliminde trend aynı yönde mi (sütunlar backtest.add_htf'ten: HTF1 / HTF4 = tam sıra, HTF1W / HTF4W = hafif;
+    +1 yukarı, -1 aşağı, 0 yok / veri yok). Sütun yoksa (canlı) filtre uygulanmaz."""
+    want = 1 if side == "LONG" else -1
+    names = {"1h": ["HTF1"], "1h_w": ["HTF1W"], "4h": ["HTF4"], "4h_w": ["HTF4W"], "1h4h": ["HTF1", "HTF4"]}.get(HTF_MODE, [])
+    for c in names:
+        if c not in df.columns:
+            return True
+        if int(df[c].values[i]) != want:
+            return False
+    return True
+
+
 def btc_corr(df, i, bars=None):
     """Coinin son `bars` mumdaki getirilerinin BTC getirileriyle korelasyonu (1 = birebir aynı hareket, 0 = ilgisiz).
     Tabloda BTC_Close sütunu yoksa (BTC'nin kendisi ya da BTC verisi alınamadı) NaN."""
@@ -643,7 +658,7 @@ def _reentry(df, res, side):
 
 def _simulate_core(df, i, side, tick, mode=None):
     """i: temas mumu. Sonucu sözlük olarak döner. mode: None = ENTRY_MODE ("classic" / "reclaim").
-    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | spike_top | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
+    status: session | quiet | no_close | no_close_below | no_reclaim | touch_body | no_prior_touch | structure_break | dirty_pivot | pivot_wick | support | pivot_leg | not_clean | btc_corr | htf | spike_top | touch_prev | touch_tail | cancel_touch | no_confirm | wick | atr | atr_min |
             min_risk | max_risk | no_room | cancel_confirm |
             no_entry | chase | zigzag | no_ema200 | no_new_high | wicky | big_touch | wide_pivot | win | loss | be | open | pending"""
     O = df["Open"].values
@@ -718,6 +733,9 @@ def _simulate_core(df, i, side, tick, mode=None):
         return res
     if clean_trend_active() and not clean_trend_ok(trend_features(df, i, side)):
         res["status"] = "not_clean"
+        return res
+    if HTF_MODE and not htf_ok(df, i, side):
+        res["status"] = "htf"
         return res
     if BTC_CORR_MAX > 0:
         k = btc_corr(df, i)
