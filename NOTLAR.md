@@ -921,3 +921,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   COMPARE_SETS["ust"]: canlı · 1s · 1s hafif · 4s · 4s hafif · 1s+4s; `/backtest 180 üst seri` + `üst eski seri`. Kabul: 5 dönemde ≥4 artı, toplam R canlıdan yüksek ya da R/iş
   belirgin yüksek, 2 eski dönem eksi değil. Doğrulama (sentetik): HTF kapalı = önceki kodla birebir; kesilmiş veride aynı değerler (ileriye bakma yok); filtre işliyor.
   SADECE sonraki dalında, YÜKLENMEDİ (canlı bot 1s/4s veri çekmiyor; kabul olursa ayrı "kodla" gerekir).
+- 20.10 12:14 1s / 4s trend onayı sonucu (`üst seri`, 5 dönem May 24 – Eki 26, canlı ayar): canlı +32.4 / +58.4 / +17.2 / -3.6 / +2.0 = +106.3R (365 iş, 0.29R/iş) ·
+  1s +86.3R (296, 0.29) · 1s hafif +107.1R (360, 0.30, canlıyla aynı) · 4s +68.8R (181, 0.38, 3/5 artı) · 4s hafif +76.2R (232, 0.33) · 1s+4s +71.4R (177, 0.40).
+  4s işlem başı R'yi artırıyor ama işlemlerin yarısını atıyor, toplam -35R. 1s'in elediği 69 işlem +20R. Son 1 ayın 10 kayıp LONG'unu (-8.3R) 1s hiç elemedi, 4s yarısını.
+  RED: 10R/ay hedefine işlem sayısı azaldığı için zarar. Canlıya alınmadı.
