@@ -1241,7 +1241,7 @@ COMPARE_SETS["teyit"] = [
 # Toplu sinyal eşiği şimdiki canlı sistemle (kullanıcı 15.10 19:14 "kodla"). 18 ayda en fazla 2 işlem sınırı hiç işlem
 # engellemedi; toplu filtre 87 / 183 / 122 kurulum eledi (tahmini -16.5 / +9.9 / -7.8). Eski "toplu" seti 14.10 kurallarıyla.
 COMPARE_SETS["toplu2"] = [
-    C("Canlı ayar (aynı mumda 5+ coin varsa girme, en fazla 2 işlem)", **_CANLI_SON),
+    C("Önceki canlı (aynı mumda 5+ coin varsa girme, en fazla 2 işlem)", **dict(_CANLI_SON, cluster_max=5)),
     C("Toplu sinyal sınırı 8 coin", **dict(_CANLI_SON, cluster_max=8)),
     C("Toplu sinyal sınırı 10 coin", **dict(_CANLI_SON, cluster_max=10)),
     C("Toplu sinyal filtresi kapalı (en fazla 2 işlem)", **dict(_CANLI_SON, cluster_max=0)),

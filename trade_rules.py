@@ -159,7 +159,7 @@ BE_LOCK_R = 0.0        # >0: BE_TRIGGER'a gelince stop girişe değil girişin b
 # yeniden geçerse aynı giriş / stop / TP ile bir kez daha girilir. İki bacağın R'si toplanır.
 REENTRY_BARS = 0       # >0: erken çıkıştan sonra kaç mum boyunca yeniden giriş emri bekler
 REENTRY_EARLY = True   # yeniden girişte de erken çıkış kuralı (ilk FAILED_ENTRY_BARS mumda girişin gerisinde kapanış)
-RISK_USD = 20.0        # 1R = kaç dolar (backtest raporlarında; canlı/oto 1R ile aynı: 15.10 15$, 20.10 20$)
+RISK_USD = 15.0        # 1R = kaç dolar (backtest raporlarında; canlı/oto 1R ile aynı: 15.10 15$, 20.10 20$, 20.10 18:06 15$)
 FEE_TAKER = 0.0005     # Binance vadeli piyasa emri komisyonu (%0.05)
 FEE_MAKER = 0.0002     # Binance vadeli limit emri komisyonu (%0.02)
 

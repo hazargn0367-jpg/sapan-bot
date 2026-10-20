@@ -48,7 +48,7 @@ log = logging.getLogger("bot")
 
 API_KEY = os.environ.get("BINANCE_API_KEY", "").strip()
 API_SECRET = os.environ.get("BINANCE_API_SECRET", "").strip()
-RISK_USD = float(os.environ.get("AUTO_RISK_USD", "20"))         # 1R = kaç dolar (otomatik işlemde); 20.10 11:43 kullanıcı: 15 → 20 (bakiye 430$)
+RISK_USD = float(os.environ.get("AUTO_RISK_USD", "15"))         # 1R = kaç dolar (otomatik işlemde); 20.10 11:43: 15 → 20 · 20.10 18:06: 20 → 15 (toplu 10 coin denemesi, 1 ay)
 LEVERAGE = int(os.environ.get("AUTO_LEVERAGE", "50"))             # en yüksek kaldıraç (işlem başı otomatik seçilir)
 MAX_NOTIONAL = float(os.environ.get("AUTO_MAX_NOTIONAL", "4000"))  # tek işlemde en büyük pozisyon (USDT); stop ≥ %0.5
                                                                     # olduğu için 15$ riskte en fazla ~3000

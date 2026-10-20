@@ -955,3 +955,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   → kabul şartını tam geçmiyor (eski dönem eksi olmasın). Filtre kapalı RED. Karar kullanıcıda.
 - 20.10 17:56 kullanıcı: 10 coin işlemlerinin grafikleri (Telegram'daki gibi). CHART_CFG["toplu2"] = 2 (10 coin), CHART_NEW["toplu2"] = 0: grafiklerde sadece
   canlıda olmayan (10 coin sınırının eklediği) işlemler, 15 TP + 15 stop fotoğraf + hepsi PDF. `/backtest 180 toplu` (tek dönem; seride grafik yok). YÜKLENDİ.
+- 20.10 18:06 kullanıcı "yükle, 1R'ı 15 yap, 1 ay bakalım, kârlı geçerse yükseltiriz" → CANLI DEĞİŞTİ: live_setups.CLUSTER_MAX 5 → 10 (bildirim + otomatik işlem),
+  AUTO_RISK_USD / ALERT_RISK_USD varsayılanı 20 → 15 (3x = 45$, 0.5x = 7.5$, günlük sınır 5R = 75$), trade_rules.RISK_USD 15 (backtest raporları). toplu2 setinin ilk satırı
+  artık "Önceki canlı (5+)" (cluster_max=5 sabit); diğer setlerin "canlı" satırları 10 coin. Render Environment'ta AUTO_RISK_USD tanımlıysa o geçer.
+  Beklenen (backtest, 1R=15$, 3x/0.5x): son 18 ay ayda ~+167$ (en iyi ~+490$, en kötü ~-133$), ~20 iş/ay, maks düşüş ~-15.5R ≈ -233$. Kasım ortası değerlendirilecek.

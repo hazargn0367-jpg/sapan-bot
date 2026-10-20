@@ -32,7 +32,7 @@ from telegram import decision_buttons, send_message, send_photo
 log = logging.getLogger("bot")
 
 UNIVERSE = 500          # hacme göre ilk kaç coin taransın
-CLUSTER_MAX = 5         # aynı mumda bu kadar coin aynı yönde temas verirse girme (toplu hareket)
+CLUSTER_MAX = 10        # aynı mumda bu kadar coin aynı yönde temas verirse girme (toplu hareket); 20.10 18:06: 5 → 10 (7 dönemde 6/7 iyi, +37R)
 MAX_OPEN = 2            # aynı anda en fazla bu kadar işlem (giriş bekleyen + açık); doluysa yeni EMİR HAZIR gönderilmez
 SCAN_THREADS = 6
 RECOVER_BARS = 60   # yeniden başlarken son 60 mumdaki (5m'de 5 saat) bildirilmiş setup'lar takibe geri alınır
@@ -85,7 +85,7 @@ LIVE_RULES = dict(
 )
 MODE_TR = {"classic": "klasik", "reclaim": "dönüş"}
 # Bildirimlerde 1R kaç dolar (kullanıcı 15.10: "1R'ım 1 dolar olacak"). Backtest raporları 25$ ile kalır.
-ALERT_RISK_USD = float(os.environ.get("ALERT_RISK_USD", os.environ.get("AUTO_RISK_USD", "20")))  # 15.10 14:24: 15$ · 20.10 11:43: 20$
+ALERT_RISK_USD = float(os.environ.get("ALERT_RISK_USD", os.environ.get("AUTO_RISK_USD", "15")))  # 15.10 14:24: 15$ · 20.10 11:43: 20$ · 20.10 18:06: 15$
 
 FINAL = ("win", "loss", "be", "cancel_confirm", "no_entry")
 STATUS_MSG = {
