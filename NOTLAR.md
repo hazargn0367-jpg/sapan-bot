@@ -935,3 +935,13 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   sadece kırılım +66.6R ama 2675 iş, 0.02R/iş (TP %24) · canlı + kırılım +107.3R (2835 iş; kırılım işlemleri 2 açık işlem sınırını doldurup EMA20 işlemlerini 327 → 183'e
   düşürdü, EMA20 kısmı +47.8R) · uzantı ≥2 ATR +93.8R · önünde ≥1R yer +36.5R · geri test ≤12 mum +119.0R (2588 iş, 0.05R/iş, 1 dönemde canlıdan kötü).
   Kırılım SHORT her dönem artı (+16.7 / +14.6 / +43.9 / +12.0, 1497 iş, ~0.06R/iş), LONG -27.7R. İşlem başı R komisyon/kaymaya çok yakın → RED. Canlıya alınmadı.
+- 20.10 15:29 kullanıcı "başka bir şey bul". (a) Yoğun rejim ölçüsü (son 24 saatte kapanan BÜTÜN kırılım / bütün canlı kurulumların toplamı,
+  kırılım CSV'leri): canlı işlemleri ayırmıyor (kır >0 0.25R/iş, <0 0.35) → mevcut "kendi işlemleri" kuralı en iyisi (>0 0.60R/iş). RED.
+  (b) TOPLU SİNYAL FİLTRESİ BUGÜNKÜ KURALLARLA (kırılım seri CSV'lerindeki "Canlı ayar" skip_cluster satırları; R çıkış fiyatından yeniden hesaplandı,
+  işlem satırlarında hata ≤0.0005R; scratchpad clus*.py): 5 dönemde 539 kurulum toplu filtreye takılmış, +49.1R. En fazla 2 işlemle yeniden kurulan
+  portföy (aynı mumda sıra 30 kez rastgele): filtre kapalı ort. +163…168R (min 152) vs canlı 112.7R, dönemler ~+34 / +76 / +22 / +26 / +7 vs
+  +34.5 / +60.5 / +19.3 / -3.6 / +2.0 (4/5 iyi, 1 eşit). 3x/0.5x ile 291.8R vs 184.8R, son 18 ay 11.5 vs 9.7R/ay, ama maks düşüş -20.1 vs -13.6R,
+  iş/ay 25.6 vs 12.3. Eklenen 408 işlem +0.12R/iş (TP %27) ve kârın tamamı ~10 büyük günden (en iyi 10 gün hariç -11.7R; gün bootstrap P>0 %95).
+  15.10'daki toplu2 testi (o günkü kurallar, Nis-Eki 26) filtre kapalı -11R demişti; bugünkü kurallarla aynı dönem ~0 → değer kurallara/döneme duyarlı.
+  ADAY, gerçek testle doğrulanmalı (kod gerekmez, toplu2 seti LIVE_RULES'u kullanıyor): `/backtest 180 toplu seri` + `/backtest 180 toplu eski seri`.
+  Kabul olursa canlıda live_setups.CLUSTER_MAX=0; düşüş büyüdüğü için 1R küçültülmeli (430$'da -20R × 20$ = bakiyenin %93'ü).
