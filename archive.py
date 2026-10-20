@@ -207,6 +207,12 @@ def get_range(symbol, interval, start_ms, end_ms, api_max_wait=None, now_ms=None
         if not api_recent and a >= today0 - DAY_MS:
             _add("skipped_recent")
             continue
+        if first_covered is not None and b <= first_covered:
+            # Arşivde ilk dosyadan önceki kısım: coin o tarihte listelenmemişti (aylık dosya listelendiği ay için de var).
+            # API'ye sorulmaz: 21.10 00:02 hacimli veri için bütün kayıtlar yeniden indirilirken her coinin bu kısmı API'ye
+            # soruldu, istekler IP engeline (-1003, 1.5 saat) yol açtı.
+            _add("skipped_lead")
+            continue
         try:
             # API engelliyse hiç deneme (engel uzamasın): hemen aşağıdaki karara düş
             if exchanges.blocked_for() > 60:

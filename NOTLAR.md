@@ -996,3 +996,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   (0/5). Onay mumu kapanışı en güçlü filtrelerden biri: kaldırınca işlem ~3 kat, işlem başı R ~1/4. RED, eski seri gereksiz.
   20.10 itibarıyla denenen ve reddedilen: 2./3. temas, 1s/4s trend, kırılım-geri test, toplu filtre kapalı, TP önceki tepe, en fazla 3 işlem, yoğun rejim, geniş stop,
   hacim, erken giriş, LONG/SHORT boyut. Kabul edilen: toplu sınırı 10 coin (canlıda).
+- 21.10 00:02 /oto: Binance -1003 "Way too many requests", IP 74.220.51.152 01:30'a kadar (1.5 saat) engelli. Büyük ihtimalle BİZİM backtestlerimiz: hacim için diskteki bütün
+  kayıtlar geçersiz sayıldı, analiz seri + hemen seri her coinin arşivden önceki (listelenmeden önceki) kısmını API'ye sordu (önceden kayıt aralığı bunu önlüyordu).
+  Düzeltme (sonraki dalında, ENGEL BİTİNCE yüklenecek: engel sürerken yeniden başlatma canlı mum kaydını siler, REST'siz yeniden kurulamaz): archive.get_range ilk arşiv
+  dosyasından önceki boşluğu API'ye hiç sormaz (skipped_lead). Engel sırasında canlı tarama WebSocket ile sürüyor (ws_only), otomatik emir konamaz.
