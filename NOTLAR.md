@@ -953,3 +953,5 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 20.10 17:36 TOPLU ESKİ SERİ (Kas 23-May 24 98 coin / May-Kas 23 48 coin): canlı -0.1 / +3.4 = +3.3R (96 iş, TP %24) · 8 coin +2.5 / +1.0 · 10 coin +4.5 / -3.7 = +0.8R
   (116 iş) · kapalı +3.7 / -9.0 = -5.3R · kapalı + 5 işlem -17.8R. 7 dönem: 10 coin 148.9R vs canlı 111.8R, 6/7 dönem iyi, ama bir eski dönemde eksi (-3.7, canlı +3.4)
   → kabul şartını tam geçmiyor (eski dönem eksi olmasın). Filtre kapalı RED. Karar kullanıcıda.
+- 20.10 17:56 kullanıcı: 10 coin işlemlerinin grafikleri (Telegram'daki gibi). CHART_CFG["toplu2"] = 2 (10 coin), CHART_NEW["toplu2"] = 0: grafiklerde sadece
+  canlıda olmayan (10 coin sınırının eklediği) işlemler, 15 TP + 15 stop fotoğraf + hepsi PDF. `/backtest 180 toplu` (tek dönem; seride grafik yok). YÜKLENDİ.
