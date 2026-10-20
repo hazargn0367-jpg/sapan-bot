@@ -950,3 +950,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   kapalı +157.8R (763 iş, 3/5, R/iş 0.21; CSV yeniden kurulumu ~+165 tahmin etmişti) · kapalı + en fazla 5 +185.1R (4/5, 862 iş).
   3x/0.5x: canlı 171.8R (son 18 ay 8.9R/ay, düşüş 13.6) · 10 coin 222.0R (5/5, son 18 ay 11.1R/ay, 10/18 ay ≥10R, düşüş 15.5, en kötü ay -8.8) · kapalı 289.0 (düşüş 20.6).
   Eşik tekdüze değil (8 < 10) → şans payı var. Karar `/backtest 180 toplu eski seri` (2023-2024) sonucuna; aday: CLUSTER_MAX 10.
+- 20.10 17:36 TOPLU ESKİ SERİ (Kas 23-May 24 98 coin / May-Kas 23 48 coin): canlı -0.1 / +3.4 = +3.3R (96 iş, TP %24) · 8 coin +2.5 / +1.0 · 10 coin +4.5 / -3.7 = +0.8R
+  (116 iş) · kapalı +3.7 / -9.0 = -5.3R · kapalı + 5 işlem -17.8R. 7 dönem: 10 coin 148.9R vs canlı 111.8R, 6/7 dönem iyi, ama bir eski dönemde eksi (-3.7, canlı +3.4)
+  → kabul şartını tam geçmiyor (eski dönem eksi olmasın). Filtre kapalı RED. Karar kullanıcıda.
