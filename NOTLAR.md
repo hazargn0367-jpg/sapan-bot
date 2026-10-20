@@ -876,3 +876,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   bağımsız kural kontrolünde 0 ihlal. COMPARE_SETS["ema"]: canlı · EMA50 · EMA100 · iki "(ek)" satırı (yavaş düzeltme sınırı yok +
   ters mum ≤4; canlı sınırlar derin düzeltmeyi kesebilir diye). Komutlar: `/backtest 180 ema seri` + `/backtest 180 ema eski seri`
   (7 dönem); grafikler için tek dönem `/backtest 180 ema` (EMA50 satırı) ve `/backtest 180 ema yüz` (EMA100 satırı).
+- 20.10 10:42 kullanıcı: ilk işlem erken çıkışla zararla kapandı, sıradaki 0.5x riskle (7.5$) girdi, TP oldu ama Telegram "+2R" yazdı.
+  Hata değil, gösterim: _finish R'yi işlemin kendi riskine böluyordu (7.5$ → +2.1R), "Bugün toplam" ise 15$'a. Düzeltme: mesajdaki R artık
+  1R = RISK_USD (15$) ölçüsünde (+1.06R, +15.9$), 0.5x/2x işlemde "(risk 7.5$ = 0.5x; işlemin kendi riskine göre +2.12R)" notu.
+  rec["r"] (kendi riskine göre) değişmedi → momentum kuralı (risk_mult) aynı çalışır. Sahte Binance ile test edildi. SADECE sonraki
+  dalında, YÜKLENMEDİ ("yükleme" dedi, 10:45).

@@ -636,8 +636,13 @@ def _finish(rec):
     kind = rec.get("exit_kind", "kapandı")
     emoji = {"TP": "🎯", "stop": "🛑", "erken çıkış": "⚠️"}.get(kind, "⚪")
     nm, ntot, nn = risk_mult(extra=[rec])
-    _say(f"{emoji} <b>{rec['side']} {html.escape(sym)}</b>: {kind} → <b>{r:+.2f}R ({net:+.2f}$)</b> "
-         f"(risk {risk_usd:g}$, komisyon {fee:.3f}$). Bugün toplam {day:+.2f}R ({day * RISK_USD:+.2f}$).\n"
+    # Mesajdaki R, "Bugün toplam" ile aynı birimde: 1R = RISK_USD (20.10 düzeltmesi: 0.5x riskli işlemde TP "+2R" görünüyordu,
+    # oysa 15$ ölçüsünde ~+1R). İşlemin kendi riskine göre R (rec["r"], momentum kuralı bunu kullanır) yanında not olarak yazılır.
+    r_unit = net / RISK_USD if RISK_USD else r
+    own = (f"; işlemin kendi riskine göre {r:+.2f}R" if abs(risk_usd - RISK_USD) > 1e-9 else "")
+    _say(f"{emoji} <b>{rec['side']} {html.escape(sym)}</b>: {kind} → <b>{r_unit:+.2f}R ({net:+.2f}$)</b> "
+         f"(risk {risk_usd:g}$ = {risk_usd / RISK_USD if RISK_USD else 1:g}x{own}, komisyon {fee:.3f}$). "
+         f"Bugün toplam {day:+.2f}R ({day * RISK_USD:+.2f}$).\n"
          f"Sıradaki işlemin riski: {RISK_USD * nm:g}$ ({mult_text(nm, ntot, nn)}).")
     if day <= -DAILY_LOSS_R:
         _say(f"⛔ Bugün {day:+.2f}R: günlük zarar sınırı (-{DAILY_LOSS_R:g}R) doldu, yarına kadar yeni işlem açılmayacak.")
