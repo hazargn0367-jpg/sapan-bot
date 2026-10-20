@@ -804,7 +804,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
-              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH"]
+              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1218,6 +1218,15 @@ COMPARE_SETS["pay2"] = [
     C("Stop payı 0.6 ATR", **dict(_YENI, STOP_BUFFER_ATR=0.6)),
     C("Stop payı 0.8 ATR", **dict(_YENI, STOP_BUFFER_ATR=0.8)),
     C("Stop temas mumunun dibinde (+0.3 ATR pay)", **dict(_YENI, STOP_AT_TOUCH=True)),
+]
+# Onay mumunu beklemeden giriş (kullanıcı 20.10 23:29 "kodla deneyelim"): erken çıkış sahte kırılımları zaten kestiği için onay kapanışını beklemek
+# girişi ~0.5-1 ATR yukarı taşıyor olabilir. Klasik: temas mumu kapanınca girişe temas tepesi + 1 tık stop emri (2 mum), stop temas dibi - 0.3 ATR.
+# Kabul: 5 dönemde ≥4 canlıdan iyi, toplam artar, 2 eski dönemde eksiye düşmez.
+COMPARE_SETS["hemen"] = [
+    C("Canlı ayar (onay mumu kapanışı beklenir)", **_YENI),
+    C("Klasikte onay beklenmez", **dict(_YENI, ENTRY_EARLY=1)),
+    C("Klasik + dönüşte onay beklenmez", **dict(_YENI, ENTRY_EARLY=2)),
+    C("Klasikte onay beklenmez, giriş 2 → 1 mum", **dict(_YENI, ENTRY_EARLY=1, ENTRY_WINDOW=1)),
 ]
 COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /

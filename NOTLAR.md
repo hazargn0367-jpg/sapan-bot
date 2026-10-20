@@ -986,3 +986,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   1.25 / 1.38, hac_duz 1.98 / 1.91 / 1.98, hac_onay 1.14 / 1.11 / 1.09). Her ölçünün üçte bir gruplarının HEPSİ artı; eksi grup yok. En büyük fark hac_duz_ters < 0.79
   (0.46 vs 0.23R/iş) ama dönemlerde tutarsız (0.31/0.32 · 0.71/0.43 · 0.45/0.15 · 0.73/-0.19 · 0.06/0.35). bacak/tepe/son20 orta grup en iyi (tekdüze değil → gürültü).
   Sonuç: hacim TP ile stopu ayırmıyor → RED, kural yok. Hacim sütunları CSV'de kalıyor.
+- 20.10 23:29 "kodla": ONAY MUMUNU BEKLEMEDEN GİRİŞ testi (sadece backtest): trade_rules.ENTRY_EARLY (1 = klasikte conf = temas mumu: giriş temas tepesi + 1 tık
+  stop emri, stop temas dibi - 0.3 ATR, giriş penceresi 2 mum, önce temas dibinin altına inilirse iptal; 2 = dönüşte de conf = dönüş mumu). Erken girişte kural 1
+  (onayda ters iğne) uygulanmaz; diğer kurallar (ATR, %0.5, 1R yer, erken çıkış) aynı. ENTRY_WINDOW PARAM_KEYS'e eklendi. COMPARE_SETS["hemen"]: canlı · klasik erken ·
+  klasik + dönüş erken · klasik erken + giriş 1 mum. `/backtest 180 hemen seri` + `hemen eski seri`. Canlıya alınırsa canlı tarama değişmeden çalışır (onay = son kapanan
+  temas mumu). Sentetik: canlı birebir, giriş = temas tepesi + 1 tık, giriş temastan sonra.

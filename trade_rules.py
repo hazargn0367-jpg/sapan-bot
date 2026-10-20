@@ -137,6 +137,8 @@ PIVOT_BAND2_MAX = 5          # fazla mum uç verdiyse girme (dipte/tepede taban 
                              # -2.5 / -3.6 / -13.7R. 12 mum iğne >0.58 (WICKY_MAX) -3.3 / -6.5 / -2.7R (15.10)
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
+ENTRY_EARLY = 0              # 20.10 testi: 1 = klasikte onay mumu beklenmez (giriş temas mumunun tepesi + 1 tık, stop temas dibi - pay);
+                             # 2 = dönüşte de (giriş dönüş mumunun tepesi). Kural 1 (onayda ters iğne) erken girişte uygulanmaz.
 STOP_AT_TOUCH = False        # True: stop onay mumunun değil temas mumunun (dönüşte temas..onay) dibinin altında (20.10 testi)
 HTF_MODE = ""                # üst zaman dilimi trend onayı (kullanıcı 20.10, sadece backtest): "1h" / "4h" / "1h4h" = son KAPANMIŞ 1s / 4s mumda
                              # EMA20 > EMA50 > EMA100 (SHORT'ta tersi) şart; "1h_w" / "4h_w" = hafif (sadece EMA20 > EMA50). "" = kapalı.
@@ -837,12 +839,18 @@ def _simulate_core(df, i, side, tick, mode=None):
             return res
         res["reclaim"] = j
         conf = j + 1  # onay: dönüş mumunun tepesini (LONG) / dibini (SHORT) kapanışla geçmeli
-        if conf >= n:
+        if ENTRY_EARLY >= 2:
+            conf = j  # erken giriş: onay beklenmez, dönüş mumunun tepesi (dibi) kırılınca giriş
+        elif conf >= n:
             res["status"] = "pending"
             return res
-        if not ((C[conf] > H[j]) if long else (C[conf] < L[j])):
+        if conf != j and not ((C[conf] > H[j]) if long else (C[conf] < L[j])):
             res["status"] = "no_confirm"
             return res
+    early = ENTRY_EARLY >= 1 and (mode != "reclaim" or ENTRY_EARLY >= 2)
+    if early and mode != "reclaim":
+        conf = i  # erken giriş: onay mumu beklenmez, temas mumunun tepesi (SHORT: dibi) kırılınca giriş, stop temas dibinde
+    res["early_entry"] = early
     lo, hi = L[i], H[i]          # temas bölgesi (2 mumlu temasta iki mumun en dibi / en tepesi)
     j, j_end = i + 1, i + 1 + CONFIRM_WINDOW
     while conf is None and j < j_end:
@@ -876,7 +884,7 @@ def _simulate_core(df, i, side, tick, mode=None):
         res["status"] = "no_confirm"
         return res
 
-    if WICK_MAX_BODY > 0:
+    if WICK_MAX_BODY > 0 and not early:
         body = abs(C[conf] - O[conf])
         wick = (H[conf] - max(O[conf], C[conf])) if long else (min(O[conf], C[conf]) - L[conf])
         if wick > WICK_MAX_BODY * body:
