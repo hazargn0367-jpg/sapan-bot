@@ -892,3 +892,18 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   (EMA20 satırı yok). Grafikler: `ema` = EMA50 + son salınım (iğne), `ema yüz` = EMA100 + son salınım (iğne). Kabul ölçütü (kullanıcıya söylendi):
   5 dönemin ≥4'ünde artı, toplam artı, 2 eski dönemde eksiye düşmemek. Sentetik doğrulama: EMA20 modu eski kodla birebir. SADECE sonraki dalında,
   YÜKLENMEDİ. Not: gerçek veriyle STO işleminin kuralla elendiği buradan doğrulanamadı (Binance arşivine erişim yok) → `/incele STOUSDT 27.05.2026 14:00 dönüş` ya da raporda bakılacak.
+- 20.10 11:04 EMA50/100 yapı kuralları testi (180 gün, Telegram özeti; kullanıcı durdurdu): taban EMA50 -24.1R (62 iş) · +kural 8 iğne -14.9 (33) ·
+  kapanış -21.0 (41) · +son salınım iğne -3.2 (9 iş, 0 TP) · kapanış -4.2 (22) · EMA100 -10.9 (19) · +kural 8 -1.1 (1) · +son salınım 0 işlem.
+  Hiçbiri artıya geçmedi, kurallar kötü işlemleri değil işlem sayısını azalttı → EMA50/100 BIRAKILDI.
+- 20.10 11:18 stop payı testi (3 dönem CSV: Nis-Eki 25 / Eki 25-Nis 26 / Nis-Eki 26, canlı ayar): pay 0.3 (canlı) +18.2 / +60.5 / +33.4 = +112.1R ·
+  0.15 +10.5 / +54.7 / +19.0 = +84.2 · 0 +3.4 / +55.5 / +18.0 = +76.9 · 0 + erken çıkış yok -0.5 / +57.1 / +5.5 = +62.1 (TP 113 ama stop 161 vs 76).
+  Canlı 3/3 dönemde en iyi → stop payı 0.3 ve erken çıkış (2 mum) AYNEN KALIR. (5+2 dönemin sadece 3'ü geldi.)
+- 20.10 11:20 18 aylık canlı ayar (3 CSV, drop_duplicates): 6.2R/ay (15.4 iş/ay, +0.405R/iş), 5/18 ay ≥10R, 4 negatif, en kötü -3.1 / en iyi +14.0.
+  Canlı boyutlandırma (24 saatte kapanan işlemler >0 → 2x, <0 → 0.5x) simülasyonu: 134.3R (7.5R/ay, 7/18 ay ≥10R); 2x / 1x (düşürme yok) 143.3R
+  (8.0R/ay); 1.5x/0.5x 118.7R. 10R/ay için ~25 iş/ay (aynı R/iş) ya da R/iş 0.65 gerekir. Kullanıcı: "ayda en az 10R backtest'i yapana kadar denemeliyiz".
+  Fikirler: (1) 2./3. temas (işlem sayısı), (2) kırılım-geri test (ayrı sinyal), (3) 1h trend onayı (kalite), (4) boyut 2x/1x.
+- 20.10 11:22 "kodla" → (1) 2./3. EMA20 temasına izin: strategy.TOUCH_NTH (1 canlı / 2 / 3, "sig" ile). Önceki temaslarda hiçbir mum EMA20'nin yanlış tarafında
+  kapatmaz, önceki temas dönemi sayısı ≤ N-1, temas mumu yeni bir temas dönemi başlatır (önceki mum EMA20'ye değmemiş), ters mum sayımı ve CORR_BARS_MAX
+  son önceki temasın yerel tepesinden/dibinden ölçülür (strategy.nth_local_peak). CSV'de temas_no (1 = ilk temas). COMPARE_SETS["ikinci"]: canlı · ≤2 temas · ≤3 temas;
+  `/backtest 180 ikinci seri` + `ikinci eski seri`. Kabul: 5 dönemde ≥4 artı, işlem sayısı artar ve toplam R düşmez, eski 2 dönemde eksiye düşmez.
+  Doğrulama (sentetik): varsayılan eski kodla birebir; NTH1⊆NTH2⊆NTH3 sinyalleri, bağımsız kural kontrolünde 0 ihlal. SADECE sonraki dalında, YÜKLENMEDİ.

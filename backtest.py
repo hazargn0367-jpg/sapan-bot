@@ -381,6 +381,15 @@ def find_signals(df):
 TRADED = ("win", "loss", "be", "open")
 
 
+def _touch_no(df, i, side):
+    """CSV'de temas sırası (1 = tepeden/dipten sonraki ilk EMA20 teması, 2 = ikinci...)."""
+    long = side == "LONG"
+    H, L, E20 = df["High"].values, df["Low"].values, df["EMA20"].values
+    start = max(0, i - st.LOOKBACK)
+    pv = start + int(np.argmax(H[start:i]) if long else np.argmin(L[start:i]))
+    return st.touch_order(H, L, E20, pv, i, long)
+
+
 def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False, status_counter=None):
     """trades_only: sadece işleme dönen setup'lar saklanır (500 coinde on binlerce satır bellek yer);
     status_counter verilirse bütün setup'ların durumları sayılır (rapordaki huni için)."""
@@ -401,6 +410,7 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
             "coin": symbol, "zaman_dilimi": tf, "yon": side,
             "temas": fmt_time(ts[i]), "temas_utc": fmt_utc(ts[i]), "durum": r["status"],
             "_touch_ts": int(ts[i]),
+            "temas_no": _touch_no(df, i, side),
             "sonuc": STATUS_TR[r["status"]],
         }
         if r.get("two_bar"):
@@ -1094,6 +1104,15 @@ COMPARE_SETS["ema"] = [
     C("EMA100 teması (taban)", **_YENI, sig={"TOUCH_EMA": 100}),
     C("EMA100 + yapı: önceki düzeltme (iğne)", **dict(_YENI, STRUCTURE_BREAK="wick"), sig={"TOUCH_EMA": 100}),
     C("EMA100 + son salınım tepesi/dibi (iğne)", **dict(_YENI, STRUCTURE_BREAK="wick", STRUCTURE_LEVEL="swing"), sig={"TOUCH_EMA": 100}),
+]
+# 2./3. temas testi (kullanıcı 20.10 11:22, "ayda 10R için işlem sayısını artır"): şimdi tepeden sonra sadece İLK EMA20 temasında sinyal var.
+# TOUCH_NTH=2/3: aynı bacakta (yeni tepe yok) EMA20'ye değip dönüp tekrar değen temaslara da izin; önceki temaslarda mumlar EMA20'nin
+# doğru tarafında kapatmış olmalı, ters mum sayımı ve yavaş düzeltme ölçüsü son önceki temasın yerel tepesinden başlar. CSV'de temas_no.
+# Kabul: 5 dönemde ≥4 artı, işlem sayısı artar ve toplam R düşmez, 2 eski dönemde eksiye düşmez.
+COMPARE_SETS["ikinci"] = [
+    C("Canlı ayar (sadece ilk temas)", **_YENI),
+    C("+ 2. temasa da izin", **_YENI, sig={"TOUCH_NTH": 2}),
+    C("+ 3. temasa kadar izin", **_YENI, sig={"TOUCH_NTH": 3}),
 ]
 COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /

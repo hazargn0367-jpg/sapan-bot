@@ -754,6 +754,8 @@ def _simulate_core(df, i, side, tick, mode=None):
     if CORR_BARS_MAX > 0:
         st_ = max(0, i - st.LOOKBACK)
         pv = st_ + int(np.argmax(H[st_:i]) if long else np.argmin(L[st_:i]))
+        if st.TOUCH_NTH > 1:   # 2./3. temas: düzeltme son önceki temasın yerel tepesinden/dibinden ölçülür
+            pv = st.nth_local_peak(H, L, df["EMA20"].values, pv, i, long)
         if i - pv >= CORR_BARS_MAX:
             res["status"] = "slow_corr"
             return res

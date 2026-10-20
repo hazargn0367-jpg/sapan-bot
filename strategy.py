@@ -29,6 +29,7 @@ MAX_EXCEPTION_CANDLES = 2  # Geri çekilmede izin verilen ters mum sayısı
 TOLERANCE_LONG = 1.0003    # EMA20 temas toleransı (%0.03)
 TOLERANCE_SHORT = 0.9997
 MIN_CANDLES = 180
+TOUCH_NTH = 1              # 1 (canlı): tepeden sonra sadece İLK EMA20 teması · 2 / 3: aynı bacakta 2. / 3. temasa da izin (20.10 testi)
 TOUCH_EMA = 20             # 20 (canlı) / 50 / 100: temasın aranacağı EMA (sadece backtest testi, 17.10; canlı hep 20)
 
 
@@ -79,6 +80,52 @@ def _variant_ok(a, i, pivot, long):
     return True
 
 
+def nth_local_peak(H, L, E20, pivot, i, long):
+    """2./3. temas testi: son önceki temastan sonraki yerel tepe (LONG) / dip (SHORT) mumu; önceki temas yoksa tepe/dip mumunun kendisi.
+    Düzeltme ters mum sayısı ve yavaş düzeltme ölçüsü bu mumdan başlar."""
+    after = pivot + 1
+    if i - 1 < after:
+        return pivot
+    t = (L[after:i] <= E20[after:i]) if long else (H[after:i] >= E20[after:i])
+    idx = np.flatnonzero(t)
+    if len(idx) == 0:
+        return pivot
+    e = after + int(idx[-1])
+    seg = H[e:i] if long else L[e:i]
+    return e + int(np.argmax(seg) if long else np.argmin(seg))
+
+
+def touch_order(H, L, E20, pivot, i, long):
+    """Temas kaçıncı temas: tepeden/dipten sonra EMA20'ye değip ayrılan önceki dönem sayısı + 1 (1 = ilk temas)."""
+    after = pivot + 1
+    if i - 1 < after:
+        return 1
+    t = (L[after:i] <= E20[after:i]) if long else (H[after:i] >= E20[after:i])
+    idx = np.flatnonzero(t)
+    if len(idx) == 0:
+        return 1
+    return 2 + int(((idx[1:] - idx[:-1]) > 1).sum())
+
+
+def _nth_start(a, i, pivot, long):
+    """TOUCH_NTH > 1: önceki temaslar geçerli mi? Geçerliyse ters mum sayımının başlayacağı mum, değilse None.
+    Şartlar: tepeden temasa kadar hiçbir mum EMA20'nin yanlış tarafında kapatmamış, önceki temas dönemi sayısı ≤ TOUCH_NTH-1,
+    temas mumu yeni bir temas dönemi başlatıyor (önceki mum EMA20'ye değmemiş)."""
+    after = pivot + 1
+    if i - 1 < after:
+        return pivot
+    L, H, C, E20 = a["Low"], a["High"], a["Close"], a["EMA20"]
+    wrong = (C[after:i] <= E20[after:i]).any() if long else (C[after:i] >= E20[after:i]).any()
+    if wrong:
+        return None
+    t = (L[after:i] <= E20[after:i]) if long else (H[after:i] >= E20[after:i])
+    if t.any() and t[-1]:
+        return None
+    if touch_order(H, L, E20, pivot, i, long) - 1 > TOUCH_NTH - 1:
+        return None
+    return nth_local_peak(H, L, E20, pivot, i, long)
+
+
 def _check_long(a, i):
     H, L, O, C, E20 = a["High"], a["Low"], a["Open"], a["Close"], a["EMA20"]
     start = max(0, i - LOOKBACK)
@@ -96,12 +143,18 @@ def _check_long(a, i):
         return None
 
     after = peak_idx + 1
-    if i - 1 >= after and not (L[after:i] > E20[after:i]).all():
+    cnt0 = after
+    if TOUCH_NTH > 1:
+        ls = _nth_start(a, i, peak_idx, True)
+        if ls is None:
+            return None
+        cnt0 = ls + 1
+    elif i - 1 >= after and not (L[after:i] > E20[after:i]).all():
         return None
     if "EMA20_REAL" in a and not _variant_ok(a, i, peak_idx, True):
         return None
 
-    if int((C[after:i + 1] > O[after:i + 1]).sum()) > MAX_EXCEPTION_CANDLES:
+    if int((C[cnt0:i + 1] > O[cnt0:i + 1]).sum()) > MAX_EXCEPTION_CANDLES:
         return None
 
     if L[i] <= E20[i] * TOLERANCE_LONG and a["Stoch_K"][i] < STOCH_LONG_MAX:
@@ -126,12 +179,18 @@ def _check_short(a, i):
         return None
 
     after = valley_idx + 1
-    if i - 1 >= after and not (H[after:i] < E20[after:i]).all():
+    cnt0 = after
+    if TOUCH_NTH > 1:
+        ls = _nth_start(a, i, valley_idx, False)
+        if ls is None:
+            return None
+        cnt0 = ls + 1
+    elif i - 1 >= after and not (H[after:i] < E20[after:i]).all():
         return None
     if "EMA20_REAL" in a and not _variant_ok(a, i, valley_idx, False):
         return None
 
-    if int((C[after:i + 1] < O[after:i + 1]).sum()) > MAX_EXCEPTION_CANDLES:
+    if int((C[cnt0:i + 1] < O[cnt0:i + 1]).sum()) > MAX_EXCEPTION_CANDLES:
         return None
 
     if H[i] >= E20[i] * TOLERANCE_SHORT and a["Stoch_K"][i] > STOCH_SHORT_MIN:
