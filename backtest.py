@@ -787,7 +787,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
-              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE"]
+              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1191,6 +1191,16 @@ COMPARE_SETS["kirilim"] = [
     C("Canlı + kırılım (uzantı ≥ 2 ATR)", **_YENI, sig={"RETEST": "add", "RT_EXT": 2.0}),
     C("Canlı + kırılım (önünde ≥ 1R yer)", **_YENI, sig={"RETEST": "add", "RT_ROOM": 1.0}),
     C("Canlı + kırılım (geri test en geç 12 mum)", **_YENI, sig={"RETEST": "add", "RT_MAX": 12}),
+]
+# Stop payı 2 (kullanıcı 20.10 22:17 "ondan sonra stop payı"): önceki pay testinde 0 → 0.15 → 0.3 ATR her adımda iyileşti
+# (+76.9 / +84.2 / +112.1R, 3 dönem); 0.3'ün üstü denenmemişti. TP de aynı oranda uzaklaşır (2.2 × risk); "önünde 1R yer" biraz daha çok eler.
+# Canlı satırı bugünkü canlı (toplu 10 coin, 1R 15$). Kabul: 5 dönemde ≥4 canlıdan iyi, toplam artar, 2 eski dönemde eksiye düşmez.
+COMPARE_SETS["pay2"] = [
+    C("Canlı ayar (stop payı 0.3 ATR)", **_YENI),
+    C("Stop payı 0.45 ATR", **dict(_YENI, STOP_BUFFER_ATR=0.45)),
+    C("Stop payı 0.6 ATR", **dict(_YENI, STOP_BUFFER_ATR=0.6)),
+    C("Stop payı 0.8 ATR", **dict(_YENI, STOP_BUFFER_ATR=0.8)),
+    C("Stop temas mumunun dibinde (+0.3 ATR pay)", **dict(_YENI, STOP_AT_TOUCH=True)),
 ]
 COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /

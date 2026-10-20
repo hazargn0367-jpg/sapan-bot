@@ -972,3 +972,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   uyumlu"). /durum'da "📡 WebSocket" satırı. LIVE_WS=0 (Render env) kapatır. Sahte sunucuyla test: parçalı mesaj, 126 uzunluk, ping/pong, kapanış →
   yeniden bağlanma, abonelik değişimi, 20.000 mesaj 0.05 sn; fetch_candles senaryoları (tam / akış / boşlukta REST / engelde sadece akış).
   Gerçek Binance'e bu ortamdan erişim yok → canlıda ilk saatlerde /durum ile izlenecek.
+- 20.10 22:40 stop payı 2 testi (sadece backtest): trade_rules.STOP_AT_TOUCH (stop onay yerine temas mumunun — dönüşte temas..onay — dibinin altında; tepe için tersi).
+  COMPARE_SETS["pay2"] (canlı = bugünkü canlı, toplu 10 coin): 0.3 (canlı) · 0.45 · 0.6 · 0.8 ATR · temas dibi + 0.3. `/backtest 180 geniş seri` + `geniş eski seri`.
+  Sentetikte temas dibi varyasyonu kurulumların yarısını 1.5 ATR stop sınırına takıyor (beklenen). Canlı birebir aynı (sentetik).

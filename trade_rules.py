@@ -137,6 +137,7 @@ PIVOT_BAND2_MAX = 5          # fazla mum uç verdiyse girme (dipte/tepede taban 
                              # -2.5 / -3.6 / -13.7R. 12 mum iğne >0.58 (WICKY_MAX) -3.3 / -6.5 / -2.7R (15.10)
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
+STOP_AT_TOUCH = False        # True: stop onay mumunun değil temas mumunun (dönüşte temas..onay) dibinin altında (20.10 testi)
 HTF_MODE = ""                # üst zaman dilimi trend onayı (kullanıcı 20.10, sadece backtest): "1h" / "4h" / "1h4h" = son KAPANMIŞ 1s / 4s mumda
                              # EMA20 > EMA50 > EMA100 (SHORT'ta tersi) şart; "1h_w" / "4h_w" = hafif (sadece EMA20 > EMA50). "" = kapalı.
 BTC_CORR_BARS = 96           # benzerlik penceresi (15dk'da 96 mum = 24 saat)
@@ -851,10 +852,12 @@ def _simulate_core(df, i, side, tick, mode=None):
 
     buf = STOP_BUFFER_ATR * A[conf]
     ebuf = ENTRY_BUFFER_ATR * A[conf]
+    lo_ref = float(L[i:conf + 1].min()) if STOP_AT_TOUCH else L[conf]   # STOP_AT_TOUCH: stop temas (dönüşte temas..onay) diplerinin altında
+    hi_ref = float(H[i:conf + 1].max()) if STOP_AT_TOUCH else H[conf]
     if long:
-        entry, stop = H[conf] + tick + ebuf, L[conf] - tick - buf
+        entry, stop = H[conf] + tick + ebuf, lo_ref - tick - buf
     else:
-        entry, stop = L[conf] - tick - ebuf, H[conf] + tick + buf
+        entry, stop = L[conf] - tick - ebuf, hi_ref + tick + buf
     risk = abs(entry - stop)
     base_risk = risk - buf - ebuf  # ATR sınırları stop/giriş payları eklenmeden önceki mesafeye uygulanır
     rr = RR
