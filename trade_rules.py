@@ -66,6 +66,8 @@ ROOM_RELAX_WICKY = 0.0       # >0: temastan önceki 12 mumda iğne oranı ≤ bu
 ROOM_RELAX_RISK_ATR = 0.0    # >0: stop mesafesi ≥ bu kadar ATR ise (geniş stop)
 TOUCH_WICK_ROOM_R = 0.0      # >0: kural 5'e uymayan (fitilsiz) temasa önünde en az bu kadar R yer varsa girilir
 STRUCTURE_BREAK = ""         # "wick" / "close": şu anki düzeltme önceki düzeltmenin dibini (LONG) / tepesini (SHORT) kırdıysa işlem yok
+STRUCTURE_LEVEL = "prior"    # "prior": kural 8 (önceki düzeltmenin ucu) · "swing" (20.10, STO örneği "son tepeyi kırmış, trend değişebilir"):
+                             # düzeltme, son dipten/tepeden hemen önceki SALINIM tepesini (SHORT) / dibini (LONG) kırdıysa işlem yok
 TOUCH_TAIL_MAX = 0.0         # >0: temas mumunun ters iğnesi (SHORT'ta alt, LONG'da üst) en fazla bu kadar TOUCH_TAIL_REF (kural 10)
 TOUCH_TAIL_REF = "wick"      # "wick": EMA20 tarafındaki iğne · "atr": ATR · "body": gövde
 SUPPORT_N = 0                # >0: son dipten (SHORT) / tepeden (LONG) sonraki bu kadar mum incelenir (kural 9)
@@ -284,12 +286,14 @@ def structure_details(df, i, side, mode="wick"):
         prior_idx = q + 1 + int(np.argmin(L[q + 1:p]))
         cur_idx = p + 1 + int(np.argmin(src[p + 1:i + 1]))
         out.update(prior_idx=prior_idx, prior=L[prior_idx], cur_idx=cur_idx, cur=src[cur_idx])
-        out["ok"] = out["cur"] >= out["prior"]
+        out["ref"] = float(L[q]) if STRUCTURE_LEVEL == "swing" else out["prior"]
+        out["ok"] = out["cur"] >= out["ref"]
     else:
         prior_idx = q + 1 + int(np.argmax(H[q + 1:p]))
         cur_idx = p + 1 + int(np.argmax(src[p + 1:i + 1]))
         out.update(prior_idx=prior_idx, prior=H[prior_idx], cur_idx=cur_idx, cur=src[cur_idx])
-        out["ok"] = out["cur"] <= out["prior"]
+        out["ref"] = float(H[q]) if STRUCTURE_LEVEL == "swing" else out["prior"]
+        out["ok"] = out["cur"] <= out["ref"]
     return out
 
 

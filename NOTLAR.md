@@ -881,3 +881,14 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   1R = RISK_USD (15$) ölçüsünde (+1.06R, +15.9$), 0.5x/2x işlemde "(risk 7.5$ = 0.5x; işlemin kendi riskine göre +2.12R)" notu.
   rec["r"] (kendi riskine göre) değişmedi → momentum kuralı (risk_mult) aynı çalışır. Sahte Binance ile test edildi. SADECE sonraki
   dalında, YÜKLENMEDİ ("yükleme" dedi, 10:45).
+- 20.10 10:47 EMA50/100 1. tur sonucu (`/backtest 180 ema`, 21.04-15.10.2026, CSV karsilastirma_20261017_1839): canlı EMA20 108 işlem %37 TP +40.1R ·
+  EMA50 61 işlem %9.8 TP -26.2R (7 ayın hepsi ≤0, klasik -14.5 / dönüş -11.7, LONG -9 / SHORT -17) · EMA50 gevşek sınırlarla 73 işlem -26.4R ·
+  EMA100 19 işlem 1 TP -10.9R · gevşek 21 işlem -8.9R. MFE ortancası EMA20 1.06R, EMA50 0.74R; 2.2R'ye gidenler %40 / %13 / %16.
+  EMA50'de 6 TP çıkma olasılığı (p=%37) ~1/600.000 → şans değil. Brüt (komisyonsuz) da eksi (-20R). Taban kötü.
+- 20.10 10:51 kullanıcı: kıyas yapma, amaç EMA50'nin kendi başına EMA20 gibi kârlı olması, başarırsak canlıya; EMA20'nin bütün kuralları geçerli.
+  Örnek STOUSDT 27.05.2026 14:00 SHORT dönüş stop -1.11R: "son tepeyi kırmış, trend değişebilir, girilmez". 10:52 "kodla": trade_rules.STRUCTURE_LEVEL
+  ("prior" = kural 8, önceki düzeltmenin ucu · "swing" = son tepeden/dipten hemen önceki 3+3 salınım tepesi/dibi kırılmış mı). COMPARE_SETS["ema"]
+  yeniden: EMA50 taban · +kural 8 iğne / kapanış · +son salınım iğne / kapanış · EMA100 taban · +kural 8 iğne · +son salınım iğne
+  (EMA20 satırı yok). Grafikler: `ema` = EMA50 + son salınım (iğne), `ema yüz` = EMA100 + son salınım (iğne). Kabul ölçütü (kullanıcıya söylendi):
+  5 dönemin ≥4'ünde artı, toplam artı, 2 eski dönemde eksiye düşmemek. Sentetik doğrulama: EMA20 modu eski kodla birebir. SADECE sonraki dalında,
+  YÜKLENMEDİ. Not: gerçek veriyle STO işleminin kuralla elendiği buradan doğrulanamadı (Binance arşivine erişim yok) → `/incele STOUSDT 27.05.2026 14:00 dönüş` ya da raporda bakılacak.

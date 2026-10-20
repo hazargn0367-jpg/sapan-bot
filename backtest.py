@@ -705,7 +705,7 @@ def build_report_detailed(df_all, period_txt, n_coins, minutes, examples_txt, p0
 # Her ayar: varsayılanların üzerine yazılan değerler. "ad" raporda görünür.
 PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "REQUIRE_PRIOR_TOUCH", "STOP_BUFFER_ATR", "CLEAN_PIVOT_MAX", "CLEAN_PIVOT_ATR",
-              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R", "STRUCTURE_BREAK",
+              "TOUCH_WICK_MIN", "PIVOT_WICK_MAX", "QUIET_UTC", "ROOM_MIN_R", "STRUCTURE_BREAK", "STRUCTURE_LEVEL",
               "SUPPORT_N", "SUPPORT_MIN", "SUPPORT_WICK_BODY", "SUPPORT_WICK_ATR",
               "TOUCH_TAIL_MAX", "TOUCH_TAIL_REF", "ENTRY_MODE", "PIVOT_LEG_MIN", "TIME_STOP_BARS",
               "LEG_BODY_MIN", "LEG_ATR_MIN", "SPIKE_MAX", "EMA_FAN_MIN",
@@ -1081,16 +1081,19 @@ COMPARE_SETS["pay"] = [
 # EMA50 / EMA100 temas testi (kullanıcı 17.10 12:17): aynı kurulum (tepe, düzeltme, stoch, temas mumu, onay, giriş/stop/TP 2.2,
 # canlı kuralların hepsi, klasik + dönüş birlikte) ama temas EMA50 / EMA100'e. Trend sırası tepe mumunda; tepeden temasa kadar
 # daha sığ EMA'ya değip dönen mum (sıçrama) varsa iptal. Kural 2 (trend teyidi) ve bacak ölçüleri gerçek EMA20'de kalır.
-# "(ek)" satırları kullanıcının istemediği ama derin düzeltmeyi kesen iki canlı sınırı gevşetir: ≥10 mum yavaş düzeltme kuralı
-# kapalı + en fazla 4 ters mum (şimdi 2). Sadece fark görülsün diye; karar canlı sınırlarla satırlara göre.
+# 1. tur (21.04-15.10, 180 gün): EMA50 61 işlem %9.8 TP -26.2R, EMA100 19 işlem -10.9R, canlı EMA20 108 işlem +40.1R → taban kötü.
+# 20.10 10:51 kullanıcı (STO 27.05 14:00 SHORT dönüş stop, "son tepeyi kırmış, trend değişebilir"): amaç EMA50'nin kendi başına
+# artıya geçmesi (EMA20 ile kıyas yok), geçerse canlıya. Satırlar: taban · yapı kuralı (kural 8: önceki düzeltmenin ucu) iğne/kapanış ·
+# son salınım tepesi/dibi (son tepeden/dipten hemen önceki 3+3 salınım noktası) iğne/kapanış · EMA100 taban + iki yapı kuralı.
 COMPARE_SETS["ema"] = [
-    C("Canlı ayar (EMA20 teması)", **_YENI),
-    C("EMA50 teması", **_YENI, sig={"TOUCH_EMA": 50}),
-    C("EMA100 teması", **_YENI, sig={"TOUCH_EMA": 100}),
-    C("EMA50 (ek: yavaş düzeltme sınırı yok, ters mum ≤4)", **dict(_YENI, CORR_BARS_MAX=0),
-      sig={"TOUCH_EMA": 50, "MAX_EXCEPTION_CANDLES": 4}),
-    C("EMA100 (ek: yavaş düzeltme sınırı yok, ters mum ≤4)", **dict(_YENI, CORR_BARS_MAX=0),
-      sig={"TOUCH_EMA": 100, "MAX_EXCEPTION_CANDLES": 4}),
+    C("EMA50 teması (taban)", **_YENI, sig={"TOUCH_EMA": 50}),
+    C("EMA50 + yapı: düzeltme önceki düzeltmenin tepesini/dibini kırmamış (iğne)", **dict(_YENI, STRUCTURE_BREAK="wick"), sig={"TOUCH_EMA": 50}),
+    C("EMA50 + yapı: önceki düzeltme (kapanış)", **dict(_YENI, STRUCTURE_BREAK="close"), sig={"TOUCH_EMA": 50}),
+    C("EMA50 + son salınım tepesi/dibi kırılmamış (iğne)", **dict(_YENI, STRUCTURE_BREAK="wick", STRUCTURE_LEVEL="swing"), sig={"TOUCH_EMA": 50}),
+    C("EMA50 + son salınım tepesi/dibi (kapanış)", **dict(_YENI, STRUCTURE_BREAK="close", STRUCTURE_LEVEL="swing"), sig={"TOUCH_EMA": 50}),
+    C("EMA100 teması (taban)", **_YENI, sig={"TOUCH_EMA": 100}),
+    C("EMA100 + yapı: önceki düzeltme (iğne)", **dict(_YENI, STRUCTURE_BREAK="wick"), sig={"TOUCH_EMA": 100}),
+    C("EMA100 + son salınım tepesi/dibi (iğne)", **dict(_YENI, STRUCTURE_BREAK="wick", STRUCTURE_LEVEL="swing"), sig={"TOUCH_EMA": 100}),
 ]
 COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /
@@ -1321,7 +1324,7 @@ COMPARE_SETS["toplu"] = [
     C("Toplu sinyal sınırı 12 coin", **_LIVE_NO_CLUSTER, cluster_max=12),
     C("Toplu sinyal filtresi kapalı", **_LIVE_NO_CLUSTER),
 ]
-CHART_CFG = {"ema": 1, "ema100": 2, "hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
+CHART_CFG = {"ema": 3, "ema100": 7, "hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
              "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "toplu2": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None, "kontrol": None, "cizgi": None, "hedef": None, "kilit": None, "yeniden": None, "pay": None}  # grafikleri çizilecek ayar (listedeki sırası)
 
