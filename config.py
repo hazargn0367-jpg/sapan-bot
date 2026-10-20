@@ -1,6 +1,6 @@
 """
 Genel ayarlar. Gizli bilgiler (token vs.) KODA YAZILMAZ,
-Render > Environment kısmından ortam değişkeni olarak verilir.
+Render > Environment kısmından (kendi sunucuda /etc/sapan-bot.env dosyasından) ortam değişkeni olarak verilir.
 """
 
 import os
@@ -16,7 +16,28 @@ LIVE_TF = os.environ.get("LIVE_TF", "15m")
 
 # Yüklenen sürüm: açılış mesajında ve /durum'da görünür (yeni kod devreye girdi mi anlaşılsın diye)
 VERSION = "21.10 01:35 · CANLI 15m + OTOMATİK İŞLEM 1R=15$ · toplu sinyal sınırı 10 coin · risk son 24 saate göre (kârda 3x = 45$ / ekside 0.5x = 7.5$ / yoksa 15$) · mumlar WebSocket · test: erken çıkış yeniden (çıkış)"
-GIT_COMMIT = os.environ.get("RENDER_GIT_COMMIT", "")[:7]
+def _git_commit():
+    """Render'da RENDER_GIT_COMMIT; kendi sunucuda (deploy/) çalışırken .git klasöründen okunur."""
+    c = os.environ.get("RENDER_GIT_COMMIT", "")
+    if c:
+        return c[:7]
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        head = open(os.path.join(here, ".git", "HEAD")).read().strip()
+        if head.startswith("ref:"):
+            ref = head.split(None, 1)[1]
+            path = os.path.join(here, ".git", ref)
+            if os.path.exists(path):
+                return open(path).read().strip()[:7]
+            for line in open(os.path.join(here, ".git", "packed-refs")):
+                if line.strip().endswith(ref):
+                    return line.split()[0][:7]
+        return head[:7]
+    except OSError:
+        return ""
+
+
+GIT_COMMIT = _git_commit()
 
 
 def version_text():

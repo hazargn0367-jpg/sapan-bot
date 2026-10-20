@@ -1006,3 +1006,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 21.10 02:06 ERKEN ÇIKIŞ YENİDEN sonucu (`çıkış seri`, 5 dönem, canlı = toplu 10): canlı +37.4 / +68.6 / +25.0 / +4.3 / +15.3 = +150.6R (495 iş, 1x düşüş 12.0, 3x 231.6R
   düşüş 15.5) · erken çıkış yok +139.9R (3/5 iyi ama düşüş 18.0 / 3x 26.2, stop 150 → 277) · 1 mum +146.6R · derin eşik 0.2 +132.9 · 0.5 +136.4. Canlı en iyi toplam ve
   en iyi kazanç/düşüş → DEĞİŞİKLİK YOK. Erken çıkış kârı az artırıyor ama düşüşü belirgin azaltıyor (bugün kuralın asıl değeri bu).
+- 21.10 02:37 ikinci uzun engel (03:54'e kadar, ~02:29'da başladı; bizim backtest 02:05'te bitmişti, bot neredeyse istek atmıyordu → paylaşılan IP). Render sabit IP
+  Pro plan + 100$/ay. 02:40 kullanıcı: "sürekli 2. yöntemi kullanalım" (kendi sanal sunucu, ~4-6$/ay). Hazırlandı (sonraki dalında): deploy/ (kurulum.sh,
+  sapan-bot.service, guncelle.sh + 2 dk'lık timer = main'e gönderince otomatik güncelleme, ornek.env, KURULUM.md). config.GIT_COMMIT Render dışında .git'ten.
+  Geçişte Render SUSPEND edilmeli (iki bot aynı anda olmasın), açık işlem yokken. Render diskindeki geçmiş taşınmaz.

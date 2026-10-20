@@ -1,0 +1,20 @@
+[Unit]
+Description=Sapan bot (Telegram EMA20 bildirimleri + Binance otomatik islem)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=bot
+WorkingDirectory=/opt/sapan-bot
+EnvironmentFile=/etc/sapan-bot.env
+Environment=DATA_DIR=/var/data
+Environment=MALLOC_ARENA_MAX=2
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/sapan-bot/venv/bin/python -u bot.py
+Restart=always
+RestartSec=10
+# Bot kapanirken acik islemleri birakmaz (emirler Binance'te durur); 30 sn icinde kapanmazsa zorla
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

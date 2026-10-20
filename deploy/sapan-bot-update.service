@@ -1,0 +1,6 @@
+[Unit]
+Description=Sapan bot guncelleme (GitHub main dalinda yeni surum varsa cek ve yeniden baslat)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/sapan-bot/deploy/guncelle.sh
