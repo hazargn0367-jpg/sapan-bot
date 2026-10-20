@@ -907,3 +907,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   son önceki temasın yerel tepesinden/dibinden ölçülür (strategy.nth_local_peak). CSV'de temas_no (1 = ilk temas). COMPARE_SETS["ikinci"]: canlı · ≤2 temas · ≤3 temas;
   `/backtest 180 ikinci seri` + `ikinci eski seri`. Kabul: 5 dönemde ≥4 artı, işlem sayısı artar ve toplam R düşmez, eski 2 dönemde eksiye düşmez.
   Doğrulama (sentetik): varsayılan eski kodla birebir; NTH1⊆NTH2⊆NTH3 sinyalleri, bağımsız kural kontrolünde 0 ihlal. SADECE sonraki dalında, YÜKLENMEDİ.
+- 20.10 11:37 2./3. EMA20 temas testi (3 dönem CSV, canlı ayar): canlı +17.2 / +60.5 / +33.4 = +111.1R (275 iş) · ≤2 temas +15.6 / +58.8 / +35.6 = +110.0R (298 iş) ·
+  ≤3 temas +14.4 / +60.9 / +34.8 = +110.1R. Eklenen 37 işlem (2. temas) +4.6R (+0.125R/iş, canlıda +0.40) → toplam R değişmedi. RED, canlıya alınmadı.
+- 20.10 11:41 boyutlandırma simülasyonu (18 ay, 275 iş, 24 saat kuralı; yukarı/aşağı çarpan → toplam R, R/ay, ≥10R ay, maks düşüş): 1/1 111.1, 6.2, 5/18, 10.7R ·
+  2/0.5 (canlıydı) 133.3, 7.4, 7/18, 8.9R · 3/0.5 164.4, 9.1, 9/18, 10.0R (getiri/düşüş 16.4 en iyi) · 3/1 173.4, 9.6, 12.4R · 3/1 48 saat 179.1, 14.6R.
+  Bakiye 430$ (kullanıcı artırdı, önceden 225$). 11:43 kullanıcı: "3x yapalım, 1R 20 olsun" → CANLI DEĞİŞTİ (yükleme sonrası): AUTO_RISK_USD varsayılanı 20, ALERT_RISK_USD
+  (varsayılan AUTO_RISK_USD), trade_rules.RISK_USD 20, AUTO_MOMENTUM_UP varsayılanı 3.0 (aşağı 0.5, pencere 24 saat). Render Environment'ta bu değişkenler tanımlıysa onlar geçer.
+  Riskler (430$): normal 20$ (%4.7), 3x 60$ (%14), 0.5x 10$, 2 işlem 3x ikisi stop -120$ (%28), günlük sınır 5R = -100$, testteki en kötü düşüş ~10R = -200$ (%47).
+  Backtest raporları artık 1R = 20$.

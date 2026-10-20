@@ -1,7 +1,7 @@
 """
 Telegram komutları (bot arka planda dinler):
   /oto            -> otomatik işlem durumu (bakiye, açık işlemler, bugünkü R)
-  /oto aç | kapat -> Binance'te otomatik işlemi aç / kapat (1R = AUTO_RISK_USD, varsayılan 15$)
+  /oto aç | kapat -> Binance'te otomatik işlemi aç / kapat (1R = AUTO_RISK_USD, varsayılan 20$)
   /ip             -> botun internet çıkış IP'si (Binance API izin listesine eklenecek)
   /backtest       -> son 7 günle backtest başlatır
   /backtest 60    -> son 60 günle backtest başlatır

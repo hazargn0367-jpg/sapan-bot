@@ -48,7 +48,7 @@ log = logging.getLogger("bot")
 
 API_KEY = os.environ.get("BINANCE_API_KEY", "").strip()
 API_SECRET = os.environ.get("BINANCE_API_SECRET", "").strip()
-RISK_USD = float(os.environ.get("AUTO_RISK_USD", "15"))         # 1R = kaç dolar (otomatik işlemde)
+RISK_USD = float(os.environ.get("AUTO_RISK_USD", "20"))         # 1R = kaç dolar (otomatik işlemde); 20.10 11:43 kullanıcı: 15 → 20 (bakiye 430$)
 LEVERAGE = int(os.environ.get("AUTO_LEVERAGE", "50"))             # en yüksek kaldıraç (işlem başı otomatik seçilir)
 MAX_NOTIONAL = float(os.environ.get("AUTO_MAX_NOTIONAL", "4000"))  # tek işlemde en büyük pozisyon (USDT); stop ≥ %0.5
                                                                     # olduğu için 15$ riskte en fazla ~3000
@@ -62,7 +62,7 @@ POLL_SEC = 5
 # yoksa 1x → 9/9 dönem eşit ya da daha iyi, ayda ~+1R (son yıl +2.4R), en büyük düşüş 16.3R → 14.3R. Kapatmak için Render
 # Environment'ta AUTO_MOMENTUM_UP=1 ve AUTO_MOMENTUM_DOWN=1.
 MOMENTUM_HOURS = float(os.environ.get("AUTO_MOMENTUM_HOURS", "24"))
-MOMENTUM_UP = float(os.environ.get("AUTO_MOMENTUM_UP", "2.0"))
+MOMENTUM_UP = float(os.environ.get("AUTO_MOMENTUM_UP", "3.0"))   # 20.10 11:43 kullanıcı: 2x → 3x (18 ay simülasyon: 3x/0.5x ayda 9.1R, düşüş aynı)
 MOMENTUM_DOWN = float(os.environ.get("AUTO_MOMENTUM_DOWN", "0.5"))
 TZ_OFFSET = 3 * 3600      # gün sınırı TR saatine göre
 
