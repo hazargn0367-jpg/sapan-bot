@@ -1025,3 +1025,5 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 21.10 23:17 ORTA sonucu (`orta seri`, 5 dönem): canlı +37.8 / +69.3 / +26.7 / +3.0 / +15.3 = +152.1R (498 iş, 1x düşüş 10.7) · ≥1 ATR ortada +123.8 (1/5) · ≥0.7 +44.1 (0/5) ·
   ≥1.3 +57.9 / +69.0 / +24.8 / -7.4 / +15.1 = +159.4R (565 iş, sadece 1. dönem iyi, 4 dönem eşit/kötü, düşüş 14.9) · stop ≤ 1 ATR +89.9. RED: fark tek dönemden (SUPER/PONS
   döneminin ayları). Büyük onay mumlu işlemlerde yakın stop TP oranını artırmıyor; iğneyle stop olanlar artıyor. Canlı değişmedi.
+- 22.10 01:41 YENİDEN GİRİŞ bugünkü kurallarla (`yeniden seri`, 2 dönem; kullanıcı kalanı iptal etti): canlı +37.8 / +67.2 · 4 mum +22.8 / +61.3 (TP +5/+8, stop +21/+18)
+  · 8 mum +21.4 / +61.3 · ikincide erken çıkış yok +18.5 / +63.6. 16.10 ile aynı sonuç → RED. (Yeniden girişlerin ~%90'ı 1. mumda, ayrı 1 mum testi gereksiz.)
