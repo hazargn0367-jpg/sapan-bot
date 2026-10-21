@@ -1010,3 +1010,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Pro plan + 100$/ay. 02:40 kullanıcı: "sürekli 2. yöntemi kullanalım" (kendi sanal sunucu, ~4-6$/ay). Hazırlandı (sonraki dalında): deploy/ (kurulum.sh,
   sapan-bot.service, guncelle.sh + 2 dk'lık timer = main'e gönderince otomatik güncelleme, ornek.env, KURULUM.md). config.GIT_COMMIT Render dışında .git'ten.
   Geçişte Render SUSPEND edilmeli (iki bot aynı anda olmasın), açık işlem yokken. Render diskindeki geçmiş taşınmaz.
+- 21.10 15:03 kullanıcı SUPERUSDT (0.5x, 7.5$) işlemine Binance'ten elle EKLEME yaptı (risk ~20$). Sorun: bot stop/TP'yi sabit miktarla (girişteki adet) koyuyordu →
+  eklenen kısım stopsuz/TP'siz kalıyordu. "Kodla, güzel bulduklarıma ekleme yapıp R'ı artırabilirim": autotrade._resize: her 5 sn'lik kontrolde pozisyon miktarı kayıttan
+  farklıysa yeni stop (bütün miktar, aynı fiyat) konur, sonra eskisi silinir; TP silinip bütün miktarla yeniden konur; rec fill = ortalama giriş, risk_usd = miktar ×
+  |ortalama - stop| (R ve 3x/0.5x kuralı gerçek riske göre). Telegram "🔁 ... bütün pozisyona taşındı, risk ~X$". Stop konamazsa eski stop kalır, uyarı (1. ve 5. denemede).
+  Sahte Binance testi geçti. Ayrıca açılış mesajı düzeltmesi (kural özeti HTML kaçırma).

@@ -573,8 +573,6 @@ def _protect(rec, qty):
     if first:
         _, fill = _our_position(sym, side)
         rec.update(status="open", fill=fill, opened=time.time(), qty=_q(qty, f["step"]))
-    elif rec["qty"] != _q(qty, f["step"]):
-        rec["qty"] = _q(qty, f["step"])
     if not rec.get("sl_algo"):
         try:
             api.new_algo(symbol=sym, type="STOP_MARKET", triggerPrice=_px(rec["stop"], f["tick"]), quantity=rec["qty"],
@@ -608,6 +606,58 @@ def _protect(rec, qty):
     if first:
         _say(f"{'🟢' if side == 'LONG' else '🔴'} <b>{side} {html.escape(sym)}</b>: giriş doldu {_fmt(rec['fill'])}, "
              f"{rec['qty']} adet. Borsaya stop {_fmt(rec['stop'])} ve {tp_txt} kondu.")
+
+
+def _resize(rec, qty):
+    """Pozisyon miktarı değişti (kullanıcı elle ekleme / azaltma yaptı, 21.10): stop ve TP bütün pozisyona taşınır.
+    Fiyatlar aynı kalır; risk (R hesabı) yeni miktar ve ortalama girişe göre güncellenir. Önce yeni stop konur, sonra eskisi
+    silinir (pozisyon hiç stopsuz kalmaz); TP önce silinir sonra konur (iki reduceOnly limit toplamı pozisyonu aşmasın)."""
+    sym, side = rec["symbol"], rec["side"]
+    f = _filters(sym)
+    newq = _q(qty, f["step"])
+    _, avg = _our_position(sym, side)
+    n = int(rec.get("resize_n", 0)) + 1
+    old_q = rec["qty"]
+    sl_cid = f"{rec['sl_cid'].split('r')[0] if 'r' in rec['sl_cid'][2:] else rec['sl_cid']}r{n}"
+    tp_cid = f"{rec['tp_cid'].split('r')[0] if 'r' in rec['tp_cid'][2:] else rec['tp_cid']}r{n}"
+    try:
+        api.new_algo(symbol=sym, type="STOP_MARKET", triggerPrice=_px(rec["stop"], f["tick"]), quantity=newq,
+                     workingType="CONTRACT_PRICE", clientAlgoId=sl_cid, **_side_params(side, closing=True))
+    except BinanceError as e:
+        if not _dup(e):
+            rec["resize_fail"] = rec.get("resize_fail", 0) + 1
+            if rec["resize_fail"] in (1, 5):
+                _say(f"⚠️ {html.escape(sym)}: pozisyon {old_q} → {newq} adet oldu ama yeni stop konamadı "
+                     f"({html.escape(str(e))[:150]}). Eklenen kısmı Binance'te elle koru (TP/SL → tüm pozisyon).")
+            return
+    old_sl = rec.get("sl_algo") or rec["sl_cid"]
+    try:
+        api.cancel_algo(sym, old_sl)
+    except BinanceError as e:
+        log.info("OTO %s eski stop silinemedi (zaten yok olabilir): %s", sym, e)
+    rec.update(sl_cid=sl_cid, sl_algo=sl_cid)
+    old_tp = rec.get("tp_order") or rec["tp_cid"]
+    try:
+        api.cancel_order(sym, old_tp)
+    except BinanceError as e:
+        log.info("OTO %s eski TP silinemedi (zaten yok olabilir): %s", sym, e)
+    rec.update(tp_cid=tp_cid, tp_order=None, tp_tries=0, qty=newq, resize_n=n, resize_fail=0)
+    if avg > 0:
+        rec["fill"] = avg
+        rec["risk_usd"] = round(float(newq) * abs(avg - float(rec["stop"])), 4)
+    tp_txt = f"TP {_fmt(rec['tp'])}"
+    try:
+        api.new_order(symbol=sym, type="LIMIT", timeInForce="GTC", price=_px(rec["tp"], f["tick"]),
+                      quantity=newq, newClientOrderId=tp_cid, **_side_params(side, closing=True))
+        rec["tp_order"] = tp_cid
+    except BinanceError as e:
+        if _dup(e):
+            rec["tp_order"] = tp_cid
+        else:
+            rec["tp_tries"] = 1   # sonraki döngülerde _protect yeniden dener
+            tp_txt = f"⚠️ TP konamadı ({html.escape(str(e))[:100]}), tekrar denenecek"
+    _say(f"🔁 {html.escape(sym)} {side}: pozisyon {old_q} → {newq} adet (ortalama giriş {_fmt(rec['fill'])}). "
+         f"Stop {_fmt(rec['stop'])} ve {tp_txt} bütün pozisyona taşındı. Bu işlemin riski artık ~{rec['risk_usd']:.2f}$.")
 
 
 def _finish(rec):
@@ -669,6 +719,9 @@ def check_once():
                     elif time.time() - rec["created"] > 4 * config.tf_minutes(rec.get("tf", "15m")) * 60 + 120:
                         _cancel_entry(rec, "giriş penceresi doldu")   # canlı takip kaçırırsa yedek
                         changed = True
+                elif qty > 0 and rec.get("sl_algo") and rec["qty"] != _q(qty, _filters(sym)["step"]):
+                    changed = True
+                    _resize(rec, qty)       # kullanıcı elle ekleme / azaltma yaptı: stop ve TP bütün pozisyona
                 elif qty > 0 and (not rec.get("sl_algo") or (not rec.get("tp_order") and rec.get("tp_tries", 0) < 5)):
                     changed = True
                     _protect(rec, qty)      # önceki deneme bağlantı hatasıyla yarım kaldı
