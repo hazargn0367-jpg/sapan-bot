@@ -1022,3 +1022,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 21.10 22:48 "kodla" (PONSUSDT 21.10 19:45 3x stop -47$: fiyat 0.2978'e çıkıp iğneyle stopu aldı; SUPER gibi yakın stop/TP ile TP olacaktı, ikisinde de onay mumu büyük):
   trade_rules.STOP_MID_CONF_ATR (onay mumu tepe-dip ≥ X ATR ise stop onay ortasında ∓ 1 tık, pay yok; TP 2.2 × yeni risk). COMPARE_SETS["orta"]: canlı · ≥1 · ≥0.7 · ≥1.3 ATR ·
   stop en fazla 1 ATR. `/backtest 180 orta seri` + `orta eski seri`. Not: risk küçülünce "stop ≥ %0.5" kuralı bazı işlemleri eleyebilir. Canlı birebir (sentetik).
+- 21.10 23:17 ORTA sonucu (`orta seri`, 5 dönem): canlı +37.8 / +69.3 / +26.7 / +3.0 / +15.3 = +152.1R (498 iş, 1x düşüş 10.7) · ≥1 ATR ortada +123.8 (1/5) · ≥0.7 +44.1 (0/5) ·
+  ≥1.3 +57.9 / +69.0 / +24.8 / -7.4 / +15.1 = +159.4R (565 iş, sadece 1. dönem iyi, 4 dönem eşit/kötü, düşüş 14.9) · stop ≤ 1 ATR +89.9. RED: fark tek dönemden (SUPER/PONS
+  döneminin ayları). Büyük onay mumlu işlemlerde yakın stop TP oranını artırmıyor; iğneyle stop olanlar artıyor. Canlı değişmedi.
