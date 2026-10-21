@@ -804,7 +804,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
-              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW"]
+              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW", "STOP_MID_CONF_ATR"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1241,6 +1241,15 @@ COMPARE_SETS["cikis"] = [
 # ARIA benzeri işlemlerin grafikleri (kullanıcı 21.10 17:55): canlı ayar, grafikler sadece sivri tepe ≥ 4 ATR + düzeltme iğne oranı ≥ %50
 # (7 dönem 10 coin CSV: 64 iş +8.3R, 0.13R/iş, TP %28, stop %36). Kural değil, grafik incelemesi için.
 COMPARE_SETS["aria"] = [C("Canlı ayar", **_YENI)]
+# Büyük onay mumunda stop onay ortasında (kullanıcı 21.10 22:48, SUPER 21.10 ve PONS 21.10: yakın TP'ye gidip döndü). Önceki stop
+# testleri (pay 0 / 0.15, STOP_MAX_ATR) stopu bütün işlemlerde yaklaştırıyordu; bu sadece büyük onay mumlu işlemlerde.
+COMPARE_SETS["orta"] = [
+    C("Canlı ayar (stop onay dibi - 0.3 ATR)", **_YENI),
+    C("Onay mumu ≥ 1 ATR ise stop onay ortasında", **dict(_YENI, STOP_MID_CONF_ATR=1.0)),
+    C("Onay mumu ≥ 0.7 ATR ise stop onay ortasında", **dict(_YENI, STOP_MID_CONF_ATR=0.7)),
+    C("Onay mumu ≥ 1.3 ATR ise stop onay ortasında", **dict(_YENI, STOP_MID_CONF_ATR=1.3)),
+    C("Stop en fazla 1 ATR", **dict(_YENI, STOP_MAX_ATR=1.0)),
+]
 COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /
 # -11.4: 31 stop kurtarıp 29 TP'yi girişten çıkarıyordu). Şimdiki canlı sistemle (iki kural + derin kapanışta erken çıkış

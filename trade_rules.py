@@ -137,6 +137,7 @@ PIVOT_BAND2_MAX = 5          # fazla mum uç verdiyse girme (dipte/tepede taban 
                              # -2.5 / -3.6 / -13.7R. 12 mum iğne >0.58 (WICKY_MAX) -3.3 / -6.5 / -2.7R (15.10)
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
+STOP_MID_CONF_ATR = 0.0      # >0 (21.10 testi): onay mumunun boyu (tepe-dip) ≥ bu kadar ATR ise stop onay mumunun ortasında
 ENTRY_EARLY = 0              # 20.10 testi: 1 = klasikte onay mumu beklenmez (giriş temas mumunun tepesi + 1 tık, stop temas dibi - pay);
                              # 2 = dönüşte de (giriş dönüş mumunun tepesi). Kural 1 (onayda ters iğne) erken girişte uygulanmaz.
 STOP_AT_TOUCH = False        # True: stop onay mumunun değil temas mumunun (dönüşte temas..onay) dibinin altında (20.10 testi)
@@ -899,8 +900,15 @@ def _simulate_core(df, i, side, tick, mode=None):
         entry, stop = H[conf] + tick + ebuf, lo_ref - tick - buf
     else:
         entry, stop = L[conf] - tick - ebuf, hi_ref + tick + buf
+    used_buf = buf
+    if STOP_MID_CONF_ATR > 0 and A[conf] > 0 and (H[conf] - L[conf]) >= STOP_MID_CONF_ATR * A[conf]:
+        # Büyük onay mumu (kullanıcı 21.10 SUPER / PONS): stop onay mumunun ortasında (pay yok), TP de o kadar yaklaşır
+        mid = (H[conf] + L[conf]) / 2
+        stop = mid - tick if long else mid + tick
+        used_buf = 0.0
+        res["stop_mid"] = True
     risk = abs(entry - stop)
-    base_risk = risk - buf - ebuf  # ATR sınırları stop/giriş payları eklenmeden önceki mesafeye uygulanır
+    base_risk = risk - used_buf - ebuf  # ATR sınırları stop/giriş payları eklenmeden önceki mesafeye uygulanır
     rr = RR
     if TP_BIG_CONF_ATR > 0 and TP_BIG_RR > 0 and A[conf] > 0 and abs(C[conf] - O[conf]) >= TP_BIG_CONF_ATR * A[conf]:
         rr = TP_BIG_RR   # güçlü onay mumu: hedef daha uzakta

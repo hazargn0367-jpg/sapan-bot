@@ -1019,3 +1019,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   dönemler -2.3 / +10.5 / -0.1 / -3.1 / +3.9 / 0 / -0.6) → kural olarak elemek toplamı düşürür. backtest.CHART_FILTER (karşılaştırma setine göre grafik süzgeci),
   COMPARE_SETS["aria"] (sadece canlı), `/backtest 180 aria` → grafikler sadece bu işlemlerden (15 TP + 15 stop + PDF). Kullanıcı grafiklerden ortak özellik arayacak.
   Ayrıca 21.10: SUPER elle ekleme → _resize canlıda çalıştı (risk 19.29$, +37.01$, kendi riskine göre +1.92R).
+- 21.10 22:48 "kodla" (PONSUSDT 21.10 19:45 3x stop -47$: fiyat 0.2978'e çıkıp iğneyle stopu aldı; SUPER gibi yakın stop/TP ile TP olacaktı, ikisinde de onay mumu büyük):
+  trade_rules.STOP_MID_CONF_ATR (onay mumu tepe-dip ≥ X ATR ise stop onay ortasında ∓ 1 tık, pay yok; TP 2.2 × yeni risk). COMPARE_SETS["orta"]: canlı · ≥1 · ≥0.7 · ≥1.3 ATR ·
+  stop en fazla 1 ATR. `/backtest 180 orta seri` + `orta eski seri`. Not: risk küçülünce "stop ≥ %0.5" kuralı bazı işlemleri eleyebilir. Canlı birebir (sentetik).
