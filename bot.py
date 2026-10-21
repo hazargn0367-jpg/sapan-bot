@@ -129,7 +129,7 @@ def main():
     send_message(f"✅ Bot başladı\n"
                  f"🏷 Sürüm: {html.escape(config.version_text())}\n"
                  f"📋 Emir bildirimleri: {setup} (hacmi en yüksek {live_setups.UNIVERSE} coin, {live_setups.LIVE_TF})\n"
-                 f"Kurallar: {live_setups.rules_summary()}\n"
+                 f"Kurallar: {html.escape(live_setups.rules_summary())}\n"
                  f"🔔 Temas bildirimleri: {durum}\n"
                  f"{oto}\n"
                  + (f"🧠 {prev}\n" if prev else "")
