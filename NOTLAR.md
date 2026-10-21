@@ -1033,3 +1033,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   günün aynı yöndeki 2. işlemi 0.18R/iş (artı). HAZIRLANDI (sonraki dalında, yüklenmedi, "kodla/yükle" bekliyor): trade_rules.CLOSE_STOP_HARD_R (kapanışta stop: mum içi sadece
   girişten X R gerideki sert stop, stop seviyesinin ötesinde kapanışta çık), COMPARE_SETS["igne2"]: canlı · kapanışta stop sert 1.5R / 2R · 1.5R'de stop +0.5R · 1R'de stop -0.5R.
   `/backtest 180 fitil seri`. Sentetik: canlı birebir, kapanış/sert stop doğru.
+- 22.10 02:25 FİTİL sonucu (`fitil seri`, 5 dönem; canlı +37.8 / +68.3 / +26.7 / +3.0 / +15.3 = +151.1R): kapanışta stop sert 1.5R +147.7 (3/5 daha iyi,
+  −3.4R) · sert 2R +142.6 (2/5) · 1.5R'de stop +0.5R +119.8 (0/5) · 1R'de stop −0.5R +131.1 (0/5). Kapanış stopu 12 stopu TP'ye çevirdi (+38.7R) ama
+  120 stop kapanışa kadar daha derin kapandı (−42R; 128 işlem 1.1R'den büyük zarar). REDDEDİLDİ (≥4/5 yok); BE/kilitleme yine zararlı. Eski seri gerek yok.
