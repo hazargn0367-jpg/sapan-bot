@@ -804,7 +804,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
-              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW", "STOP_MID_CONF_ATR"]
+              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW", "STOP_MID_CONF_ATR", "CLOSE_STOP_HARD_R"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1249,6 +1249,15 @@ COMPARE_SETS["orta"] = [
     C("Onay mumu ≥ 0.7 ATR ise stop onay ortasında", **dict(_YENI, STOP_MID_CONF_ATR=0.7)),
     C("Onay mumu ≥ 1.3 ATR ise stop onay ortasında", **dict(_YENI, STOP_MID_CONF_ATR=1.3)),
     C("Stop en fazla 1 ATR", **dict(_YENI, STOP_MAX_ATR=1.0)),
+]
+# İğne stoplarına karşı (kullanıcı 22.10 01:43 "bugünkü gibi işlemlerde kâr için ne yapılabilir"; PONS 21.10: +1.6R gördü, iğne stopu aldı, fiyat
+# geri döndü; 30 ayda stop olanların %14'ü önce ≥1.5R görmüş, -28.6R). Kapanışta stop (sert stop 1.5 / 2R) ve kârdayken stopu yaklaştırma.
+COMPARE_SETS["igne2"] = [
+    C("Canlı ayar (stop mum içinde)", **_YENI),
+    C("Kapanışta stop, sert stop 1.5R", **dict(_YENI, CLOSE_STOP_HARD_R=1.5)),
+    C("Kapanışta stop, sert stop 2R", **dict(_YENI, CLOSE_STOP_HARD_R=2.0)),
+    C("1.5R'ye gelince stop +0.5R'ye", **dict(_YENI, BE_TRIGGER=1.5, BE_LOCK_R=0.5)),
+    C("1R'ye gelince stop -0.5R'ye (zarar yarıya)", **dict(_YENI, BE_TRIGGER=1.0, BE_LOCK_R=-0.5)),
 ]
 COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /

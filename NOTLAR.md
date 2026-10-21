@@ -1027,3 +1027,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   döneminin ayları). Büyük onay mumlu işlemlerde yakın stop TP oranını artırmıyor; iğneyle stop olanlar artıyor. Canlı değişmedi.
 - 22.10 01:41 YENİDEN GİRİŞ bugünkü kurallarla (`yeniden seri`, 2 dönem; kullanıcı kalanı iptal etti): canlı +37.8 / +67.2 · 4 mum +22.8 / +61.3 (TP +5/+8, stop +21/+18)
   · 8 mum +21.4 / +61.3 · ikincide erken çıkış yok +18.5 / +63.6. 16.10 ile aynı sonuç → RED. (Yeniden girişlerin ~%90'ı 1. mumda, ayrı 1 mum testi gereksiz.)
+- 22.10 01:43 kullanıcı: "bugün kazanabileceğimiz yerde çok kaybettim, atladığımız bir şey var mı". 21.10 günü: ARIA -15.45 · SUPER +37.01 (elle ekleme) · PONS 3x + ekleme ~-70
+  (+1.6R gördü, iğne 0.2867 stopu 0.2875 aldı, fiyat geri döndü) · EUL 1x + ekleme ~-15 → bakiye 427 → 363. Sistem tek başına (eklemesiz) ≈ -55$.
+  CSV (10 coin, 7 dönem, 605 iş): stop olanların %32'si önce ≥1R (-66.9R), %14'ü ≥1.5R (-28.6R) görmüş · aynı yönde açık işlem varken açılanlar 49 iş +9.2R (sınır gereksiz) ·
+  günün aynı yöndeki 2. işlemi 0.18R/iş (artı). HAZIRLANDI (sonraki dalında, yüklenmedi, "kodla/yükle" bekliyor): trade_rules.CLOSE_STOP_HARD_R (kapanışta stop: mum içi sadece
+  girişten X R gerideki sert stop, stop seviyesinin ötesinde kapanışta çık), COMPARE_SETS["igne2"]: canlı · kapanışta stop sert 1.5R / 2R · 1.5R'de stop +0.5R · 1R'de stop -0.5R.
+  `/backtest 180 fitil seri`. Sentetik: canlı birebir, kapanış/sert stop doğru.

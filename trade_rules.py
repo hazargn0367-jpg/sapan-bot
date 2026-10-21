@@ -137,6 +137,8 @@ PIVOT_BAND2_MAX = 5          # fazla mum uç verdiyse girme (dipte/tepede taban 
                              # -2.5 / -3.6 / -13.7R. 12 mum iğne >0.58 (WICKY_MAX) -3.3 / -6.5 / -2.7R (15.10)
 BTC_CORR_MAX = 0.0           # >0: coinin son BTC_CORR_BARS mumdaki getirileri BTC ile en az bu kadar benzerse (korelasyon)
                              # işlem yok: coin kendi hareketini değil BTC'yi izliyor (kullanıcı, 14.10). BTC'nin kendisine uygulanmaz.
+CLOSE_STOP_HARD_R = 0.0      # >0 (21.10 testi): stop mum içinde değil, stop seviyesinin ötesinde KAPANIŞTA; mum içi sadece girişten bu kadar R
+                             # gerideki sert stop (1.5 = sert stop -1.5R)
 STOP_MID_CONF_ATR = 0.0      # >0 (21.10 testi): onay mumunun boyu (tepe-dip) ≥ bu kadar ATR ise stop onay mumunun ortasında
 ENTRY_EARLY = 0              # 20.10 testi: 1 = klasikte onay mumu beklenmez (giriş temas mumunun tepesi + 1 tık, stop temas dibi - pay);
                              # 2 = dönüşte de (giriş dönüş mumunun tepesi). Kural 1 (onayda ters iğne) erken girişte uygulanmaz.
@@ -1039,6 +1041,9 @@ def _simulate_core(df, i, side, tick, mode=None):
         if failed(k_in):
             res["early_exit"] = True
             return close_trade(k_in, C[k_in], "be")
+        if CLOSE_STOP_HARD_R > 0 and ((C[k_in] <= stop) if long else (C[k_in] >= stop)):
+            res["close_stop"] = True   # kapanışta stop: giriş mumu stopun ötesinde kapattı
+            return close_trade(k_in, C[k_in], "loss")
         if reached_be(k_in):
             cur_stop, be_on = lock_level, True
             res["lock_on"] = BE_LOCK_R > 0
@@ -1055,8 +1060,27 @@ def _simulate_core(df, i, side, tick, mode=None):
                 res["time_exit"] = True
                 return close_trade(m, O[m], "be")
             cur_stop, be_on = level, True
-        hit_stop = (L[m] <= cur_stop) if long else (H[m] >= cur_stop)
         hit_tp = (H[m] >= tp) if long else (L[m] <= tp)
+        if CLOSE_STOP_HARD_R > 0 and not be_on:
+            # Kapanışta stop (21.10 PONS: iğne stopu alıp fiyat geri döndü): mum içi sadece sert stop (girişten HARD R geride);
+            # asıl stop seviyesinin ötesinde KAPANIŞ olursa o mumun kapanışında çık (kayıp 1R'den biraz fazla olabilir)
+            hard = (fill - CLOSE_STOP_HARD_R * risk) if long else (fill + CLOSE_STOP_HARD_R * risk)
+            if (L[m] <= hard) if long else (H[m] >= hard):
+                res["hard_stop"] = True
+                return close_trade(m, min(hard, O[m]) if long else max(hard, O[m]), "loss")
+            if hit_tp:
+                return close_trade(m, tp, "win")
+            if (C[m] <= stop) if long else (C[m] >= stop):
+                res["close_stop"] = True
+                return close_trade(m, C[m], "loss")
+            if failed(m):
+                res["early_exit"] = True
+                return close_trade(m, C[m], "be")
+            if reached_be(m):
+                cur_stop, be_on = lock_level, True
+                res["lock_on"] = BE_LOCK_R > 0
+            continue
+        hit_stop = (L[m] <= cur_stop) if long else (H[m] >= cur_stop)
         if hit_stop:
             price = min(cur_stop, O[m]) if long else max(cur_stop, O[m])
             if be_on and res.get("lock_on"):
