@@ -1015,3 +1015,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   farklıysa yeni stop (bütün miktar, aynı fiyat) konur, sonra eskisi silinir; TP silinip bütün miktarla yeniden konur; rec fill = ortalama giriş, risk_usd = miktar ×
   |ortalama - stop| (R ve 3x/0.5x kuralı gerçek riske göre). Telegram "🔁 ... bütün pozisyona taşındı, risk ~X$". Stop konamazsa eski stop kalır, uyarı (1. ve 5. denemede).
   Sahte Binance testi geçti. Ayrıca açılış mesajı düzeltmesi (kural özeti HTML kaçırma).
+- 21.10 17:55 "kodla": ARIA benzeri işlemlerin grafikleri. 7 dönem 10 coin CSV: sivri tepe ≥ 4 ATR + düzeltme iğne oranı ≥ %50 → 64 iş +8.3R (0.13R/iş, TP %28, stop %36;
+  dönemler -2.3 / +10.5 / -0.1 / -3.1 / +3.9 / 0 / -0.6) → kural olarak elemek toplamı düşürür. backtest.CHART_FILTER (karşılaştırma setine göre grafik süzgeci),
+  COMPARE_SETS["aria"] (sadece canlı), `/backtest 180 aria` → grafikler sadece bu işlemlerden (15 TP + 15 stop + PDF). Kullanıcı grafiklerden ortak özellik arayacak.
+  Ayrıca 21.10: SUPER elle ekleme → _resize canlıda çalıştı (risk 19.29$, +37.01$, kendi riskine göre +1.92R).

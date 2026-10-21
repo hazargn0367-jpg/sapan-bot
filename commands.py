@@ -31,6 +31,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 ikinci seri -> tepeden sonra 2. / 3. EMA20 temasına da izin (işlem sayısı artar mı, R düşer mi) (+ "ikinci eski seri"; CSV'de temas_no)
   /backtest 180 ema seri -> temas EMA50 / EMA100 + yapı kuralları (kural 8 ve son salınım tepesi/dibi; iğne/kapanış); tek dönem `ema` grafikler EMA50 (son salınım, iğne), `ema yüz` EMA100 (+ "ema eski seri")
   /backtest 180 analiz seri -> sadece canlı ayar, 5 dönem; CSV'de hacim ölçüleri (hac_bacak, hac_duz, hac_oran, hac_onay ...). İlk çalıştırma veriyi hacimle yeniden indirir (uzun sürer)
+  /backtest 180 aria -> canlı ayar, grafikler sadece ARIA benzeri işlemlerden (pompa tepe ≥ 4 ATR + iğneli düzeltme): 15 TP + 15 stop + hepsi PDF (+ "önceki")
   /backtest 180 çıkış seri -> erken çıkış: canlı (2 mum, 0.35) / yok / 1 mum / derin eşik 0.2 / 0.5 ATR (+ "çıkış eski seri")
   /backtest 180 hemen seri -> onay mumunu beklemeden giriş (temas mumunun tepesi kırılınca) (+ "hemen eski seri")
   /backtest 180 geniş seri -> stop payı 0.3 (canlı) / 0.45 / 0.6 / 0.8 ATR ve stop temas mumunun dibinde (+ "geniş eski seri")
@@ -186,6 +187,8 @@ def start_backtest(text):
         args += ["--compare", "ikinci"]
     elif re.search(r"\bema\b", low):   # 17.10: temas EMA50 / EMA100 ("yüz": grafikler EMA100 satırından; rakam RR sanılmasın)
         args += ["--compare", "ema100" if re.search(r"y[üu]z", low) else "ema"]
+    elif re.search(r"\baria\b", low):   # 21.10: ARIA benzeri işlemlerin grafikleri
+        args += ["--compare", "aria"]
     elif re.search(r"\b[çc][ıi]k[ıi][şs]\b", low):   # 21.10 00:21: erken çıkış yeniden (bugünkü kurallarla)
         args += ["--compare", "cikis"]
     elif re.search(r"\bhemen\b", low):   # 20.10 23:29: onay mumunu beklemeden giriş

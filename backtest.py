@@ -1238,6 +1238,9 @@ COMPARE_SETS["cikis"] = [
     C("Erken çıkış 2 mum, derin eşik 0.2 ATR", **dict(_YENI, EARLY_EXIT_MAX_ATR=0.2)),
     C("Erken çıkış 2 mum, derin eşik 0.5 ATR", **dict(_YENI, EARLY_EXIT_MAX_ATR=0.5)),
 ]
+# ARIA benzeri işlemlerin grafikleri (kullanıcı 21.10 17:55): canlı ayar, grafikler sadece sivri tepe ≥ 4 ATR + düzeltme iğne oranı ≥ %50
+# (7 dönem 10 coin CSV: 64 iş +8.3R, 0.13R/iş, TP %28, stop %36). Kural değil, grafik incelemesi için.
+COMPARE_SETS["aria"] = [C("Canlı ayar", **_YENI)]
 COMPARE_SETS["ema100"] = COMPARE_SETS["ema"]   # aynı test, grafikler EMA100 satırından (`/backtest 180 ema yüz`)
 # Başabaş yeniden (kullanıcı 15.10 15:19 "kodla deneyelim"): sabahki test (eski sistem) iki dönemde kötüydü (1R BE -31.5 /
 # -11.4: 31 stop kurtarıp 29 TP'yi girişten çıkarıyordu). Şimdiki canlı sistemle (iki kural + derin kapanışta erken çıkış
@@ -1468,6 +1471,8 @@ COMPARE_SETS["toplu"] = [
     C("Toplu sinyal filtresi kapalı", **_LIVE_NO_CLUSTER),
 ]
 CHART_NEW = {"toplu2": 0}   # grafikte sadece bu ayarda olmayan (eklenen) işlemler
+# Grafiklerde sadece bu koşulu tutan işlemler (kullanıcı 21.10 17:53, ARIAUSDT 21.10 11:00: pompa tepe + iğneli düzeltme)
+CHART_FILTER = {"aria": lambda d: (d["sivri_atr"] >= 4) & (d["duz_igne"] >= 0.5)}
 CHART_CFG = {"toplu2": 2, "ema": 3, "ema100": 7, "hepsi": 0, "yeni": 6, "koruma": 5, "son": 6, "son2": 6, "saat": 3, "tp": 1, "dip": 2, "yapi": 4,
              "destek": 2, "toplu": 3, "igne": 1, "donus": 5,
              "temiz": 5, "temiz_donus": 5, "aday": 4, "tarama": None, "btc": 2, "erken": 1, "ornek": 8, "tp": None, "basabas": None, "sivri": 4, "komisyon": None, "renk": None, "yer": None, "yatay": None, "gevset": None, "kapanis": None, "grafik": None, "grafik2": None, "dilim": None, "stop": None, "basabas2": None, "giris": None, "gemini": None, "yatay2": None, "teyit": None, "artir": None, "esnet": None, "gelisim": None, "bybit": None, "ikimum": None, "ikimum2": None, "dalga": None, "temel": None, "analiz": None, "kontrol": None, "cizgi": None, "hedef": None, "kilit": None, "yeniden": None, "pay": None}  # grafikleri çizilecek ayar (listedeki sırası)
@@ -2090,6 +2095,10 @@ def main():
             have = set(zip(b_tr["coin"], b_tr["_touch_ts"], b_tr["yon"])) if not b.empty else set()
             d = d[[(c, t, y) not in have for c, t, y in zip(d["coin"], d["_touch_ts"], d["yon"])]]
             chart_name = f"{chart_name}: sadece eklenen işlemler"
+        flt = CHART_FILTER.get(args.compare)
+        if flt is not None and not d.empty:
+            d = d[flt(d).fillna(False).values]
+            chart_name = f"{chart_name}: ARIA benzeri (sivri tepe ≥ 4 ATR + düzeltme iğneli ≥ %50)"
         if not d.empty:
             recs = d[d["durum"].isin(["win", "loss", "be"])].sort_values("_touch_ts").to_dict("records")
             if recs:
