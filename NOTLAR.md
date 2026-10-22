@@ -1052,3 +1052,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 22.10 03:39 "kodla": trade_rules.CANCEL_MID_FRAC / CANCEL_MID_SAME (giriş stop emri tetiklenmeden fiyat onay ucundan oran·mum boyu geri gelirse
   "cancel_mid"; aynı mumda hem geri gelme hem giriş: SAME=False giriş, True iptal). COMPARE_SETS["geri"]: canlı · orta · orta aynı mumda iptal · üst 1/3 · 3/4.
   `/backtest 180 geri seri` + `geri eski seri`. Sentetik: varsayılanla 1127 kurulumda birebir.
+- 22.10 03:50 GERİ sonucu (`geri seri`, 4 dönem geldi; canlı +35.6 / +67.2 / +25.7 / +3.0): orta iptal +29.6 / +59.3 / +19.7 / −4.4 (0/4) · üst 1/3 aynı (0/4) ·
+  3/4 +30.4 / +61.4 / +26.0 / −1.3 (1/4) · orta + aynı mumda iptal +30.9 / +59.7 / +20.6 / +7.4 (1/4; R/iş 0.39/0.71/0.37/0.17 vs 0.29/0.50/0.26/0.04, düşüş
+  hep küçük) AMA ileriye bakıyor (15m mumda önce giriş sonra ortaya düşüşü de siler; canlıda dolmuş emir iptal edilemez). REDDEDİLDİ. İleride: aynı mum sırası
+  1 dk mumlarla çözülürse 3. satırın gerçek değeri ölçülebilir (düşük öncelik, toplam yine canlının altında).
