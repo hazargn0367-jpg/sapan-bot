@@ -582,16 +582,18 @@ def btc_trend_map(df):
     return dict(zip(df["timestamp"].astype("int64"), np.where(df["EMA20"] > df["EMA50"], 1, -1)))
 
 
-def apply_portfolio(rows, max_open=0, cluster_max=0, btc=False, btc_map=None, touch_counts=None):
+def apply_portfolio(rows, max_open=0, cluster_max=0, btc=False, btc_map=None, touch_counts=None, one_per_coin=False):
     """Coinler arası kurallar. Elenen işlemlerin durumu skip_* olur.
     Sıra: BTC yönü -> toplu sinyal -> aynı anda açık işlem sınırı.
     touch_counts: (temas zamanı, yön) -> o mumda temas veren coin sayısı. Canlıdaki gibi BÜTÜN temaslar
-    sayılır (sadece işleme dönenler değil)."""
+    sayılır (sadece işleme dönenler değil). Anahtar (zaman dilimi, temas zamanı, yön): toplu sinyal her zaman diliminde ayrı.
+    one_per_coin (birden çok zaman dilimi birlikte, 22.10): aynı coinde açık işlem varken (başka zaman diliminden) yeni işlem yok
+    (Binance tek yön modunda bir coinde tek pozisyon)."""
     if not (max_open or cluster_max or btc):
         return rows
     from collections import Counter
     import heapq
-    counts = touch_counts if touch_counts is not None else Counter((r["_touch_ts"], r["yon"]) for r in rows)
+    counts = touch_counts if touch_counts is not None else Counter((r["zaman_dilimi"], r["_touch_ts"], r["yon"]) for r in rows)
     traded = ("win", "loss", "be", "open")
 
     def skip(r, status):
@@ -608,7 +610,7 @@ def apply_portfolio(rows, max_open=0, cluster_max=0, btc=False, btc_map=None, to
                 d = btc_map.get(r["_touch_ts"])
                 if d is not None and d != (1 if r["yon"] == "LONG" else -1):
                     r = skip(r, "skip_btc")
-            if r["durum"] in traded and cluster_max and counts[(r["_touch_ts"], r["yon"])] >= cluster_max:
+            if r["durum"] in traded and cluster_max and counts[(r["zaman_dilimi"], r["_touch_ts"], r["yon"])] >= cluster_max:
                 r = skip(r, "skip_cluster")
         out.append(r)
 
@@ -616,14 +618,16 @@ def apply_portfolio(rows, max_open=0, cluster_max=0, btc=False, btc_map=None, to
         order = sorted((i for i, r in enumerate(out) if r["durum"] in traded),
                        key=lambda i: out[i]["_entry_ts"])
         open_exits = []
+        coin_busy = {}   # coin -> açık işlemin çıkış zamanı (one_per_coin)
         for i in order:
             r = out[i]
             while open_exits and open_exits[0] <= r["_entry_ts"]:
                 heapq.heappop(open_exits)
-            if len(open_exits) >= max_open:
+            if len(open_exits) >= max_open or (one_per_coin and coin_busy.get(r["coin"], 0) > r["_entry_ts"]):
                 out[i] = skip(r, "skip_open")
                 continue
             heapq.heappush(open_exits, r.get("_exit_ts", 2**62))
+            coin_busy[r["coin"]] = r.get("_exit_ts", 2**62)
     return out
 
 
@@ -1273,6 +1277,16 @@ COMPARE_SETS["geri"] = [
     C("Onayın üst 1/3'üne gelirse iptal", **dict(_YENI, CANCEL_MID_FRAC=0.33)),
     C("Onayın 3/4'üne gelirse iptal", **dict(_YENI, CANCEL_MID_FRAC=0.75)),
 ]
+# 22.10 03:49 "kodla" (kullanıcı: "işlem sayısını arttırmam lazım"): aynı kurallar 15dk'nın yanında 30dk / 1s'te de; bütün dilimler
+# toplam MAX_OPEN'ı paylaşır, bir coinde tek işlem (tek yön modu), toplu sinyal her dilimde ayrı
+COMPARE_SETS["coklu"] = [
+    C("Canlı ayar (sadece 15dk)", **_YENI, tfs=["15m"]),
+    C("Sadece 30dk", **_YENI, tfs=["30m"]),
+    C("15dk + 30dk (toplam en fazla 2 işlem)", **_YENI, tfs=["15m", "30m"]),
+    C("15dk + 30dk (toplam en fazla 3 işlem)", **dict(_YENI, max_open=3), tfs=["15m", "30m"]),
+    C("15dk + 1s (toplam en fazla 2 işlem)", **_YENI, tfs=["15m", "1h"]),
+    C("15dk + 30dk + 1s (toplam en fazla 3 işlem)", **dict(_YENI, max_open=3), tfs=["15m", "30m", "1h"]),
+]
 COMPARE_SETS["igne2"] = [
     C("Canlı ayar (stop mum içinde)", **_YENI),
     C("Kapanışta stop, sert stop 1.5R", **dict(_YENI, CLOSE_STOP_HARD_R=1.5)),
@@ -1828,6 +1842,13 @@ def main():
         use_htf = any(c.get("HTF_MODE") for c in configs)
         if use_htf:
             WARMUP_FACTOR = max(WARMUP_FACTOR, 6)   # 4s EMA100 oturması için ~19 gün geriden başla
+        if any(c.get("tfs") for c in configs):
+            # Çoklu zaman dilimi (22.10): her ayar kendi listesindeki dilimlerde çalışır (listesi olmayan: komuttaki dilimler);
+            # veri bir kez çekilir, gereken bütün dilimler 15dk'dan üretilir
+            configs = [dict(c, tfs=c.get("tfs") or list(tfs)) for c in configs]
+            for c in configs:
+                tfs += [t for t in c["tfs"] if t not in tfs]
+            WARMUP_FACTOR = max(WARMUP_FACTOR, max(config.tf_minutes(t) for t in tfs) // (BAR_MS // 60000))
     elif args.preset == "donus":
         import live_setups
         rules = dict(live_setups.LIVE_RULES, ENTRY_MODE="reclaim")
@@ -1964,7 +1985,7 @@ def main():
     from collections import Counter
     status_counts = Counter()   # tekli testte bütün setup'ların durumları (huni)
     from collections import defaultdict
-    touch_by = defaultdict(Counter)   # sinyal tanımı -> (mum, yön) -> temas veren coin sayısı (toplu sinyal filtresi)
+    touch_by = defaultdict(Counter)   # sinyal tanımı -> (zaman dilimi, mum, yön) -> temas veren coin sayısı (toplu sinyal filtresi)
     touch_counts = touch_by[()]       # canlı tanım
     n_ok = 0
     btc_map = None
@@ -1994,16 +2015,18 @@ def main():
                         sg = [(i, sd) for i, sd in find_signals(line_df(df, dict(key).get("TOUCH_EMA", 20)))
                               if ts_[i] >= p0]  # ısınma payındaki temaslar sayılmaz
                     sigsets[key] = sg
-                    touch_by[key].update((int(ts_[i]), side) for i, side in sg)
+                    touch_by[key].update((tf, int(ts_[i]), side) for i, side in sg)
                     if dict(key).get("RETEST"):
                         import retest
                         with _st_override(key):
                             rt = [x for x in retest.find(df) if ts_[x[0]] >= p0]
                         rtsets[key] = rt
-                        touch_by[key].update((int(ts_[x[0]]), x[1]) for x in rt)
+                        touch_by[key].update((tf, int(ts_[x[0]]), x[1]) for x in rt)
                 signals = sigsets[()]
                 on_bn = bybit.norm(symbol) in BINANCE_SET if EXCHANGE == "bybit" else True
                 for ci, cfg in enumerate(configs):
+                    if cfg.get("tfs") and tf not in cfg["tfs"]:
+                        continue   # bu ayar bu zaman diliminde çalışmıyor (22.10 çoklu zaman dilimi testi)
                     only = cfg.get("coins", DEFAULT_COINS)
                     if (only == "binance" and not on_bn) or (only == "new" and on_bn):
                         continue
@@ -2091,7 +2114,8 @@ def main():
     for cfg in configs:
         results[cfg["ad"]] = apply_portfolio(results[cfg["ad"]], cfg.get("max_open", 0),
                                              cfg.get("cluster_max", 0), cfg.get("btc", False), btc_map,
-                                             touch_counts=touch_by[_sig_key(cfg)])
+                                             touch_counts=touch_by[_sig_key(cfg)],
+                                             one_per_coin=len(cfg.get("tfs") or tfs) > 1)
     minutes = (time.time() - t0) / 60
     coins_txt = f"{n_ok}/{len(symbols)}" if n_ok < len(symbols) else f"{len(symbols)}"
     if n_ok == 0:

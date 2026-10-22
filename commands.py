@@ -31,6 +31,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 ikinci seri -> tepeden sonra 2. / 3. EMA20 temasına da izin (işlem sayısı artar mı, R düşer mi) (+ "ikinci eski seri"; CSV'de temas_no)
   /backtest 180 ema seri -> temas EMA50 / EMA100 + yapı kuralları (kural 8 ve son salınım tepesi/dibi; iğne/kapanış); tek dönem `ema` grafikler EMA50 (son salınım, iğne), `ema yüz` EMA100 (+ "ema eski seri")
   /backtest 180 analiz seri -> sadece canlı ayar, 5 dönem; CSV'de hacim ölçüleri (hac_bacak, hac_duz, hac_oran, hac_onay ...). İlk çalıştırma veriyi hacimle yeniden indirir (uzun sürer)
+  /backtest 180 çoklu seri -> aynı kurallar 15dk + 30dk / 1s birlikte (toplam en fazla 2 / 3 işlem, coinde tek işlem); sadece 30dk (+ "çoklu eski seri")
   /backtest 180 geri seri -> giriş tetiklenmeden fiyat onay mumunun ortasına / üst 1/3'üne / 3/4'üne geri gelirse emir iptal (+ "geri eski seri")
   /backtest 180 limit seri -> dönüşte TP 3; onaydan sonra limit giriş (onay ortası / üst 1/3, TP aynı fiyat ya da 2.2 × yeni risk, 4 mum bekleme, erken çıkışsız) (+ "limit eski seri")
   /backtest 180 fitil seri -> kapanışta stop (sert stop 1.5 / 2R), 1.5R'de stop +0.5R, 1R'de stop -0.5R (+ "fitil eski seri")
@@ -191,6 +192,8 @@ def start_backtest(text):
         args += ["--compare", "ikinci"]
     elif re.search(r"\bema\b", low):   # 17.10: temas EMA50 / EMA100 ("yüz": grafikler EMA100 satırından; rakam RR sanılmasın)
         args += ["--compare", "ema100" if re.search(r"y[üu]z", low) else "ema"]
+    elif re.search(r"\b[çc]oklu\b", low):   # 22.10: 15dk + 30dk / 1s birlikte (işlem sayısı)
+        args += ["--compare", "coklu"]
     elif re.search(r"\bgeri\b", low):   # 22.10: girişten önce onay içine geri gelirse iptal
         args += ["--compare", "geri"]
     elif re.search(r"\blimit\b", low):   # 22.10: dönüşte TP 3 + geri çekilmede limit giriş

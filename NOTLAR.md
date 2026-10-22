@@ -1056,3 +1056,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   3/4 +30.4 / +61.4 / +26.0 / −1.3 (1/4) · orta + aynı mumda iptal +30.9 / +59.7 / +20.6 / +7.4 (1/4; R/iş 0.39/0.71/0.37/0.17 vs 0.29/0.50/0.26/0.04, düşüş
   hep küçük) AMA ileriye bakıyor (15m mumda önce giriş sonra ortaya düşüşü de siler; canlıda dolmuş emir iptal edilemez). REDDEDİLDİ. İleride: aynı mum sırası
   1 dk mumlarla çözülürse 3. satırın gerçek değeri ölçülebilir (düşük öncelik, toplam yine canlının altında).
+- 22.10 03:49 "kodla" (kullanıcı: "işlem sayısını arttırıp TP oranını aynı tutsak iyi kazanırım"): çoklu zaman dilimi testi. Ayarlarda tfs listesi
+  (listesi olan sette her ayar kendi dilimlerinde; veri bir kez çekilir, 30dk/1s 15dk'dan üretilir, WARMUP_FACTOR en büyük dilime göre). apply_portfolio:
+  toplu sinyal anahtarı (dilim, mum, yön) — her dilimde ayrı; one_per_coin (birden çok dilimde coinde tek işlem, tek yön modu); MAX_OPEN dilimler arası ortak.
+  COMPARE_SETS["coklu"]: canlı 15dk · sadece 30dk · 15+30 (2) · 15+30 (3) · 15+1s (2) · 15+30+1s (3). `/backtest 180 çoklu seri` + `çoklu eski seri`.
+  Sentetik: tek dilimde sonuç aynı (igne2 mock), 15+30 işlemleri = 15dk + 30dk toplamı. Not: 30/1s'te mum sayılı kurallar (WICKY 12, CORR 10) süre olarak 2x/4x.
