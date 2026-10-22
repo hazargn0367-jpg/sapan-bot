@@ -1061,3 +1061,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   toplu sinyal anahtarı (dilim, mum, yön) — her dilimde ayrı; one_per_coin (birden çok dilimde coinde tek işlem, tek yön modu); MAX_OPEN dilimler arası ortak.
   COMPARE_SETS["coklu"]: canlı 15dk · sadece 30dk · 15+30 (2) · 15+30 (3) · 15+1s (2) · 15+30+1s (3). `/backtest 180 çoklu seri` + `çoklu eski seri`.
   Sentetik: tek dilimde sonuç aynı (igne2 mock), 15+30 işlemleri = 15dk + 30dk toplamı. Not: 30/1s'te mum sayılı kurallar (WICKY 12, CORR 10) süre olarak 2x/4x.
+- 22.10 04:05 ÇOKLU sonucu (`çoklu seri`, 5 dönem May 24 – Eki 26; R / işlem / TP% / en büyük düşüş R / canlıdan iyi):
+  canlı 15dk +37.8 / +67.2 / +25.7 / +3.0 / +13.2 = +146.8 (497, %33, 10.7) · sadece 30dk +5.7 / +1.5 / −2.2 / +13.3 / +10.1 = +28.3 (263, %24, 12.1) ·
+  15+30 (2) +41.3 / +68.6 / +18.1 / +16.2 / +23.3 = +167.6 (755, %30, 15.0, 4/5) · **15+30 (3) +43.5 / +69.2 / +22.4 / +15.2 / +23.1 = +173.3 (767, %30, 14.9, 4/5)** ·
+  15+1s (2) +154.7 (612, 2/5) · 15+30+1s (3) +183.7 (891, %29, 16.4, 4/5; 1s tek başına 2/5 artı, küçük örnek → güvenilmez).
+  30dk eski dönemlerde (2024) 15dk zayıfken artı → çeşitlendirme. Bedeli: R/iş 0.30 → 0.23, düşüş 10.7 → 14.9R. Aday: 15+30 (3). Karar `çoklu eski seri`.
