@@ -1098,3 +1098,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   DİKKAT: ilk denemede 24 saat / coin geçmişi hesabında işlemin kendisi de sayılmıştı (c_t <= g_t, giriş mumunda erken çıkış) → yanlış %42; düzeltildi (c_t < g_t).
 - 23.10 02:41 "kodla": trade_rules.TREND_AGE_MIN + trend_age() (status young_trend; reasons'ta Türkçe). COMPARE_SETS["yas"]: canlı · ≥60 · ≥76 · ≥100 ·
   ≥76 + erken çıkışsız · erken çıkışsız. `/backtest 180 yaş seri` + `/backtest 180 yaş seri 3 sene önce` (ago 1095: 2021-2023, hiç bakılmamış). Sentetik birebir.
+- 23.10 02:55 YAŞ sonucu (`yaş seri`, 5 dönem; R / işlem / TP% / en büyük düşüş / R÷düşüş): canlı +148.1 / 489 / %33.7 / 10.7 / 13.8 · ≥60 +131.0 / 323 / %37.2 / 7.4 / 17.7
+  (3/5 iyi) · ≥76 +105.6 / 245 / %37.1 / 7.7 / 13.7 · ≥100 +89.0 / 172 / %39.5 / 6.0 / 14.8 · ≥76 + erken çıkışsız +107.0 / 244 / %47.5 / 8.9 · erken çıkışsız
+  +135.8 / 483 / %42.7 / 15.0. Gerçek backtest CSV tahminiyle birebir (aynı işlemler). TP% ve R/iş artıyor ama toplam düşüyor; ≥60 kazanç/düşüş oranında en iyi
+  (aynı düşüşe göre risk ~1.4x → ~+%25). Sınav: `yaş seri 3 sene önce` (2021-2023) bekleniyor.
