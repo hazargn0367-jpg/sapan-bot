@@ -94,6 +94,7 @@ STATUS_TR = {
     "max_risk": "Stop mesafesi %3'ten geniş",
     "session": "Temas 00-08 UTC (Asya seansı)",
     "cancel_confirm": "Girişten önce onay mumunun ucu kırıldı",
+    "ran": "Limit emir dolmadan fiyat hedefe gitti",
     "no_entry": "2 mumda girişe gelmedi",
     "chase": "Kapanış girişten çok uzakta (kovalamaca)",
     "wicky": "Temastan önceki mumlar çok iğneli (git-gel)",
@@ -804,7 +805,8 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "ROOM_RELAX_R", "ROOM_RELAX_WICKY", "ROOM_RELAX_RISK_ATR", "TOUCH_WICK_ROOM_R", "TWO_BAR_TOUCH", "TWO_BAR_BODY_ATR", "TWO_BAR_ANY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
-              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW", "STOP_MID_CONF_ATR", "CLOSE_STOP_HARD_R"]
+              "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW", "STOP_MID_CONF_ATR", "CLOSE_STOP_HARD_R",
+              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1252,6 +1254,16 @@ COMPARE_SETS["orta"] = [
 ]
 # İğne stoplarına karşı (kullanıcı 22.10 01:43 "bugünkü gibi işlemlerde kâr için ne yapılabilir"; PONS 21.10: +1.6R gördü, iğne stopu aldı, fiyat
 # geri döndü; 30 ayda stop olanların %14'ü önce ≥1.5R görmüş, -28.6R). Kapanışta stop (sert stop 1.5 / 2R) ve kârdayken stopu yaklaştırma.
+# 22.10 03:23 "kodla": dönüşte büyük hedef + geri çekilmede limit giriş (onay mumunun içine limit, stop aynı)
+COMPARE_SETS["limit"] = [
+    C("Canlı ayar (onay ucunda stop emriyle giriş)", **_YENI),
+    C("Dönüşte TP 3 (klasik 2.2)", **dict(_YENI, RR_RECLAIM=3.0)),
+    C("Limit onay ortasında, TP aynı fiyat", **dict(_YENI, LIMIT_ENTRY_FRAC=0.5)),
+    C("Limit onay ortasında, TP aynı fiyat, 4 mum bekle", **dict(_YENI, LIMIT_ENTRY_FRAC=0.5, LIMIT_WINDOW=4)),
+    C("Limit onay ortasında, TP 2.2 × yeni risk", **dict(_YENI, LIMIT_ENTRY_FRAC=0.5, LIMIT_KEEP_TP=False)),
+    C("Limit onayın üst 1/3'ünde, TP aynı fiyat", **dict(_YENI, LIMIT_ENTRY_FRAC=0.33)),
+    C("Limit onay ortasında, TP aynı fiyat, erken çıkış yok", **dict(_YENI, LIMIT_ENTRY_FRAC=0.5, LIMIT_EARLY=False)),
+]
 COMPARE_SETS["igne2"] = [
     C("Canlı ayar (stop mum içinde)", **_YENI),
     C("Kapanışta stop, sert stop 1.5R", **dict(_YENI, CLOSE_STOP_HARD_R=1.5)),

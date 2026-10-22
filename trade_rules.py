@@ -157,6 +157,13 @@ RR = 2.0               # hedef: riskin kaç katı
 # MFE tahmini (5 dönem): onay gövdesi ≥ 0.5-0.65 ATR → TP 2.5 +10.5-11R (5/5). Gerçek test: /backtest 180 hedef seri.
 TP_BIG_CONF_ATR = 0.0  # >0: onay mumunun gövdesi en az bu kadar ATR ise TP_BIG_RR kullanılır
 TP_BIG_RR = 0.0        # >0: büyük onay mumlu işlemlerde hedef (riskin katı)
+RR_RECLAIM = 0.0       # >0 (22.10 testi): dönüş varyasyonunda hedef (riskin katı); klasik RR ile kalır
+# 22.10 testi "geri çekilmede limit giriş": onaydan sonra stop emri yerine onay mumunun içine LİMİT emir. Kurulum kuralları
+# (ATR, %0.5, önünde yer) asıl giriş (onay ucu + 1 tık) ve riske göre değerlendirilir; sonra giriş limit seviyesine taşınır.
+LIMIT_ENTRY_FRAC = 0.0  # >0: limit = onay ucundan mum boyunun bu oranı kadar geride (LONG: tepe - oran·(tepe-dip)); 0.5 = orta
+LIMIT_KEEP_TP = True    # True: TP fiyatı aynı (asıl giriş + RR·asıl risk) → risk küçülür, hedef R büyür; False: TP = limit + RR·yeni risk
+LIMIT_WINDOW = 0        # limit emrin bekleme süresi (mum, onaydan sonra); 0 = ENTRY_WINDOW. TP fiyatına dolmadan gelinirse iptal
+LIMIT_EARLY = True      # False: limit girişte erken çıkış kuralı uygulanmaz
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 # Kullanıcı 16.10 22:59 "kodla": TP'ye gelince kapatmak yerine stopu kâra çek (kâr kilidi), hedef daha uzakta.
 BE_LOCK_R = 0.0        # >0: BE_TRIGGER'a gelince stop girişe değil girişin bu kadar R kârına çekilir (örn. 2.2R'de +1.8R)
@@ -914,6 +921,8 @@ def _simulate_core(df, i, side, tick, mode=None):
     rr = RR
     if TP_BIG_CONF_ATR > 0 and TP_BIG_RR > 0 and A[conf] > 0 and abs(C[conf] - O[conf]) >= TP_BIG_CONF_ATR * A[conf]:
         rr = TP_BIG_RR   # güçlü onay mumu: hedef daha uzakta
+    if RR_RECLAIM > 0 and mode == "reclaim":
+        rr = RR_RECLAIM   # dönüş varyasyonu: hedef daha uzakta (22.10 testi)
     tp = entry + rr * risk if long else entry - rr * risk
     res.update(confirm=conf, entry=entry, stop=stop, tp=tp, risk=risk, atr=A[conf], rr=rr)
 
@@ -956,6 +965,8 @@ def _simulate_core(df, i, side, tick, mode=None):
         res["body_touch"] = body_touch
 
     # --- Giriş ---
+    if LIMIT_ENTRY_FRAC > 0 and not CLOSE_ENTRY:
+        return _limit_entry(res, O, H, L, C, A, n, long, conf, stop, tp, risk, rr)
     k_in = None
     for k in range(conf + 1, conf + 1 + ENTRY_WINDOW):
         if k >= n:
@@ -1095,5 +1106,73 @@ def _simulate_core(df, i, side, tick, mode=None):
             cur_stop, be_on = lock_level, True
             res["lock_on"] = BE_LOCK_R > 0
 
+    res["status"] = "open"
+    return res
+
+
+def _limit_entry(res, O, H, L, C, A, n, long, conf, stop, tp, risk, rr):
+    """Geri çekilmede limit giriş (22.10 testi, sadece backtest). Limit onay mumunun içinde; dolum mum içinde fiyat limite
+    inince (LONG). Temkinli varsayımlar: dolum mumunda stop seviyesine de inildiyse stop; dolum mumunda TP sayılmaz
+    (mum içinde önce tepe sonra dip olabilir). Dolmadan TP fiyatına gelinirse emir iptal ("ran"). Giriş komisyonu maker."""
+    rng = H[conf] - L[conf]
+    lim = (H[conf] - LIMIT_ENTRY_FRAC * rng) if long else (L[conf] + LIMIT_ENTRY_FRAC * rng)
+    lim_risk = (lim - stop) if long else (stop - lim)
+    if lim_risk <= 0:
+        res["status"] = "atr"
+        return res
+    if not LIMIT_KEEP_TP:
+        tp = lim + rr * lim_risk if long else lim - rr * lim_risk
+    res.update(orig_entry=res["entry"], orig_risk=risk, entry=lim, risk=lim_risk, tp=tp, limit_entry=True,
+               rr=((tp - lim) if long else (lim - tp)) / lim_risk)
+    entry, risk = lim, lim_risk
+    win = LIMIT_WINDOW or ENTRY_WINDOW
+    k_in = None
+    for k in range(conf + 1, conf + 1 + win):
+        if k >= n:
+            res["status"] = "pending"
+            return res
+        if (L[k] <= lim) if long else (H[k] >= lim):
+            k_in = k
+            break
+        if (H[k] >= tp) if long else (L[k] <= tp):
+            res["status"] = "ran"   # fiyat geri gelmeden hedefe gitti
+            return res
+    if k_in is None:
+        res["status"] = "no_entry"
+        return res
+    fill = min(lim, O[k_in]) if long else max(lim, O[k_in])
+    res.update(entry_bar=k_in, fill=fill)
+
+    def close_trade(bar, price, status):
+        res.update(exit_bar=bar, exit=price, status=status)
+        gross = (price - fill) / risk if long else (fill - price) / risk
+        fees = (fill * FEE_MAKER + price * (FEE_MAKER if status == "win" else FEE_TAKER)) / risk
+        res.update(r_gross=gross, r_net=gross - fees)
+        return res
+
+    early_off = [not (LIMIT_EARLY and FAILED_ENTRY_BARS > 0)]
+
+    def failed(bar):
+        if early_off[0] or bar - k_in >= FAILED_ENTRY_BARS or not ((C[bar] < entry) if long else (C[bar] > entry)):
+            return False
+        if EARLY_EXIT_MAX_ATR > 0 and ((fill - C[bar]) if long else (C[bar] - fill)) > EARLY_EXIT_MAX_ATR * A[conf]:
+            early_off[0] = True
+            res["early_skipped"] = True
+            return False
+        return True
+
+    if (L[k_in] <= stop) if long else (H[k_in] >= stop):
+        return close_trade(k_in, min(stop, fill) if long else max(stop, fill), "loss")
+    if failed(k_in):
+        res["early_exit"] = True
+        return close_trade(k_in, C[k_in], "be")
+    for m in range(k_in + 1, n):
+        if (L[m] <= stop) if long else (H[m] >= stop):
+            return close_trade(m, min(stop, O[m]) if long else max(stop, O[m]), "loss")
+        if (H[m] >= tp) if long else (L[m] <= tp):
+            return close_trade(m, tp, "win")
+        if failed(m):
+            res["early_exit"] = True
+            return close_trade(m, C[m], "be")
     res["status"] = "open"
     return res

@@ -31,6 +31,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 ikinci seri -> tepeden sonra 2. / 3. EMA20 temasına da izin (işlem sayısı artar mı, R düşer mi) (+ "ikinci eski seri"; CSV'de temas_no)
   /backtest 180 ema seri -> temas EMA50 / EMA100 + yapı kuralları (kural 8 ve son salınım tepesi/dibi; iğne/kapanış); tek dönem `ema` grafikler EMA50 (son salınım, iğne), `ema yüz` EMA100 (+ "ema eski seri")
   /backtest 180 analiz seri -> sadece canlı ayar, 5 dönem; CSV'de hacim ölçüleri (hac_bacak, hac_duz, hac_oran, hac_onay ...). İlk çalıştırma veriyi hacimle yeniden indirir (uzun sürer)
+  /backtest 180 limit seri -> dönüşte TP 3; onaydan sonra limit giriş (onay ortası / üst 1/3, TP aynı fiyat ya da 2.2 × yeni risk, 4 mum bekleme, erken çıkışsız) (+ "limit eski seri")
   /backtest 180 fitil seri -> kapanışta stop (sert stop 1.5 / 2R), 1.5R'de stop +0.5R, 1R'de stop -0.5R (+ "fitil eski seri")
   /backtest 180 orta seri -> büyük onay mumunda (≥ 1 / 0.7 / 1.3 ATR) stop onay mumunun ortasında; stop en fazla 1 ATR (+ "orta eski seri")
   /backtest 180 aria -> canlı ayar, grafikler sadece ARIA benzeri işlemlerden (pompa tepe ≥ 4 ATR + iğneli düzeltme): 15 TP + 15 stop + hepsi PDF (+ "önceki")
@@ -189,6 +190,8 @@ def start_backtest(text):
         args += ["--compare", "ikinci"]
     elif re.search(r"\bema\b", low):   # 17.10: temas EMA50 / EMA100 ("yüz": grafikler EMA100 satırından; rakam RR sanılmasın)
         args += ["--compare", "ema100" if re.search(r"y[üu]z", low) else "ema"]
+    elif re.search(r"\blimit\b", low):   # 22.10: dönüşte TP 3 + geri çekilmede limit giriş
+        args += ["--compare", "limit"]
     elif re.search(r"\bfitil\b", low):   # 22.10: iğne stoplarına karşı kapanışta stop / kârda stop yaklaştırma
         args += ["--compare", "igne2"]
     elif re.search(r"\borta\b", low):   # 21.10 22:48: büyük onay mumunda stop onay ortasında

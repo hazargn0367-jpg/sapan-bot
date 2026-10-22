@@ -1040,3 +1040,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Ubuntu 24.04, IP 95.216.214.13 (Binance trusted IP'ye eklendi). /etc/sapan-bot.env MEMORY_LIMIT_MB=700. Render worker SUSPEND.
   Güncelleme: guncelle.sh timer'ı 2 dk'da bir main'e bakar ("yükle" = main'e push, aynen). İlk açılış: oto kapalı geldi → /oto aç; bakiye 300.25;
   momentum geçmişi sıfırdan (1x). Bağlantı: kullanıcı telefonda Termius (root).
+- 22.10 03:23 "kodla" (CSV analizi: dönüş R/iş 7 dönemin 6'sında klasikten iyi; onay gövdesi / SHORT / risk ATR eski dönemlerde tutmadı):
+  trade_rules.RR_RECLAIM (dönüşte hedef) + LIMIT_ENTRY_FRAC / LIMIT_KEEP_TP / LIMIT_WINDOW / LIMIT_EARLY (_limit_entry: kurulum kuralları asıl
+  girişe göre; limit = onay ucu − oran·mum boyu; dolum mumunda stop varsa stop, TP sayılmaz; dolmadan TP fiyatı → "ran"; giriş maker komisyon).
+  COMPARE_SETS["limit"]: canlı · dönüş TP 3 · limit orta TP aynı · +4 mum bekle · TP 2.2×yeni risk · üst 1/3 · orta erken çıkışsız.
+  `/backtest 180 limit seri` + `limit eski seri`. Sentetik: varsayılanlarla 1127 kurulumda birebir aynı.
