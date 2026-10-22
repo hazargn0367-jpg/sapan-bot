@@ -391,6 +391,26 @@ def _pick_leverage(symbol, notional, stop_frac):
     return max(1, min(max_lev, safe))
 
 
+def size_plan(symbol, entry, stop, risk_usd):
+    """Bildirimler için (22.10 kullanıcı: "kaç x kaç dolar"): risk_usd riskte adet (Binance adımına yuvarlı), pozisyon
+    (USDT), otomatik işlemdeki kuralla kaldıraç (likidasyon stopun 1.5 katı ötede) ve izole marjin. Hata olursa None."""
+    risk = abs(entry - stop)
+    if risk <= 0 or entry <= 0:
+        return None
+    qty = risk_usd / risk * (1 + 1e-9)   # 44.999.. / 0.01 → 4499 olmasın
+    try:
+        f = _filters(symbol)
+        if f is not None:
+            qty = float(_q(qty, f["step"]))
+    except Exception as e:
+        log.debug("%s adım bilgisi alınamadı: %s", symbol, e)
+    if qty <= 0:
+        return None
+    notional = qty * entry
+    lev = _pick_leverage(symbol, notional, risk / entry)
+    return qty, notional, lev, notional / lev
+
+
 def _open_setup(key, symbol, side, entry, stop, tp, tf, touch_ts):
     t = trades()
     if key in t:

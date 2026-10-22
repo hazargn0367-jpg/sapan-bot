@@ -1078,3 +1078,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Yeniden başlayınca son 30 mumdaki (15 saat) bildirilmiş setup'lar takibe geri alınır. Sahte veriyle test (25 coin, 600 tarama): 7 bildirim, takip mesajları doğru.
 - 22.10 04:21 kullanıcı: "15 Kasım'a kadar bakalım, total sonuçlar ne olacak; bakiye 300$". Plan: canlı 15dk oto (1R 15$, momentum 3x/0.5x) + 30dk sadece
   bildirim (elle, sadece 1R / 0.5R, 3x'e ekleme yok). 15.11'de: oto sonuç (/oto son 30 gün), günlük (15dk / 30dk / girdiklerin), ban gelip gelmediği, 1R kararı.
+- 22.10 04:33 "kodla": bildirimlerde (15dk EMİR HAZIR + 30dk) pozisyon satırı: "N adet = X USDT → Lx, marjin Y$" (autotrade.size_plan: adet Binance adımına
+  aşağı yuvarlı, kaldıraç oto işlemdeki _pick_leverage kuralı: likidasyon stopun 1.5 katı ötede, coinin bracket sınırı). 30dk'da 1R ve 0.5R ayrı satır +
+  "önce kaldıracı ayarla (izole), adedi gir, STOP emri, sonra stop/TP". Bracket alınamazsa en fazla 20x.

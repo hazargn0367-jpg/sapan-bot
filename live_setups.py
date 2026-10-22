@@ -308,6 +308,22 @@ def scan_symbol(symbol, keep_df=False, lookback=None):
     return symbol, df, touches, ready, recovered
 
 
+def plan_text(symbol, entry, stop, risk_usd, label):
+    """'1R = 15$: 8.76 adet = 955 USDT → 20x, marjin 48$' (adet Binance adımına yuvarlı, kaldıraç oto işlemdeki kuralla)."""
+    try:
+        import autotrade
+        plan = autotrade.size_plan(symbol, entry, stop, risk_usd)
+    except Exception as e:
+        log.debug("%s pozisyon planı hesaplanamadı: %s", symbol, e)
+        plan = None
+    if plan is None:
+        risk = abs(entry - stop)
+        qty = risk_usd / risk if risk else 0
+        return f"{label}: ~{qty * entry:,.0f} USDT pozisyon ({qty:.6g} adet)"
+    qty, notional, lev, margin = plan
+    return f"{label}: <b>{qty:.6g} adet</b> = {notional:,.0f} USDT → <b>{lev}x, marjin {margin:,.2f}$</b>"
+
+
 def setup_message(symbol, side, r, df):
     ts = df["timestamp"].values
     risk = abs(r["entry"] - r["stop"])
@@ -332,7 +348,7 @@ def setup_message(symbol, side, r, df):
         f"Giriş ({order}): <code>{p(r['entry'])}</code>\n"
         f"Stop: <code>{p(r['stop'])}</code>  (%{100 * risk / r['entry']:.2f})\n"
         f"TP (1:{tr.RR:g}): <code>{p(r['tp'])}</code>\n"
-        f"{risk_usd:g}$ risk için{mnote}: ~{notional:,.0f} USDT pozisyon ({qty:.6g} adet)\n\n"
+        f"{plan_text(symbol, r['entry'], r['stop'], risk_usd, f'{risk_usd:g}$ risk{mnote}')}\n\n"
         f"{steps}\n"
         f"Emir {fmt(valid_until, '%H:%M')}'e kadar geçerli. Girişten önce fiyat onay mumunun "
         f"{'dibini' if side == 'LONG' else 'tepesini'} kırarsa iptal.\n"
