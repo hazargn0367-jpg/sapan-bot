@@ -1081,3 +1081,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 22.10 04:33 "kodla": bildirimlerde (15dk EMİR HAZIR + 30dk) pozisyon satırı: "N adet = X USDT → Lx, marjin Y$" (autotrade.size_plan: adet Binance adımına
   aşağı yuvarlı, kaldıraç oto işlemdeki _pick_leverage kuralı: likidasyon stopun 1.5 katı ötede, coinin bracket sınırı). 30dk'da 1R ve 0.5R ayrı satır +
   "önce kaldıracı ayarla (izole), adedi gir, STOP emri, sonra stop/TP". Bracket alınamazsa en fazla 20x.
+- 22.10 18:18 "kodla": /temas = son 15dk ve 30dk taramasındaki EMA20 temasları (coin, yön, temas saati, klasik/dönüş) ve durumu: bildirim gönderildi /
+  toplu sinyal / onay bekleniyor / onay geldi giriş bekleniyor / "elendi: <sebep>" (reasons.py = backtest.STATUS_TR kopyası). scan_symbol her temasın
+  simulate durumunu _touch_log'a yazar (sadece son CONFIRM_WINDOW+1 mum), run_cycle sonunda _stats["touch_list"]. En fazla 40 satır.

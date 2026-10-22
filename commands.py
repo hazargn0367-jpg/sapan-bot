@@ -91,6 +91,7 @@ Telegram komutları (bot arka planda dinler):
   /iptal          -> çalışan backtest'i durdurur
   /bildirim aç | kapat -> EMA20 temas bildirimleri
   /sinyal aç | kapat -> kurallara uyan setup'larda EMİR HAZIR bildirimleri
+  /temas -> son 15dk ve 30dk taramasındaki EMA20 temasları ve neden işleme dönmedikleri
   /otuz aç | kapat -> 30dk bildirimleri (aynı kurallar, otomatik işlem yok, karar senin)
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
 """
@@ -423,6 +424,13 @@ def _listen():
                                  f"\n\n{journal.summary()}"
                                  f"\n\n{exchanges.status_line()}\n\n{memwatch.status_line()}"
                                  f"\n\n🏷 Sürüm: {html.escape(config.version_text(), quote=False)}")
+                elif text.lower().startswith("/temas"):
+                    import live_setups
+                    import live_alt
+                    send_message(live_setups.touch_list_text(f"Son temaslar {live_setups.LIVE_TF}", live_setups.TF_MIN,
+                                                             live_setups._stats.get("touch_list"), live_setups._active))
+                    send_message(live_setups.touch_list_text(f"Son temaslar {live_alt.TF}", live_alt.TF_MIN,
+                                                             live_alt._stats.get("touch_list"), live_alt._active))
                 elif text.lower().startswith("/otuz"):
                     import live_alt
                     low = text.lower()

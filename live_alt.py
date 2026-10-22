@@ -41,6 +41,7 @@ ENABLED = os.environ.get("ALT_ALERTS", "1") != "0"
 
 _kcache = {}
 _active = {}   # (coin, temas_ts) -> {"side", "status"}
+_touch_log = []
 _feed = None
 _state = {"last_bucket": None, "recovered": False}
 _stats = {"cycles": 0, "last_run": None, "ok": 0, "scanned": 0, "touches": 0, "ready": 0, "cluster": 0,
@@ -116,6 +117,9 @@ def scan_symbol(symbol, keep_df=False, lookback=None):
             continue
         touches.append((int(ts[i]), sig["side"]))
         r = tr.simulate(df, i, sig["side"], tick)
+        if i >= n - 1 - tr.CONFIRM_WINDOW:   # /temas listesi (22.10): son taramadaki temaslar ve durumları
+            _touch_log.append((symbol, int(ts[i]), sig["side"], r.get("status"), r.get("mode", "classic"),
+                               "entry" in r and r.get("confirm") is not None and r["confirm"] <= n - 1))
         if r["status"] == "pending" and r.get("confirm") == n - 1 and "entry" in r:
             ready.append((i, sig["side"], r))
         elif lookback and "entry" in r and r["status"] in ("pending", "open") and r["confirm"] < n - 1:
@@ -268,6 +272,7 @@ def run_cycle():
     if not symbols:
         return
     t0 = time.time()
+    _touch_log.clear()
     for k in ("ws", "rest", "full"):
         _stats[k] = 0
     f = feed()
@@ -316,6 +321,7 @@ def run_cycle():
         send_setup(symbol, side, r, df)
         _active[(symbol, touch_ts)] = {"side": side, "status": "pending"}
         sent += 1
+    _stats["touch_list"] = (time.time(), list(_touch_log), dict(counts))
     _stats.update(cycles=_stats["cycles"] + 1, last_run=time.time(), scanned=len(todo),
                   ok=sum(1 for x in results if x[1] is not None), touches=sum(counts.values()),
                   ready=len(candidates), cluster=cluster, sent=sent, total_sent=_stats["total_sent"] + sent,

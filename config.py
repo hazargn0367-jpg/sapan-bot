@@ -15,7 +15,7 @@ LIVE_TF = os.environ.get("LIVE_TF", "15m")
 
 
 # Yüklenen sürüm: açılış mesajında ve /durum'da görünür (yeni kod devreye girdi mi anlaşılsın diye)
-VERSION = "22.10 04:40 · CANLI 15m + OTOMATİK İŞLEM 1R=15$ · toplu sinyal sınırı 10 coin · risk son 24 saate göre (kârda 3x = 45$ / ekside 0.5x = 7.5$ / yoksa 15$) · mumlar WebSocket · elle eklemede stop/TP bütün pozisyona · 30dk sadece bildirim (oto işlem yok, /otuz) · bildirimde kaldıraç + marjin"
+VERSION = "22.10 18:30 · CANLI 15m + OTOMATİK İŞLEM 1R=15$ · toplu sinyal sınırı 10 coin · risk son 24 saate göre (kârda 3x = 45$ / ekside 0.5x = 7.5$ / yoksa 15$) · mumlar WebSocket · elle eklemede stop/TP bütün pozisyona · 30dk sadece bildirim (oto işlem yok, /otuz) · bildirimde kaldıraç + marjin · /temas listesi"
 def _git_commit():
     """Render'da RENDER_GIT_COMMIT; kendi sunucuda (deploy/) çalışırken .git klasöründen okunur."""
     c = os.environ.get("RENDER_GIT_COMMIT", "")

@@ -139,7 +139,7 @@ def main():
                  f"🔔 {live_alt.TF_MIN}dk bildirim (otomatik işlem yok): {'açık' if live_alt.ENABLED else 'kapalı'}\n"
                  f"{oto}\n"
                  + (f"🧠 {prev}\n" if prev else "")
-                 + "Komutlar: /oto aç|kapat  /ip  /sinyal aç|kapat  /bildirim aç|kapat  /otuz aç|kapat  /backtest  /durum  /iptal  /incele")
+                 + "Komutlar: /oto aç|kapat  /ip  /sinyal aç|kapat  /bildirim aç|kapat  /otuz aç|kapat  /temas  /backtest  /durum  /iptal  /incele")
     start_listener()
     memwatch.start(commands.backtest_proc, send_message)
     autotrade.start(send_message)

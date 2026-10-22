@@ -102,6 +102,7 @@ _stats = {"started": time.time(), "cycles": 0, "last_run": None, "scanned": 0, "
           "ready": 0, "cluster": 0, "sent": 0, "secs": 0.0, "total_sent": 0, "last_sent": None,
           "last_error": None, "running_since": None}
 _active = {}   # (coin, temas_ts) -> {"side", "status", "entry", "stop", "tp"}
+_touch_log = []   # bu taramadaki temaslar (coin, temas_ts, yön, durum, mod, onay_var); run_cycle sonunda _stats["touch_list"]
 
 
 def apply_rules():
@@ -299,6 +300,9 @@ def scan_symbol(symbol, keep_df=False, lookback=None):
             continue
         touches.append((int(ts[i]), sig["side"]))
         r = tr.simulate(df, i, sig["side"], tick)
+        if i >= n - 1 - tr.CONFIRM_WINDOW:   # /temas listesi (22.10): son taramadaki temaslar ve durumları
+            _touch_log.append((symbol, int(ts[i]), sig["side"], r.get("status"), r.get("mode", "classic"),
+                               "entry" in r and r.get("confirm") is not None and r["confirm"] <= n - 1))
         if r["status"] == "pending" and r.get("confirm") == n - 1 and "entry" in r:
             ready.append((i, sig["side"], r))
         elif lookback and "entry" in r and r["status"] in ("pending", "open") and r["confirm"] < n - 1:
@@ -476,6 +480,7 @@ def run_cycle():
     if not symbols:
         return
     t0 = time.time()
+    _touch_log.clear()
     for k in ("ws", "rest", "full"):
         _ws_stats[k] = 0
     f = feed()
@@ -539,6 +544,7 @@ def run_cycle():
             log.exception("Otomatik işlem hatası: %s", e)
         sent += 1
         busy += 1
+    _stats["touch_list"] = (time.time(), list(_touch_log), dict(counts))
     if limit_skipped:
         send_message(f"⏸ Zaten {MAX_OPEN} işlem açık/giriş bekliyor, yeni setup bildirilmedi: "
                      + ", ".join(html.escape(x) for x in limit_skipped))
@@ -591,6 +597,32 @@ def status_text():
         lines.append("📡 WebSocket kapalı (LIVE_WS=0), mumlar REST'ten")
     if _stats["last_error"]:
         lines.append(f"⚠️ Son hata: {_stats['last_error']}")
+    return "\n".join(lines)
+
+
+def touch_list_text(title, tf_min, data, active, limit=40):
+    """/temas: son taramadaki temaslar ve neden işleme dönmedikleri."""
+    import reasons
+    if not data:
+        return f"👀 {title}: henüz tarama yok"
+    when, items, counts = data
+    hhmm = pd.Timestamp(when, unit="s", tz="UTC").tz_convert(TZ).strftime("%H:%M")
+    if not items:
+        return f"👀 <b>{title}</b> ({hhmm}): temas yok"
+    lines = [f"👀 <b>{title}</b> (tarama {hhmm}, {len(items)} temas)"]
+    for sym, ts, side, status, mode, conf in sorted(items, key=lambda x: (-x[1], x[0]))[:limit]:
+        emoji = "🟢" if side == "LONG" else "🔴"
+        if (sym, ts) in active:
+            why = "📋 bildirim gönderildi"
+        elif counts.get((ts, side), 0) >= CLUSTER_MAX:
+            why = f"toplu sinyal ({counts[(ts, side)]} coin aynı mumda)"
+        elif status == "pending":
+            why = "onay geldi, giriş bekleniyor" if conf else "onay bekleniyor"
+        else:
+            why = "elendi: " + reasons.reason(status)
+        lines.append(f"{emoji} {html.escape(sym)} {side} (temas {fmt(ts, '%H:%M')}, {MODE_TR.get(mode, mode)}) — {html.escape(why)}")
+    if len(items) > limit:
+        lines.append(f"… ve {len(items) - limit} temas daha")
     return "\n".join(lines)
 
 
