@@ -1036,3 +1036,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 22.10 02:25 FİTİL sonucu (`fitil seri`, 5 dönem; canlı +37.8 / +68.3 / +26.7 / +3.0 / +15.3 = +151.1R): kapanışta stop sert 1.5R +147.7 (3/5 daha iyi,
   −3.4R) · sert 2R +142.6 (2/5) · 1.5R'de stop +0.5R +119.8 (0/5) · 1R'de stop −0.5R +131.1 (0/5). Kapanış stopu 12 stopu TP'ye çevirdi (+38.7R) ama
   120 stop kapanışa kadar daha derin kapandı (−42R; 128 işlem 1.1R'den büyük zarar). REDDEDİLDİ (≥4/5 yok); BE/kilitleme yine zararlı. Eski seri gerek yok.
+- 22.10 03:17 KENDİ SUNUCUYA TAŞINDI: Hetzner Cloud Helsinki, CPX02 (x86, ~930MB RAM + 2GB swap, 20GB disk, 6.49 €/ay, 25 € ön ödeme),
+  Ubuntu 24.04, IP 95.216.214.13 (Binance trusted IP'ye eklendi). /etc/sapan-bot.env MEMORY_LIMIT_MB=700. Render worker SUSPEND.
+  Güncelleme: guncelle.sh timer'ı 2 dk'da bir main'e bakar ("yükle" = main'e push, aynen). İlk açılış: oto kapalı geldi → /oto aç; bakiye 300.25;
+  momentum geçmişi sıfırdan (1x). Bağlantı: kullanıcı telefonda Termius (root).
