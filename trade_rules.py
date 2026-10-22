@@ -164,6 +164,10 @@ LIMIT_ENTRY_FRAC = 0.0  # >0: limit = onay ucundan mum boyunun bu oranı kadar g
 LIMIT_KEEP_TP = True    # True: TP fiyatı aynı (asıl giriş + RR·asıl risk) → risk küçülür, hedef R büyür; False: TP = limit + RR·yeni risk
 LIMIT_WINDOW = 0        # limit emrin bekleme süresi (mum, onaydan sonra); 0 = ENTRY_WINDOW. TP fiyatına dolmadan gelinirse iptal
 LIMIT_EARLY = True      # False: limit girişte erken çıkış kuralı uygulanmaz
+# 22.10 03:39 "kodla" (limit testinden: onay ortasına geri gelen işlemler zayıf): giriş (stop emri) tetiklenmeden önce fiyat
+# onay mumunun içine bu kadar geri gelirse emir iptal. Canlıdaki "onay mumunun ucu kırılırsa iptal" kuralının (oran 1.0) sıkı hali.
+CANCEL_MID_FRAC = 0.0   # >0: iptal seviyesi = onay ucu − oran·mum boyu (LONG: tepe − oran·(tepe-dip)); 0.5 = orta
+CANCEL_MID_SAME = False # True: aynı mumda hem iptal seviyesine hem girişe gelinirse iptal sayılır (False: giriş sayılır)
 BE_TRIGGER = 0.0       # >0 ise: fiyat bu kadar R kâra gelince stop girişe çekilir (0 = kapalı)
 # Kullanıcı 16.10 22:59 "kodla": TP'ye gelince kapatmak yerine stopu kâra çek (kâr kilidi), hedef daha uzakta.
 BE_LOCK_R = 0.0        # >0: BE_TRIGGER'a gelince stop girişe değil girişin bu kadar R kârına çekilir (örn. 2.2R'de +1.8R)
@@ -975,6 +979,13 @@ def _simulate_core(df, i, side, tick, mode=None):
         if (L[k] < L[conf]) if long else (H[k] > H[conf]):
             res["status"] = "cancel_confirm"
             return res
+        if CANCEL_MID_FRAC > 0:
+            lvl = (H[conf] - CANCEL_MID_FRAC * (H[conf] - L[conf])) if long else (L[conf] + CANCEL_MID_FRAC * (H[conf] - L[conf]))
+            back = (L[k] <= lvl) if long else (H[k] >= lvl)
+            hit = (H[k] >= entry) if long else (L[k] <= entry)
+            if back and (CANCEL_MID_SAME or not hit or CLOSE_ENTRY):
+                res["status"] = "cancel_mid"
+                return res
         if CLOSE_ENTRY:
             if (C[k] > entry) if long else (C[k] < entry):
                 k_in = k

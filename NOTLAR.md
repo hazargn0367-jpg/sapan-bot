@@ -1049,3 +1049,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   dönüşte TP 3 +36.4 / +58.5 / +24.9 (1/3, −8.7R) · limit orta TP aynı −27.9 / +23.4 / −24.6 · +4 mum −24.0 / +31.4 / −27.4 · TP 2.2×yeni −36.6 / +0.8 / −12.6 ·
   üst 1/3 −38.9 / +24.2 / −26.5 · orta erken çıkışsız −26.8 / +27.0 / −15.9. HEPSİ REDDEDİLDİ (her dönemde canlıdan kötü). Geri gelip onay ortasına dolan
   işlemler zayıf (TP %12-20): onaydan sonra hemen kırılım yapan işlemler iyi → stop emriyle giriş doğru. Dönüşte büyük hedef de yok. Eski seri gereksiz.
+- 22.10 03:39 "kodla": trade_rules.CANCEL_MID_FRAC / CANCEL_MID_SAME (giriş stop emri tetiklenmeden fiyat onay ucundan oran·mum boyu geri gelirse
+  "cancel_mid"; aynı mumda hem geri gelme hem giriş: SAME=False giriş, True iptal). COMPARE_SETS["geri"]: canlı · orta · orta aynı mumda iptal · üst 1/3 · 3/4.
+  `/backtest 180 geri seri` + `geri eski seri`. Sentetik: varsayılanla 1127 kurulumda birebir.

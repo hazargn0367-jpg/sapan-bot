@@ -95,6 +95,7 @@ STATUS_TR = {
     "session": "Temas 00-08 UTC (Asya seansı)",
     "cancel_confirm": "Girişten önce onay mumunun ucu kırıldı",
     "ran": "Limit emir dolmadan fiyat hedefe gitti",
+    "cancel_mid": "Girişten önce fiyat onay mumunun içine geri geldi (iptal)",
     "no_entry": "2 mumda girişe gelmedi",
     "chase": "Kapanış girişten çok uzakta (kovalamaca)",
     "wicky": "Temastan önceki mumlar çok iğneli (git-gel)",
@@ -806,7 +807,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
               "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW", "STOP_MID_CONF_ATR", "CLOSE_STOP_HARD_R",
-              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY"]
+              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY", "CANCEL_MID_FRAC", "CANCEL_MID_SAME"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1263,6 +1264,14 @@ COMPARE_SETS["limit"] = [
     C("Limit onay ortasında, TP 2.2 × yeni risk", **dict(_YENI, LIMIT_ENTRY_FRAC=0.5, LIMIT_KEEP_TP=False)),
     C("Limit onayın üst 1/3'ünde, TP aynı fiyat", **dict(_YENI, LIMIT_ENTRY_FRAC=0.33)),
     C("Limit onay ortasında, TP aynı fiyat, erken çıkış yok", **dict(_YENI, LIMIT_ENTRY_FRAC=0.5, LIMIT_EARLY=False)),
+]
+# 22.10 03:39 "kodla": giriş tetiklenmeden fiyat onay mumunun içine geri gelirse emir iptal
+COMPARE_SETS["geri"] = [
+    C("Canlı ayar (onay mumunun ucu kırılırsa iptal)", **_YENI),
+    C("Onay ortasına gelirse iptal", **dict(_YENI, CANCEL_MID_FRAC=0.5)),
+    C("Onay ortasına gelirse iptal (aynı mumda girişse de)", **dict(_YENI, CANCEL_MID_FRAC=0.5, CANCEL_MID_SAME=True)),
+    C("Onayın üst 1/3'üne gelirse iptal", **dict(_YENI, CANCEL_MID_FRAC=0.33)),
+    C("Onayın 3/4'üne gelirse iptal", **dict(_YENI, CANCEL_MID_FRAC=0.75)),
 ]
 COMPARE_SETS["igne2"] = [
     C("Canlı ayar (stop mum içinde)", **_YENI),
