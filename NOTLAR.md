@@ -1076,3 +1076,5 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   takip: giriş / ERKEN ÇIK / TP / stop / iptal ("🔔 … (30dk, temas …)"). Toplu sinyal (≥10) 30dk'da ayrı; MAX_OPEN uygulanmaz (karar kullanıcının).
   Günlük: anahtar "COIN|ts|30m", kayıtta tf; /durum'da "30dk bütün bildirimler / senin girdiklerin" ayrı satır. /otuz aç|kapat (env ALT_ALERTS=0 kapatır).
   Yeniden başlayınca son 30 mumdaki (15 saat) bildirilmiş setup'lar takibe geri alınır. Sahte veriyle test (25 coin, 600 tarama): 7 bildirim, takip mesajları doğru.
+- 22.10 04:21 kullanıcı: "15 Kasım'a kadar bakalım, total sonuçlar ne olacak; bakiye 300$". Plan: canlı 15dk oto (1R 15$, momentum 3x/0.5x) + 30dk sadece
+  bildirim (elle, sadece 1R / 0.5R, 3x'e ekleme yok). 15.11'de: oto sonuç (/oto son 30 gün), günlük (15dk / 30dk / girdiklerin), ban gelip gelmediği, 1R kararı.
