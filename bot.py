@@ -31,6 +31,7 @@ import commands
 import config
 from commands import start_listener
 import live_setups
+import live_alt
 import memwatch
 from exchanges import get_symbols as fetch_symbols, get_klines
 from strategy import check_signal
@@ -99,6 +100,10 @@ def setup_loop():
                 live_setups.maybe_run()
             except Exception as e:
                 log.exception("Setup döngüsü hatası: %s", e)
+            try:
+                live_alt.maybe_run()   # 30dk sadece bildirim (22.10), 15dk taramasından sonra
+            except Exception as e:
+                log.exception("30dk bildirim döngüsü hatası: %s", e)
         time.sleep(5)
 
 
@@ -131,9 +136,10 @@ def main():
                  f"📋 Emir bildirimleri: {setup} (hacmi en yüksek {live_setups.UNIVERSE} coin, {live_setups.LIVE_TF})\n"
                  f"Kurallar: {html.escape(live_setups.rules_summary())}\n"
                  f"🔔 Temas bildirimleri: {durum}\n"
+                 f"🔔 {live_alt.TF_MIN}dk bildirim (otomatik işlem yok): {'açık' if live_alt.ENABLED else 'kapalı'}\n"
                  f"{oto}\n"
                  + (f"🧠 {prev}\n" if prev else "")
-                 + "Komutlar: /oto aç|kapat  /ip  /sinyal aç|kapat  /bildirim aç|kapat  /backtest  /durum  /iptal  /incele")
+                 + "Komutlar: /oto aç|kapat  /ip  /sinyal aç|kapat  /bildirim aç|kapat  /otuz aç|kapat  /backtest  /durum  /iptal  /incele")
     start_listener()
     memwatch.start(commands.backtest_proc, send_message)
     autotrade.start(send_message)

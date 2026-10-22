@@ -91,6 +91,7 @@ Telegram komutları (bot arka planda dinler):
   /iptal          -> çalışan backtest'i durdurur
   /bildirim aç | kapat -> EMA20 temas bildirimleri
   /sinyal aç | kapat -> kurallara uyan setup'larda EMİR HAZIR bildirimleri
+  /otuz aç | kapat -> 30dk bildirimleri (aynı kurallar, otomatik işlem yok, karar senin)
 Sadece TELEGRAM_CHAT_ID'deki sohbetten gelen komutlar kabul edilir.
 """
 
@@ -416,10 +417,21 @@ def _listen():
                         oto = autotrade.status_text().split("\n")[0]
                     except Exception as e:
                         oto = f"🤖 Otomatik işlem: durum okunamadı ({html.escape(str(e))[:100]})"
+                    import live_alt
                     send_message(f"{status_text()}\n\n{live_setups.status_text()}\nEmir bildirimleri: {sig}\n{oto}"
+                                 f"\n{live_alt.status_text()}"
                                  f"\n\n{journal.summary()}"
                                  f"\n\n{exchanges.status_line()}\n\n{memwatch.status_line()}"
                                  f"\n\n🏷 Sürüm: {html.escape(config.version_text(), quote=False)}")
+                elif text.lower().startswith("/otuz"):
+                    import live_alt
+                    low = text.lower()
+                    if "kapa" in low:
+                        live_alt.ENABLED = False
+                    elif "aç" in low or "ac" in low:
+                        live_alt.ENABLED = True
+                    send_message(f"🔔 {live_alt.TF_MIN}dk bildirimleri (otomatik işlem yok) "
+                                 + ("açık" if live_alt.ENABLED else "kapalı") + ". (Bot yeniden başlarsa açık başlar.)")
                 elif text.lower().startswith("/sinyal"):
                     low = text.lower()
                     if "kapa" in low:

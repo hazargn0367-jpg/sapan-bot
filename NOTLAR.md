@@ -1070,3 +1070,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   (düşüş 17.1 / 21.3 vs 14.4 / 12.2) · 15+1s +4.7 / −5.5 · 15+30+1s +2.6 / −18.9. 7 dönem: 15+30 (3) +156.6 vs canlı +145.6 (+11R / 42 ay, 4/7 iyi),
   eski dönemlerde 0/2 ve 2023'te −13.4R ek zarar. KURALA GÖRE REDDEDİLDİ (eski dönemler kötü). 30dk 2024-26'da artı, 2023 ayı piyasasında zararlı.
   1s: 7 dönemde küçük ve tutarsız. Kullanıcıya: canlıya alınmadı; istenirse 30dk sadece bildirim (oto işlem yok) olarak izlenebilir.
+- 22.10 04:11 "kodla" → CANLI EKLENDİ: live_alt.py = 30dk SADECE BİLDİRİM (aynı LIVE_RULES, otomatik işlem YOK). Kendi önbelleği + ayrı WebSocket
+  (kline_30m, 5 bağlantı daha), REST yedek aynı (40 mum / tam 499). bot.setup_loop'ta 15dk taramasından sonra; her 30dk kapanışından sonra 10-600 sn
+  penceresinde bir kez. Mesaj "🔔 30dk BİLDİRİM": giriş/stop/TP, 1R ve 0.5R pozisyon, grafik, Girdim/Girmedim, coinde 15dk setup'ı / oto işlem varsa uyarı;
+  takip: giriş / ERKEN ÇIK / TP / stop / iptal ("🔔 … (30dk, temas …)"). Toplu sinyal (≥10) 30dk'da ayrı; MAX_OPEN uygulanmaz (karar kullanıcının).
+  Günlük: anahtar "COIN|ts|30m", kayıtta tf; /durum'da "30dk bütün bildirimler / senin girdiklerin" ayrı satır. /otuz aç|kapat (env ALT_ALERTS=0 kapatır).
+  Yeniden başlayınca son 30 mumdaki (15 saat) bildirilmiş setup'lar takibe geri alınır. Sahte veriyle test (25 coin, 600 tarama): 7 bildirim, takip mesajları doğru.

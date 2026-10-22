@@ -34,16 +34,17 @@ def _save(data):
     os.replace(tmp, _path())
 
 
-def key_of(symbol, touch_ts):
-    return f"{symbol}|{int(touch_ts)}"
+def key_of(symbol, touch_ts, tf=None):
+    """tf: 15dk (canlı) için None (eski kayıtlarla aynı anahtar); 30dk bildirimleri "…|30m" (22.10)."""
+    return f"{symbol}|{int(touch_ts)}" + (f"|{tf}" if tf else "")
 
 
-def record_alert(symbol, touch_ts, side, entry, stop, tp, mode=None):
+def record_alert(symbol, touch_ts, side, entry, stop, tp, mode=None, tf=None):
     with _lock:
         d = _load()
-        d["setups"].setdefault(key_of(symbol, touch_ts), {
+        d["setups"].setdefault(key_of(symbol, touch_ts, tf), {
             "symbol": symbol, "touch": int(touch_ts), "side": side, "entry": entry, "stop": stop, "tp": tp,
-            "mode": mode,
+            "mode": mode, "tf": tf,
             "sent": time.time(), "decision": None, "status": "pending", "r": None,
         })
         _save(d)
@@ -60,10 +61,10 @@ def set_decision(key, decision):
         return s
 
 
-def set_result(symbol, touch_ts, status, r_net=None):
+def set_result(symbol, touch_ts, status, r_net=None, tf=None):
     with _lock:
         d = _load()
-        s = d["setups"].get(key_of(symbol, touch_ts))
+        s = d["setups"].get(key_of(symbol, touch_ts, tf))
         if s is None:
             return
         s["status"] = status
@@ -89,14 +90,19 @@ def _risk_usd():
 
 def summary():
     """/durum için: bütün bildirimler ve senin girdiklerin."""
-    items = list(_load()["setups"].values())
-    if not items:
+    allitems = list(_load()["setups"].values())
+    items = [s for s in allitems if not s.get("tf")]          # 15dk (canlı / otomatik)
+    alt = [s for s in allitems if s.get("tf")]                # 30dk sadece bildirim (22.10)
+    if not allitems:
         return "📒 Günlük: henüz bildirim yok"
     took = [s for s in items if s["decision"] == "girdim"]
     skipped = [s for s in items if s["decision"] == "girmedim"]
-    unmarked = sum(1 for s in items if s["decision"] is None)
-    lines = [f"📒 <b>Günlük</b> ({len(items)} bildirim, {unmarked} işaretlenmemiş)",
+    unmarked = sum(1 for s in allitems if s["decision"] is None)
+    lines = [f"📒 <b>Günlük</b> ({len(items)} bildirim" + (f" + {len(alt)} 30dk" if alt else "") + f", {unmarked} işaretlenmemiş)",
              _line("Botun bütün bildirimleri", items),
              _line("Senin girdiklerin", took),
              _line("Girmediklerin", skipped)]
+    if alt:
+        lines += [_line("30dk bütün bildirimler", alt),
+                  _line("30dk senin girdiklerin", [s for s in alt if s["decision"] == "girdim"])]
     return "\n".join(lines)
