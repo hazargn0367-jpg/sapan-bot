@@ -1045,3 +1045,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   girişe göre; limit = onay ucu − oran·mum boyu; dolum mumunda stop varsa stop, TP sayılmaz; dolmadan TP fiyatı → "ran"; giriş maker komisyon).
   COMPARE_SETS["limit"]: canlı · dönüş TP 3 · limit orta TP aynı · +4 mum bekle · TP 2.2×yeni risk · üst 1/3 · orta erken çıkışsız.
   `/backtest 180 limit seri` + `limit eski seri`. Sentetik: varsayılanlarla 1127 kurulumda birebir aynı.
+- 22.10 03:40 LİMİT sonucu (`limit seri`, ilk 3 dönem Nis 26-Eki 26 / Eki 25-Nis 26 / May 25-Eki 25; yeni sunucuda 3 dönem ~3 dk): canlı +35.6 / +67.2 / +25.7 ·
+  dönüşte TP 3 +36.4 / +58.5 / +24.9 (1/3, −8.7R) · limit orta TP aynı −27.9 / +23.4 / −24.6 · +4 mum −24.0 / +31.4 / −27.4 · TP 2.2×yeni −36.6 / +0.8 / −12.6 ·
+  üst 1/3 −38.9 / +24.2 / −26.5 · orta erken çıkışsız −26.8 / +27.0 / −15.9. HEPSİ REDDEDİLDİ (her dönemde canlıdan kötü). Geri gelip onay ortasına dolan
+  işlemler zayıf (TP %12-20): onaydan sonra hemen kırılım yapan işlemler iyi → stop emriyle giriş doğru. Dönüşte büyük hedef de yok. Eski seri gereksiz.
