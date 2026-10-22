@@ -1088,3 +1088,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   ("reclaim" / "classic" / "both": kural 2 o varyasyonda uygulanmaz, res no_teyit). COMPARE_SETS["teyit2"]: canlı · dönüşte yok · klasikte yok · hiç yok.
   `/backtest 180 ilk seri` + `ilk eski seri` ("teyit" kelimesi eski teyit setinde). Sentetik: varsayılanla birebir; dönüş + klasik eklenenler = hiç yok.
   Eski bilgi: kural 2'yi kaldırmak 18 ayda +321 işlem −16.2R (artır testi), gevşet −11.4 / +17.4.
+- 23.10 02:25 İLK (teyitsiz ilk temas) sonucu (`ilk seri`, 5 dönem May 24 – Eki 26): canlı +40.0 / +72.8 / +20.2 / +4.1 / +13.2 = +150.3 (490 iş) ·
+  kural 2 dönüşte yok +125.2 (671 iş, eklenen 183 iş −21R, 2/5) · klasikte yok +103.3 (868 iş, eklenen 385 iş, TP %20, −44R, 2/5) · hiç yok +73.0 (1045 iş, 1/5).
+  Teyitsiz ilk temasların TP oranı %8-27 (canlı ~%33). REDDEDİLDİ, kural 2 kalır (önceki artır testiyle aynı sonuç). Eski seri gereksiz.
