@@ -1066,3 +1066,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   15+30 (2) +41.3 / +68.6 / +18.1 / +16.2 / +23.3 = +167.6 (755, %30, 15.0, 4/5) · **15+30 (3) +43.5 / +69.2 / +22.4 / +15.2 / +23.1 = +173.3 (767, %30, 14.9, 4/5)** ·
   15+1s (2) +154.7 (612, 2/5) · 15+30+1s (3) +183.7 (891, %29, 16.4, 4/5; 1s tek başına 2/5 artı, küçük örnek → güvenilmez).
   30dk eski dönemlerde (2024) 15dk zayıfken artı → çeşitlendirme. Bedeli: R/iş 0.30 → 0.23, düşüş 10.7 → 14.9R. Aday: 15+30 (3). Karar `çoklu eski seri`.
+- 22.10 04:10 ÇOKLU ESKİ (Kas 23-May 24, 121 coin / May 23-Kas 23, 81 coin): canlı +4.6 / −5.8 · sadece 30dk −1.5 / −13.4 · 15+30 (3) +2.5 / −19.2
+  (düşüş 17.1 / 21.3 vs 14.4 / 12.2) · 15+1s +4.7 / −5.5 · 15+30+1s +2.6 / −18.9. 7 dönem: 15+30 (3) +156.6 vs canlı +145.6 (+11R / 42 ay, 4/7 iyi),
+  eski dönemlerde 0/2 ve 2023'te −13.4R ek zarar. KURALA GÖRE REDDEDİLDİ (eski dönemler kötü). 30dk 2024-26'da artı, 2023 ayı piyasasında zararlı.
+  1s: 7 dönemde küçük ve tutarsız. Kullanıcıya: canlıya alınmadı; istenirse 30dk sadece bildirim (oto işlem yok) olarak izlenebilir.
