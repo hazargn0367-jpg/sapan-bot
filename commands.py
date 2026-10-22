@@ -31,6 +31,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 ikinci seri -> tepeden sonra 2. / 3. EMA20 temasına da izin (işlem sayısı artar mı, R düşer mi) (+ "ikinci eski seri"; CSV'de temas_no)
   /backtest 180 ema seri -> temas EMA50 / EMA100 + yapı kuralları (kural 8 ve son salınım tepesi/dibi; iğne/kapanış); tek dönem `ema` grafikler EMA50 (son salınım, iğne), `ema yüz` EMA100 (+ "ema eski seri")
   /backtest 180 analiz seri -> sadece canlı ayar, 5 dönem; CSV'de hacim ölçüleri (hac_bacak, hac_duz, hac_oran, hac_onay ...). İlk çalıştırma veriyi hacimle yeniden indirir (uzun sürer)
+  /backtest 180 ilk seri -> kural 2 (trend teyidi) sadece dönüşte / sadece klasikte / hiç uygulanmaz (+ "ilk eski seri")
   /backtest 180 çoklu seri -> aynı kurallar 15dk + 30dk / 1s birlikte (toplam en fazla 2 / 3 işlem, coinde tek işlem); sadece 30dk (+ "çoklu eski seri")
   /backtest 180 geri seri -> giriş tetiklenmeden fiyat onay mumunun ortasına / üst 1/3'üne / 3/4'üne geri gelirse emir iptal (+ "geri eski seri")
   /backtest 180 limit seri -> dönüşte TP 3; onaydan sonra limit giriş (onay ortası / üst 1/3, TP aynı fiyat ya da 2.2 × yeni risk, 4 mum bekleme, erken çıkışsız) (+ "limit eski seri")
@@ -180,6 +181,8 @@ def start_backtest(text):
         args += ["--compare", "artir"]   # işlem sayısını artırma: canlı kurallar tek tek gevşetilir
     elif any(w in low for w in ("gevşet", "gevset", "gevşe")):
         args += ["--compare", "gevset"]
+    elif re.search(r"\bilk\b", low):   # 23.10: teyitsiz ilk temas: kural 2 sadece dönüşte / klasikte / hiç yok
+        args += ["--compare", "teyit2"]
     elif "teyit" in low:
         args += ["--compare", "teyit"]
     elif "gemini" in low:

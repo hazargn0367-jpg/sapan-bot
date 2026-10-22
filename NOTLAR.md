@@ -1084,3 +1084,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 22.10 18:18 "kodla": /temas = son 15dk ve 30dk taramasındaki EMA20 temasları (coin, yön, temas saati, klasik/dönüş) ve durumu: bildirim gönderildi /
   toplu sinyal / onay bekleniyor / onay geldi giriş bekleniyor / "elendi: <sebep>" (reasons.py = backtest.STATUS_TR kopyası). scan_symbol her temasın
   simulate durumunu _touch_log'a yazar (sadece son CONFIRM_WINDOW+1 mum), run_cycle sonunda _stats["touch_list"]. En fazla 40 satır.
+- 23.10 02:12 "kodla" (BANKUSDT 19.09 01:15 grafiği: dümdüz çıkıştan sonraki ilk temas kural 2'ye takıldı, sonraki teyitli temas erken çıkış): trade_rules.PRIOR_TOUCH_SKIP
+  ("reclaim" / "classic" / "both": kural 2 o varyasyonda uygulanmaz, res no_teyit). COMPARE_SETS["teyit2"]: canlı · dönüşte yok · klasikte yok · hiç yok.
+  `/backtest 180 ilk seri` + `ilk eski seri` ("teyit" kelimesi eski teyit setinde). Sentetik: varsayılanla birebir; dönüş + klasik eklenenler = hiç yok.
+  Eski bilgi: kural 2'yi kaldırmak 18 ayda +321 işlem −16.2R (artır testi), gevşet −11.4 / +17.4.

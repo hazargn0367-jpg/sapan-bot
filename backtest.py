@@ -811,7 +811,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
               "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW", "STOP_MID_CONF_ATR", "CLOSE_STOP_HARD_R",
-              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY", "CANCEL_MID_FRAC", "CANCEL_MID_SAME"]
+              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY", "CANCEL_MID_FRAC", "CANCEL_MID_SAME", "PRIOR_TOUCH_SKIP"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1286,6 +1286,13 @@ COMPARE_SETS["coklu"] = [
     C("15dk + 30dk (toplam en fazla 3 işlem)", **dict(_YENI, max_open=3), tfs=["15m", "30m"]),
     C("15dk + 1s (toplam en fazla 2 işlem)", **_YENI, tfs=["15m", "1h"]),
     C("15dk + 30dk + 1s (toplam en fazla 3 işlem)", **dict(_YENI, max_open=3), tfs=["15m", "30m", "1h"]),
+]
+# 23.10 02:12 "kodla" (BANKUSDT 19.09 örneği: dümdüz çıkıştan sonraki ilk temas kural 2'ye takıldı): kural 2 sadece bir varyasyonda kalkar
+COMPARE_SETS["teyit2"] = [
+    C("Canlı ayar (kural 2 hepsinde)", **_YENI),
+    C("Kural 2 dönüşte yok (teyitsiz ilk temasta dönüşe girilir)", **dict(_YENI, PRIOR_TOUCH_SKIP="reclaim")),
+    C("Kural 2 klasikte yok (teyitsiz ilk temasta klasiğe girilir)", **dict(_YENI, PRIOR_TOUCH_SKIP="classic")),
+    C("Kural 2 hiç yok", **dict(_YENI, PRIOR_TOUCH_SKIP="both")),
 ]
 COMPARE_SETS["igne2"] = [
     C("Canlı ayar (stop mum içinde)", **_YENI),

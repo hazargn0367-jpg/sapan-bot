@@ -41,6 +41,7 @@ SESSION_START_UTC = 8    # temas mumu 00:00-08:00 UTC (03:00-11:00 TR) arasında
 # ---- Grafik incelemesinden gelen kurallar (varsayılan kapalı, backtest'te açılır) ----
 WICK_MAX_BODY = 0.0          # >0: onay mumunun ters iğnesi (LONG'da üst) gövdenin bu katından uzunsa işlem yok
 REQUIRE_PRIOR_TOUCH = False  # trend başladıktan sonra, tepeden önce en az bir EMA20 teması olmalı
+PRIOR_TOUCH_SKIP = ""        # 23.10 testi: kural 2 bu varyasyonda uygulanmaz ("reclaim" / "classic" / "both"); "" = hepsinde uygulanır
 PRIOR_TOUCH_SEP_ATR = 0.0    # >0: kural 2'de "kalkış" = fiyatın EMA20'den bu kadar ATR ayrıldığı ilk mum (0: tamamen
                              # üstünde olduğu ilk mum). Yataydan tek dev mumla başlayan trendde yataydaki temaslar sayılmaz
                              # (kullanıcı 15.10 17:28, CARVUSDT 05.10 07:45)
@@ -761,8 +762,11 @@ def _simulate_core(df, i, side, tick, mode=None):
         res["status"] = "touch_prev"
         return res
     if REQUIRE_PRIOR_TOUCH and not prior_touch_ok(df, i, side):
-        res["status"] = "no_prior_touch"
-        return res
+        if PRIOR_TOUCH_SKIP in ("both", mode):
+            res["no_teyit"] = True   # teyitsiz ilk temas, bu varyasyonda kural 2 uygulanmıyor (test)
+        else:
+            res["status"] = "no_prior_touch"
+            return res
     if STRUCTURE_BREAK and not structure_ok(df, i, side, STRUCTURE_BREAK):
         res["status"] = "structure_break"
         return res
