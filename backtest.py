@@ -96,6 +96,7 @@ STATUS_TR = {
     "cancel_confirm": "Girişten önce onay mumunun ucu kırıldı",
     "ran": "Limit emir dolmadan fiyat hedefe gitti",
     "cancel_mid": "Girişten önce fiyat onay mumunun içine geri geldi (iptal)",
+    "young_trend": "Trend genç (EMA'lar sıralı olalı az mum oldu)",
     "no_entry": "2 mumda girişe gelmedi",
     "chase": "Kapanış girişten çok uzakta (kovalamaca)",
     "wicky": "Temastan önceki mumlar çok iğneli (git-gel)",
@@ -811,7 +812,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
               "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW", "STOP_MID_CONF_ATR", "CLOSE_STOP_HARD_R",
-              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY", "CANCEL_MID_FRAC", "CANCEL_MID_SAME", "PRIOR_TOUCH_SKIP"]
+              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY", "CANCEL_MID_FRAC", "CANCEL_MID_SAME", "PRIOR_TOUCH_SKIP", "TREND_AGE_MIN"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1288,6 +1289,15 @@ COMPARE_SETS["coklu"] = [
     C("15dk + 30dk + 1s (toplam en fazla 3 işlem)", **dict(_YENI, max_open=3), tfs=["15m", "30m", "1h"]),
 ]
 # 23.10 02:12 "kodla" (BANKUSDT 19.09 örneği: dümdüz çıkıştan sonraki ilk temas kural 2'ye takıldı): kural 2 sadece bir varyasyonda kalkar
+# 23.10 02:41 "kodla": trend yaşı (CSV analizi, 7 dönem: yaş ≥ 76 mum 6/7 dönemde daha iyi, TP %37 vs %26; genç trend 3 dönemde zarar)
+COMPARE_SETS["yas"] = [
+    C("Canlı ayar", **_YENI),
+    C("Trend yaşı ≥ 60 mum (15 saat)", **dict(_YENI, TREND_AGE_MIN=60)),
+    C("Trend yaşı ≥ 76 mum (19 saat)", **dict(_YENI, TREND_AGE_MIN=76)),
+    C("Trend yaşı ≥ 100 mum (25 saat)", **dict(_YENI, TREND_AGE_MIN=100)),
+    C("Trend yaşı ≥ 76 + erken çıkış yok", **dict(_YENI, TREND_AGE_MIN=76, FAILED_ENTRY_BARS=0)),
+    C("Erken çıkış yok (yaş şartı yok)", **dict(_YENI, FAILED_ENTRY_BARS=0)),
+]
 COMPARE_SETS["teyit2"] = [
     C("Canlı ayar (kural 2 hepsinde)", **_YENI),
     C("Kural 2 dönüşte yok (teyitsiz ilk temasta dönüşe girilir)", **dict(_YENI, PRIOR_TOUCH_SKIP="reclaim")),

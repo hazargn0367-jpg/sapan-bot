@@ -41,6 +41,8 @@ SESSION_START_UTC = 8    # temas mumu 00:00-08:00 UTC (03:00-11:00 TR) arasında
 # ---- Grafik incelemesinden gelen kurallar (varsayılan kapalı, backtest'te açılır) ----
 WICK_MAX_BODY = 0.0          # >0: onay mumunun ters iğnesi (LONG'da üst) gövdenin bu katından uzunsa işlem yok
 REQUIRE_PRIOR_TOUCH = False  # trend başladıktan sonra, tepeden önce en az bir EMA20 teması olmalı
+TREND_AGE_MIN = 0            # >0 (23.10 testi): trend yaşı (temastan geriye EMA20>EMA50>EMA100 sırasının bozulmadan sürdüğü mum sayısı,
+                             # trend_features'taki trend_yasi) en az bu kadar olmalı. 15dk'da 76 mum ≈ 19 saat. Genç trende girme.
 PRIOR_TOUCH_SKIP = ""        # 23.10 testi: kural 2 bu varyasyonda uygulanmaz ("reclaim" / "classic" / "both"); "" = hepsinde uygulanır
 PRIOR_TOUCH_SEP_ATR = 0.0    # >0: kural 2'de "kalkış" = fiyatın EMA20'den bu kadar ATR ayrıldığı ilk mum (0: tamamen
                              # üstünde olduğu ilk mum). Yataydan tek dev mumla başlayan trendde yataydaki temaslar sayılmaz
@@ -429,6 +431,17 @@ def zigzag(df, i, side):
     return float(up.mean()), flips, n
 
 
+def trend_age(df, i, side):
+    """Temas mumundan geriye EMA20 > EMA50 > EMA100 (SHORT'ta tersi) sırasının bozulmadan sürdüğü mum sayısı (en fazla TREND_AGE_MAX)."""
+    long = side == "LONG"
+    E20, E50, E100 = _real_ema20(df), df["EMA50"].values, df["EMA100"].values
+    age, m = 0, i
+    while m >= 0 and age < TREND_AGE_MAX and ((E20[m] > E50[m] > E100[m]) if long else (E20[m] < E50[m] < E100[m])):
+        age += 1
+        m -= 1
+    return age
+
+
 def trend_features(df, i, side, entry=None, risk=None):
     """Temiz trend ölçüleri (i: temas mumu). TP ile stop olan işlemleri karşılaştırmak ve filtre için.
     Bacak: son tepeden (LONG) / dipten (SHORT) önceki son EMA20 temasından sonraki mumlar, tepe mumu dahil."""
@@ -766,6 +779,12 @@ def _simulate_core(df, i, side, tick, mode=None):
             res["no_teyit"] = True   # teyitsiz ilk temas, bu varyasyonda kural 2 uygulanmıyor (test)
         else:
             res["status"] = "no_prior_touch"
+            return res
+    if TREND_AGE_MIN > 0:
+        age = trend_age(df, i, side)
+        res["trend_age"] = age
+        if age < TREND_AGE_MIN:
+            res["status"] = "young_trend"
             return res
     if STRUCTURE_BREAK and not structure_ok(df, i, side, STRUCTURE_BREAK):
         res["status"] = "structure_break"

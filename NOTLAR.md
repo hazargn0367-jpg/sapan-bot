@@ -1091,3 +1091,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 23.10 02:25 İLK (teyitsiz ilk temas) sonucu (`ilk seri`, 5 dönem May 24 – Eki 26): canlı +40.0 / +72.8 / +20.2 / +4.1 / +13.2 = +150.3 (490 iş) ·
   kural 2 dönüşte yok +125.2 (671 iş, eklenen 183 iş −21R, 2/5) · klasikte yok +103.3 (868 iş, eklenen 385 iş, TP %20, −44R, 2/5) · hiç yok +73.0 (1045 iş, 1/5).
   Teyitsiz ilk temasların TP oranı %8-27 (canlı ~%33). REDDEDİLDİ, kural 2 kalır (önceki artır testiyle aynı sonuç). Eski seri gereksiz.
+- 23.10 02:32 kullanıcı: "TP oranı %33 çok düşük, %40-45'e çıkarmalıyız". CSV analizi (7 dönem, 605 iş; scratchpad/tp): TP %32 / stop %31 / erken %37
+  (TP/(TP+stop) %50). Erken çıkışsız (mfe ile) TP %41.5, R +145 vs +149, düşüş 14.4 → 19.1R, art arda stop 5 → 14. TP 1.5: %36 / +82R. 45 ölçü / 686 tekli +
+  ikili filtre: aynı veride ikili %41-42 TP ama dönem-dışı sınavda (LOPO) TP %35.6, R 149 → 71 (ezber). Tutarlı tek bulgu: trend_yasi (EMA20>50>100 sırası
+  kaç mum): <76 mum TP %23-29 R/iş ~0.05 (3 dönemde eksi) · ≥76 %34-42, 0.31-0.53 (6/7 dönem iyi; tekdüze artış). ≥76 + erken çıkışsız TP %48 +138R (aynı veri).
+  DİKKAT: ilk denemede 24 saat / coin geçmişi hesabında işlemin kendisi de sayılmıştı (c_t <= g_t, giriş mumunda erken çıkış) → yanlış %42; düzeltildi (c_t < g_t).
+- 23.10 02:41 "kodla": trade_rules.TREND_AGE_MIN + trend_age() (status young_trend; reasons'ta Türkçe). COMPARE_SETS["yas"]: canlı · ≥60 · ≥76 · ≥100 ·
+  ≥76 + erken çıkışsız · erken çıkışsız. `/backtest 180 yaş seri` + `/backtest 180 yaş seri 3 sene önce` (ago 1095: 2021-2023, hiç bakılmamış). Sentetik birebir.

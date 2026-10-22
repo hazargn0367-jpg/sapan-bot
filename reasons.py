@@ -52,6 +52,7 @@ REASONS = {
     "pending": "Beklemede (veri bitti)",
 }
 REASONS.update({
+    "young_trend": "Trend genç (EMA'lar sıralı olalı az mum oldu)",
     "no_confirm": "onay gelmedi",
     "pending": "bekleniyor",
 })
