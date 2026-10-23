@@ -1132,3 +1132,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   yavaş düzeltme, onay 3 mum) + TEMEL (hepsi kalkmış). "saglam_k" = aynısı +5/+10 dk kaydırılmış mumlarda (en fazla 4 işlem). 4 görünüm:
   `sağlam seri` (Binance) · `sağlam seri 3 sene önce` (2021-23) · `sağlam kayık seri` (5dk veri) · `sağlam mexc seri` (Binance coinleri MEXC mumlarıyla).
   Karar: kuralın elediği işlemler (− kural satırı eksi canlı) çoğu görünümde eksiyse kural kalır, yoksa çıkar.
+- 23.10 11:40 SAĞLAM sonucu (3 görünüm; kural kaldırınca canlıya göre R farkı, eklenen işlem): canlı Binance +151.2 (489) · 2021-23 −20.5 (195) · kayık +5.4 (1083).
+  kural 1 −19.0 / −2.2 / +14.6 · kural 2 −72.2 / −14.3 / −3.5 (KALIR) · kural 4 −3.0 / +0.9 / +5.0 (etkisiz, +28 iş) · kural 5 −5.9 / −9.9 / +3.9 · kural 6 +21.9 (+159 iş,
+  4/5) / −7.8 / −13.3 · 1R yer −1.0 (+200 iş) / −14.5 / +25.4 · iğneli −10.6 / −1.8 / +4.9 · taban −3.3 / −2.8 / −23.8 (KALIR) · sert sallanma −8.7 / −4.3 / −3.8 (KALIR) ·
+  yavaş −6.6 / +0.5 / 0 · onay 3 mum +2.9 / −4.1 / −6.1 (kalır) · TEMEL −335.6 / −162.5 / −174.0. Kurallar topluca gerçek (temel her yerde çok eksi), ama kalan
+  avantaj sadece Binance 2024-26'da artı. Gevşetme adayları (işlem artırır, kârı az etkiler): kural 4, 1R yer, kural 6. MEXC görünümü bekleniyor.
