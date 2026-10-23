@@ -1151,3 +1151,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   7 endeks (US500, NAS100, US30, DE40, UK100, JP225, FR40), 2 petrol. Maliyet taraf başına %0.006. COMPARE_SETS["forex"]: 15dk / 30dk / 1s / 2s / 4s × (canlı
   kurallar, BASE_MIN_RISK_PCT %0.03 · temel kurallarsız). CSV'de grup. `/backtest 180 forex` (+ seri). Sahte veriyle uçtan uca çalıştı; gerçek Dukascopy
   erişimi ve kayıt sırası sunucuda doğrulanacak (bu ortamdan ulaşılamıyor). İlk indirme ~30-60 dk.
+
+## 23.10 18:15 — açık seri (− kural 4 / en fazla 3-4 işlem), Binance 5 dönem (May 24 – Eki 26) → RED
+- Canlı: 497 işlem, +166.4R (mom +252.9R, ayda 8.4R). − kural 4: 524 işlem (+%5), +161.2R (mom +253.8R); düz 1/5, mom 3/5 dönem daha iyi.
+- En fazla 3 = en fazla 4: sadece +6 işlem (30 ayda), −3R. MAX_OPEN 2 neredeyse hiç dolmuyor → sınır darboğaz değil.
+- Sonuç: işlem sayısı sınırlardan değil kurulum azlığından düşük. 2021-23 / kayık testine gerek görülmedi.
