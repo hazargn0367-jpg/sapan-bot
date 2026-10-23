@@ -34,6 +34,7 @@ import pandas as pd
 
 import archive
 import bybit
+import mexc
 import config
 import charts
 import live_setups
@@ -52,6 +53,7 @@ FETCH_THREADS = 16  # aynı anda kaç coinin verisi çekilsin (arşiv dosyaları
 MAX_IN_FLIGHT = 20  # bellekte aynı anda en fazla kaç coinin ham verisi dursun
 BAN_WAIT = 600  # Binance IP engeli/sınırı en fazla bu kadar sn sürecekse beklenir, daha uzunsa backtest durur
 USE_ARCHIVE = True  # geçmiş veri Binance dosya arşivinden (API sınırı/engeli yok); --api ile kapatılır
+ALT_EX = {"bybit": bybit, "mexc": mexc}   # başka borsa verisiyle backtest (23.10: mexc)
 EXCHANGE = "binance"  # --exchange bybit: mumlar ve coin listesi Bybit'ten (diske kaydedilmez)
 BINANCE_SET = set()   # Bybit testinde canlı botun Binance coinleri (bybit.norm adlarıyla)
 DEFAULT_COINS = "all"  # Bybit testinde "coins" anahtarı olmayan ayarlar: bybit seti dışında "binance" (aynı coinler)
@@ -195,8 +197,8 @@ def set_base_tf(tf):
 
 
 def _fetch_range(symbol, start_ms, end_ms):
-    if EXCHANGE == "bybit":
-        return bybit.klines(symbol, start_ms, end_ms, BASE_TF)
+    if EXCHANGE in ALT_EX:
+        return ALT_EX[EXCHANGE].klines(symbol, start_ms, end_ms, BASE_TF)
     if USE_ARCHIVE:
         return archive.get_range(symbol, BASE_TF, start_ms, end_ms, api_max_wait=BAN_WAIT, api_recent=False)
     return get_klines_range(symbol, BASE_TF, start_ms, end_ms, max_wait=BAN_WAIT)
@@ -227,7 +229,7 @@ def load_15m(symbol, days, ago=0):
     Kayıt her zaman kesintisizdir: span = çekilmiş aralık (coin o tarihte yoksa da çekilmiş sayılır)."""
     start_ms, end_ms = period(days, ago)
     start_ms -= WARMUP * BAR_MS * WARMUP_FACTOR
-    if EXCHANGE == "bybit" or end_ms < time.time() * 1000 - OLD_DAYS * 86400 * 1000:
+    if EXCHANGE in ALT_EX or end_ms < time.time() * 1000 - OLD_DAYS * 86400 * 1000:
         # Çok eski dönem (ör. 2-3 yıl önce): sadece o aylar arşivden indirilir, kayda eklenmez
         # (kayıt kesintisiz tutulduğu için aradaki yılların hepsi indirilip diske yazılırdı)
         df = _fetch_range(symbol, start_ms, end_ms)
@@ -1292,6 +1294,13 @@ COMPARE_SETS["coklu"] = [
 # 23.10 02:41 "kodla": trend yaşı (CSV analizi, 7 dönem: yaş ≥ 76 mum 6/7 dönemde daha iyi, TP %37 vs %26; genç trend 3 dönemde zarar)
 # 23.10 03:14 "kodla" (kullanıcı: ayda 10R için işlem sayısı 2 katı): aynı kurallar 5 / 10 dk kaydırılmış 15dk mumlarda
 # (:05/:20/:35/:50 ve :10/:25/:40/:55 başlangıçlı). Veri 5dk; coinde tek işlem; toplu sinyal her dizide ayrı.
+# 23.10 03:35 "kodla": başka borsanın bütün coinleri (MEXC ~1000), bugünkü canlı kurallar. "coins": all / binance (canlı botun Binance
+# coinleri, aynı sinyaller) / new (Binance'te olmayan: YENİ işlemler). `/backtest 180 mexc` (+ seri).
+COMPARE_SETS["borsa"] = [
+    C("Bütün coinler", **_YENI, coins="all"),
+    C("Sadece canlı botun Binance coinleri (aynı sinyaller)", **_YENI, coins="binance"),
+    C("Sadece Binance'te olmayan coinler (YENİ işlemler)", **_YENI, coins="new"),
+]
 COMPARE_SETS["kayik"] = [
     C("Canlı ayar (normal 15dk mumlar)", **_YENI, tfs=["15m"]),
     C("Sadece +5 dk kaydırılmış 15dk", **_YENI, tfs=["15m+5"]),
@@ -1841,7 +1850,7 @@ def main():
     ap.add_argument("--stop-buf", type=float, default=0.0, help="stop payı (ATR)")
     ap.add_argument("--top", type=int, default=None, help="hacme göre ilk kaç coin (0 = hepsi; Binance 500, Bybit hepsi)")
     ap.add_argument("--trend", action="store_true", help="trend takibi (Donchian kırılımı) testi")
-    ap.add_argument("--exchange", default="binance", choices=["binance", "bybit"], help="veri kaynağı borsa")
+    ap.add_argument("--exchange", default="binance", choices=["binance", "bybit", "mexc"], help="veri kaynağı borsa")
     ap.add_argument("--coins", default=None, choices=["all", "binance", "new"],
                     help="Bybit testinde hangi coinler (varsayılan: bybit setinde ayara göre, diğerlerinde binance)")
     ap.add_argument("--max-open", type=int, default=0, help="aynı anda en fazla açık işlem (0 = sınırsız)")
@@ -1852,9 +1861,9 @@ def main():
     args = ap.parse_args()
     global EXCHANGE, DEFAULT_COINS
     EXCHANGE = args.exchange
-    DEFAULT_COINS = args.coins or ("binance" if EXCHANGE == "bybit" and args.compare != "bybit" else "all")
+    DEFAULT_COINS = args.coins or ("binance" if EXCHANGE in ALT_EX and args.compare not in ("bybit", "borsa") else "all")
     if args.top is None:
-        args.top = 0 if EXCHANGE == "bybit" else 500
+        args.top = 0 if EXCHANGE in ALT_EX else 500
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
     if "5m" in tfs:
         tfs = ["5m"]  # 5 dakikalık test tek başına çalışır
@@ -1918,29 +1927,39 @@ def main():
     drop_other_tf_cache()
     global USE_ARCHIVE
     exchanges.WEIGHT_SOFT_LIMIT = exchanges.BACKTEST_SOFT_LIMIT  # canlı taramaya pay bırak
-    if EXCHANGE == "bybit":
+    if EXCHANGE in ALT_EX:
+        X = ALT_EX[EXCHANGE]
         USE_ARCHIVE = False
-        tr.FEE_TAKER, tr.FEE_MAKER = 0.00055, 0.0002   # Bybit temel vadeli komisyon (taker %0.055, maker %0.02)
-        symbols, ticks = bybit.top_symbols(args.top)
+        if EXCHANGE == "bybit":
+            tr.FEE_TAKER, tr.FEE_MAKER = 0.00055, 0.0002   # Bybit temel vadeli komisyon (taker %0.055, maker %0.02)
+        else:
+            tr.FEE_TAKER, tr.FEE_MAKER = 0.0008, 0.0006     # MEXC API emir komisyonu (taker %0.08, maker %0.06; web daha ucuz)
+        symbols, ticks = X.top_symbols(args.top)
         bn = None
         try:
-            bn = get_top_symbols(live_setups.UNIVERSE if hasattr(live_setups, "UNIVERSE") else 500, max_wait=60)
+            import live_setups as _ls
+            bn = get_top_symbols(getattr(_ls, "UNIVERSE", 500), max_wait=60)
         except Exception as e:
             log.warning("Binance coin listesi alınamadı (%s), son kayıttan", e)
             uni = _load_universe()
             bn = uni[0][:500] if uni else None
         if not bn:
             raise RuntimeError("Binance coin listesi alınamadı: hangi coinin yeni olduğu ayrılamıyor")
-        BINANCE_SET.update(bybit.norm(x) for x in bn)
-        n_new = sum(1 for x in symbols if bybit.norm(x) not in BINANCE_SET)
-        source = (f"Bybit API ({len(symbols)} USDT vadeli coin; {len(symbols) - n_new} tanesi canlı botun Binance "
-                  f"listesinde de var, {n_new} tanesi yeni). Komisyon Bybit: %0.055 / %0.02")
+        BINANCE_SET.update(X.norm(x) for x in bn)
+        n_new = sum(1 for x in symbols if X.norm(x) not in BINANCE_SET)
+        exn = "Bybit" if EXCHANGE == "bybit" else "MEXC"
+        source = (f"{exn} API ({len(symbols)} USDT vadeli coin; {len(symbols) - n_new} tanesi canlı botun Binance "
+                  f"listesinde de var, {n_new} tanesi yeni). Komisyon {exn}: %{100 * tr.FEE_TAKER:g} / %{100 * tr.FEE_MAKER:g}")
+        if EXCHANGE == "mexc":
+            st_ = mexc.STATS
+            source += (f". API ile işlem: {st_['api_allowed']} coin izinli, {st_['api_blocked']} kapalı; "
+                       f"hisse {st_['stock']} / gizli {st_['hidden']} kontrat hariç")
         need = {cfg.get("coins", DEFAULT_COINS) for cfg in configs}
         if need == {"binance"}:   # sadece ortak coinler: diğerlerinin verisi indirilmez (toplu sinyal de bunlardan sayılır)
-            symbols = [x for x in symbols if bybit.norm(x) in BINANCE_SET]
+            symbols = [x for x in symbols if X.norm(x) in BINANCE_SET]
         elif need == {"new"}:
-            symbols = [x for x in symbols if bybit.norm(x) not in BINANCE_SET]
-        if args.compare != "bybit":
+            symbols = [x for x in symbols if X.norm(x) not in BINANCE_SET]
+        if args.compare not in ("bybit", "borsa"):
             source += {"binance": ". Test edilen: sadece canlı botun Binance coinleri (aynı coinler, Bybit verisi)",
                        "new": ". Test edilen: sadece Binance'te olmayan coinler",
                        "all": ". Test edilen: bütün Bybit coinleri"}[DEFAULT_COINS]
@@ -1951,11 +1970,11 @@ def main():
         ok, why = archive_reachable()
         USE_ARCHIVE = ok
         source = (f"Binance arşivi ({why})" if ok else f"Binance API, arşive ulaşılamadı: {why}")
-    if EXCHANGE != "bybit":
+    if EXCHANGE not in ALT_EX:
         log.info("Veri kaynağı: %s", source)
         ticks, symbols = {}, [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
     try:
-        if EXCHANGE == "bybit":
+        if EXCHANGE in ALT_EX:
             raise _SkipBinance
         for attempt in range(3):
             try:
@@ -2052,7 +2071,7 @@ def main():
                         rtsets[key] = rt
                         touch_by[key].update((tf, int(ts_[x[0]]), x[1]) for x in rt)
                 signals = sigsets[()]
-                on_bn = bybit.norm(symbol) in BINANCE_SET if EXCHANGE == "bybit" else True
+                on_bn = ALT_EX[EXCHANGE].norm(symbol) in BINANCE_SET if EXCHANGE in ALT_EX else True
                 for ci, cfg in enumerate(configs):
                     if cfg.get("tfs") and tf not in cfg["tfs"]:
                         continue   # bu ayar bu zaman diliminde çalışmıyor (22.10 çoklu zaman dilimi testi)
@@ -2073,7 +2092,7 @@ def main():
                             new = new + run_retest(df, symbol, tf, tick, rtsets[_sig_key(cfg)], busy)
                     for r in new:
                         r["hacim_sirasi"] = rank.get(symbol, 0)
-                        if EXCHANGE == "bybit":
+                        if EXCHANGE in ALT_EX:
                             r["binance_da"] = int(on_bn)
                     results[cfg["ad"]] += new
                 if not args.compare:

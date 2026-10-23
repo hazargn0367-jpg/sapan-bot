@@ -1117,3 +1117,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   ÖNEMLİ UYARI: aynı kurallar aynı piyasada sadece mum saati kayınca avantaj ~0. İki açıklama: (a) standart 15dk kapanışları gerçekten önemli (kalabalık bu
   mumlara bakıyor), (b) kurallar 30+ test boyunca standart mumlarda seçildiği için backtest avantajı şişmiş (ezber). 2021-23'ün eksi olması (b)'yi destekliyor →
   canlı beklenti backtestin altında tutulmalı (ör. 0.1-0.15R/iş). Ayırt etmek için: 14.10 temel kurallarla (filtresiz) normal / kaydırılmış karşılaştırması.
+- 23.10 03:35 "kodla": MEXC TESTİ. mexc.py (bybit.py arayüzü: contract v1 /detail, /ticker amount24, /kline/{sym} saniye, 2000 mum/istek, 7 istek/sn; USDT perpetual,
+  state 0, hisse ve gizli kontratlar hariç; apiAllowed sayılır). backtest: ALT_EX {bybit, mexc}, komisyon MEXC API taker %0.08 / maker %0.06. COMPARE_SETS["borsa"]
+  (_YENI: bütün / Binance'te de olan / sadece yeni). `/backtest 180 mexc` (+ "mexc seri"; commands'ta mexc + seri düzeltildi, bybit seri de çalışır).
+  Düzeltme: Bybit/MEXC testinde Binance coin listesi live_setups yerel import hatası yüzünden hep son kayıttan geliyordu (UnboundLocalError) → _ls.
+  Sahte veriyle test: ortak / yeni ayrımı ve binance_da doğru. Gerçek MEXC erişimi sunucudan denenmedi (bu ortamdan ulaşılamıyor).
