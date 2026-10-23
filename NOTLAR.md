@@ -1128,3 +1128,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   avantajsız (Bybit 16.10'da da zayıftı). Kaydırılmış mumlar (~0), Bybit/MEXC verisi (≤0), 2021-23 (eksi) → backtestteki +0.3R/iş büyük ölçüde Binance
   standart 15dk mumlarına ezber. Canlı beklenti düşük (~0-0.1R/iş). Öneri: sağlamlık süzgeci (her kural kaydırılmış mum + MEXC + 2021-23'te de işe yarıyor mu),
   risk düşürme / 3x momentumu kısma, 15.11 canlı sonucu belirleyici.
+- 23.10 04:01 "kodla": SAĞLAMLIK SÜZGECİ. COMPARE_SETS["saglam"] = canlı + 11 kural tek tek kaldırılmış (kural 1/2/4/5/6, 1R yer, iğneli, taban, sert sallanma,
+  yavaş düzeltme, onay 3 mum) + TEMEL (hepsi kalkmış). "saglam_k" = aynısı +5/+10 dk kaydırılmış mumlarda (en fazla 4 işlem). 4 görünüm:
+  `sağlam seri` (Binance) · `sağlam seri 3 sene önce` (2021-23) · `sağlam kayık seri` (5dk veri) · `sağlam mexc seri` (Binance coinleri MEXC mumlarıyla).
+  Karar: kuralın elediği işlemler (− kural satırı eksi canlı) çoğu görünümde eksiyse kural kalır, yoksa çıkar.

@@ -1296,6 +1296,34 @@ COMPARE_SETS["coklu"] = [
 # (:05/:20/:35/:50 ve :10/:25/:40/:55 başlangıçlı). Veri 5dk; coinde tek işlem; toplu sinyal her dizide ayrı.
 # 23.10 03:35 "kodla": başka borsanın bütün coinleri (MEXC ~1000), bugünkü canlı kurallar. "coins": all / binance (canlı botun Binance
 # coinleri, aynı sinyaller) / new (Binance'te olmayan: YENİ işlemler). `/backtest 180 mexc` (+ seri).
+# 23.10 04:01 "kodla": SAĞLAMLIK SÜZGECİ. Canlı ayardan her kural tek tek kaldırılır (+ hepsi kalkmış "temel"). Aynı set 4 görünümde:
+# Binance 5 dönem, 2021-23 (3 sene önce), kaydırılmış mumlar (kayık), MEXC verisi (mexc). Bir kural ancak elediği işlemler çoğu görünümde
+# eksiyse tutulur (kaydırılmış mum / başka borsa / eski dönem = ezber sınaması).
+_SAGLAM_OFF = [
+    ("kural 1: onay iğnesi", dict(WICK_MAX_BODY=0.0)),
+    ("kural 2: trend teyidi", dict(REQUIRE_PRIOR_TOUCH=False)),
+    ("kural 4: temiz tepe/dip", dict(CLEAN_PIVOT_MAX=0)),
+    ("kural 5: fitil temas", dict(TOUCH_WICK_MIN=0.0)),
+    ("kural 6: tepe iğnesi", dict(PIVOT_WICK_MAX=0.0)),
+    ("önünde 1R yer", dict(ROOM_MIN_R=0.0)),
+    ("iğneli git-gel (%58)", dict(WICKY_MAX=0.0)),
+    ("dip/tepe tabanı", dict(PIVOT_BAND2_ATR=0.0)),
+    ("sert sallanma (0.8 ATR)", dict(BODY_AVG_MAX_ATR=0.0)),
+    ("yavaş düzeltme (10 mum)", dict(CORR_BARS_MAX=0)),
+    ("onay 2. mum sınırı (3 mum)", dict(CONFIRM_WINDOW=3)),
+]
+def _saglam(extra=None):
+    extra = extra or {}
+    rows = [C("Canlı ayar", **dict(_YENI, **extra))]
+    for name, off in _SAGLAM_OFF:
+        rows.append(C(f"− {name}", **dict(_YENI, **off, **extra)))
+    temel = dict(_YENI, **extra)
+    for _, off in _SAGLAM_OFF:
+        temel.update(off)
+    rows.append(C("TEMEL: hepsi kalkmış (trend + Stoch + temas + onay + erken çıkış + toplu)", **temel))
+    return rows
+COMPARE_SETS["saglam"] = _saglam()
+COMPARE_SETS["saglam_k"] = [dict(c, tfs=["15m+5", "15m+10"], max_open=4) for c in _saglam()]   # kaydırılmış mumlar (+5 ve +10 dk)
 COMPARE_SETS["borsa"] = [
     C("Bütün coinler", **_YENI, coins="all"),
     C("Sadece canlı botun Binance coinleri (aynı sinyaller)", **_YENI, coins="binance"),

@@ -31,6 +31,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 ikinci seri -> tepeden sonra 2. / 3. EMA20 temasına da izin (işlem sayısı artar mı, R düşer mi) (+ "ikinci eski seri"; CSV'de temas_no)
   /backtest 180 ema seri -> temas EMA50 / EMA100 + yapı kuralları (kural 8 ve son salınım tepesi/dibi; iğne/kapanış); tek dönem `ema` grafikler EMA50 (son salınım, iğne), `ema yüz` EMA100 (+ "ema eski seri")
   /backtest 180 analiz seri -> sadece canlı ayar, 5 dönem; CSV'de hacim ölçüleri (hac_bacak, hac_duz, hac_oran, hac_onay ...). İlk çalıştırma veriyi hacimle yeniden indirir (uzun sürer)
+  /backtest 180 sağlam seri -> sağlamlık süzgeci: canlı kurallar tek tek kalkar + temel; aynı test "sağlam seri 3 sene önce", "sağlam kayık seri", "sağlam mexc seri"
   /backtest 180 kayık seri -> aynı kurallar 5 / 10 dk kaydırılmış 15dk mumlarda; ayrı ayrı ve üçü birlikte (en fazla 2 / 4 işlem). Veri 5dk (ilk çalıştırma uzun)
   /backtest 180 yaş seri -> trend yaşı ≥ 60 / 76 / 100 mum (genç trende girme), ≥76 + erken çıkışsız, sadece erken çıkışsız (+ "yaş seri 3 sene önce" = 2021-2023)
   /backtest 180 ilk seri -> kural 2 (trend teyidi) sadece dönüşte / sadece klasikte / hiç uygulanmaz (+ "ilk eski seri")
@@ -187,6 +188,8 @@ def start_backtest(text):
         args += ["--compare", "artir"]   # işlem sayısını artırma: canlı kurallar tek tek gevşetilir
     elif any(w in low for w in ("gevşet", "gevset", "gevşe")):
         args += ["--compare", "gevset"]
+    elif re.search(r"\bsa[gğ]lam\b", low):   # 23.10: sağlamlık süzgeci (kurallar tek tek kalkar); "kayık" ile kaydırılmış mumlarda
+        args += ["--compare", "saglam_k" if re.search(r"\bkay[ıi]k\b", low) else "saglam"]
     elif re.search(r"\bkay[ıi]k\b", low):   # 23.10: 5 / 10 dk kaydırılmış 15dk mumlar (işlem sayısı)
         args += ["--compare", "kayik"]
     elif re.search(r"\bya[şs]\b", low):   # 23.10: trend yaşı (genç trende girme) + erken çıkışsız
