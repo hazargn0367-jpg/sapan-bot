@@ -1142,3 +1142,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   mumlarda artık "15dk mumlar 5 / 10 dk kaydırılmış (veri 5dk)". MEXC sağlam testi kullanıcı iptal etti.
 - 23.10 11:55 SADE Binance (`sade seri`, 5 dönem; R / işlem / iş-ay / R-iş / düşüş / iyi): canlı +153.8 / 497 / 17 / 0.31 / 10.8 · −4 +148.7 / 524 · −4 −yer +138.5 / 739 / 25 /
   0.19 / 17.2 (2/5) · **−4 −6 +170.7 / 689 / 23 / 0.25 / 15.7 (4/5)** · −4 −yer −6 +148.9 / 973 / 32 / 0.15 / 25.1 (3/5; D3 −0.7) · +−1 +125.7 / 1078 / 36. 2021-23 ve kayık bekleniyor.
+- 23.10 12:15 SADE 2021-23 (canlı −20.5 / 195 iş; −4 −19.4; −4 −yer −33.3; −4 −6 −28.2 / 277 iş, R/iş −0.10 aynı; −4 −yer −6 −46.6) ve SADE KAYIK (canlı +3.2 / 1083 iş
+  0.00R/iş; −4 +8.2; −4 −yer +35.1 (4/5); −4 −6 −7.6 (1/5); −4 −yer −6 +30.2; +−1 +33.7; hepsi ~0R/iş). −4 −6 üç görünümde +17 / −8 / −11 → REDDEDİLDİ (2/3 kötü).
+  Hiçbir gevşetme 3 görünümde sağlam değil; gevşetmeler işlem sayısını büyütüp işlem başı R'yi korur ya da düşürür, toplam piyasaya göre büyür/küçülür.
+  Kaydırılmış mumlarda bütün varyantlar ~0R/iş → avantajın büyük kısmı standart Binance 15dk mumlarına bağlı. CANLI DEĞİŞMEDİ. 15.11 canlı sonucu belirleyici.
