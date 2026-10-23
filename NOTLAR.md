@@ -1122,3 +1122,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   (_YENI: bütün / Binance'te de olan / sadece yeni). `/backtest 180 mexc` (+ "mexc seri"; commands'ta mexc + seri düzeltildi, bybit seri de çalışır).
   Düzeltme: Bybit/MEXC testinde Binance coin listesi live_setups yerel import hatası yüzünden hep son kayıttan geliyordu (UnboundLocalError) → _ls.
   Sahte veriyle test: ortak / yeni ayrımı ve binance_da doğru. Gerçek MEXC erişimi sunucudan denenmedi (bu ortamdan ulaşılamıyor).
+- 23.10 04:00 MEXC sonucu (Nis-Eki 26, 601 USDT perp; 479 Binance'te de var, 122 yeni; komisyon %0.08/%0.06): bütün −9.0R (187 iş, %25) · Binance coinleri MEXC
+  mumlarıyla −15.7R (170 iş, %24, düşüş 23.6; aynı dönem Binance verisiyle +37.9R / 122 iş!) · yeni coinler +4.3R (19 iş, %32, 0.23R/iş; ~3 iş/ay, küçük örnek;
+  isim eşleşmeyen birkaç Binance coini de içinde: FILECOIN, ASTR, ETHW). SONUÇ: MEXC eklenmez (az işlem). ASIL BULGU: aynı coinler başka borsanın mumlarında
+  avantajsız (Bybit 16.10'da da zayıftı). Kaydırılmış mumlar (~0), Bybit/MEXC verisi (≤0), 2021-23 (eksi) → backtestteki +0.3R/iş büyük ölçüde Binance
+  standart 15dk mumlarına ezber. Canlı beklenti düşük (~0-0.1R/iş). Öneri: sağlamlık süzgeci (her kural kaydırılmış mum + MEXC + 2021-23'te de işe yarıyor mu),
+  risk düşürme / 3x momentumu kısma, 15.11 canlı sonucu belirleyici.
