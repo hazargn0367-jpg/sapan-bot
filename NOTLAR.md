@@ -1112,3 +1112,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 23.10 03:14 "kodla": KAYDIRILMIŞ 15dk MUMLAR. config.tf_offset ("15m+5" = :05/:20/:35/:50 başlangıçlı), backtest.resample_tf(offset_min), set'te "+"lı dilim
   varsa veri 5dk (set_base_tf("5m"), bütün 15dk dizileri 5dk'dan). COMPARE_SETS["kayik"]: normal · +5 · +10 · üçü (2 işlem) · üçü (4 işlem); coinde tek işlem.
   `/backtest 180 kayık seri` (+ `kayık seri 3 sene önce`). Amaç: (1) işlem sayısı, (2) kurallar standart mum saatine ezber mi sınaması.
+- 23.10 03:35 KAYIK sonucu (`kayık seri`, 5 dönem, veri 5dk): normal 15dk +37.9 / +74.9 / +22.3 / +4.1 / +13.0 = +152.1 (492 iş, %33.9, 0.31R/iş) ·
+  +5 dk kaydırılmış −3.1 (555 iş, %24, −0.01R/iş, düşüş 28.8) · +10 dk +9.3 (561 iş, %23.5, 0.02R/iş) · üçü (2 işlem) +124.5 · üçü (4 işlem) +139.1. REDDEDİLDİ.
+  ÖNEMLİ UYARI: aynı kurallar aynı piyasada sadece mum saati kayınca avantaj ~0. İki açıklama: (a) standart 15dk kapanışları gerçekten önemli (kalabalık bu
+  mumlara bakıyor), (b) kurallar 30+ test boyunca standart mumlarda seçildiği için backtest avantajı şişmiş (ezber). 2021-23'ün eksi olması (b)'yi destekliyor →
+  canlı beklenti backtestin altında tutulmalı (ör. 0.1-0.15R/iş). Ayırt etmek için: 14.10 temel kurallarla (filtresiz) normal / kaydırılmış karşılaştırması.
