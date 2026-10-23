@@ -1324,6 +1324,20 @@ def _saglam(extra=None):
     return rows
 COMPARE_SETS["saglam"] = _saglam()
 COMPARE_SETS["saglam_k"] = [dict(c, tfs=["15m+5", "15m+10"], max_open=4) for c in _saglam()]   # kaydırılmış mumlar (+5 ve +10 dk)
+# 23.10 11:42 "kodla": sağlamlık sonucundan gevşetme adayları birlikte (işlem sayısı; kural 4 etkisiz, 1R yer ve kural 6 Binance'te işlem ekliyor)
+_K4, _YER, _K6, _K1 = dict(CLEAN_PIVOT_MAX=0), dict(ROOM_MIN_R=0.0), dict(PIVOT_WICK_MAX=0.0), dict(WICK_MAX_BODY=0.0)
+def _gevsek(extra=None):
+    e = extra or {}
+    return [
+        C("Canlı ayar", **dict(_YENI, **e)),
+        C("− kural 4", **dict(_YENI, **_K4, **e)),
+        C("− kural 4 − 1R yer", **dict(_YENI, **_K4, **_YER, **e)),
+        C("− kural 4 − kural 6", **dict(_YENI, **_K4, **_K6, **e)),
+        C("− kural 4 − 1R yer − kural 6", **dict(_YENI, **_K4, **_YER, **_K6, **e)),
+        C("− kural 4 − 1R yer − kural 6 − kural 1", **dict(_YENI, **_K4, **_YER, **_K6, **_K1, **e)),
+    ]
+COMPARE_SETS["gevsek"] = _gevsek()
+COMPARE_SETS["gevsek_k"] = [dict(c, tfs=["15m+5", "15m+10"], max_open=4) for c in _gevsek()]
 COMPARE_SETS["borsa"] = [
     C("Bütün coinler", **_YENI, coins="all"),
     C("Sadece canlı botun Binance coinleri (aynı sinyaller)", **_YENI, coins="binance"),
@@ -1948,7 +1962,7 @@ def main():
     period_txt = (f"{pd.Timestamp(p0, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} – "
                   f"{pd.Timestamp(p1, unit='ms', tz='UTC').tz_convert(TZ):%d.%m.%Y} ({args.days} gün)")
     if BASE_TF == "5m":
-        period_txt += ", 5 dakikalık grafik"
+        period_txt += (", 15dk mumlar 5 / 10 dk kaydırılmış (veri 5dk)" if any("+" in t for t in tfs) else ", 5 dakikalık grafik")
 
     t0 = time.time()
     clean_cache()

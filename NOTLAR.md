@@ -1137,3 +1137,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   4/5) / −7.8 / −13.3 · 1R yer −1.0 (+200 iş) / −14.5 / +25.4 · iğneli −10.6 / −1.8 / +4.9 · taban −3.3 / −2.8 / −23.8 (KALIR) · sert sallanma −8.7 / −4.3 / −3.8 (KALIR) ·
   yavaş −6.6 / +0.5 / 0 · onay 3 mum +2.9 / −4.1 / −6.1 (kalır) · TEMEL −335.6 / −162.5 / −174.0. Kurallar topluca gerçek (temel her yerde çok eksi), ama kalan
   avantaj sadece Binance 2024-26'da artı. Gevşetme adayları (işlem artırır, kârı az etkiler): kural 4, 1R yer, kural 6. MEXC görünümü bekleniyor.
+- 23.10 11:42 "kodla": COMPARE_SETS["gevsek"] / "gevsek_k" (kaydırılmış): canlı · −kural 4 · −4 −1R yer · −4 −kural 6 · −4 −yer −6 · −4 −yer −6 −kural 1.
+  Komut kelimesi "sade" ("gevşek" eski gevset setine düşüyordu): `/backtest 180 sade seri`, `sade seri 3 sene önce`, `sade kayık seri`. Rapor başlığı kaydırılmış
+  mumlarda artık "15dk mumlar 5 / 10 dk kaydırılmış (veri 5dk)". MEXC sağlam testi kullanıcı iptal etti.
