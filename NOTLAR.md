@@ -1140,3 +1140,5 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 23.10 11:42 "kodla": COMPARE_SETS["gevsek"] / "gevsek_k" (kaydırılmış): canlı · −kural 4 · −4 −1R yer · −4 −kural 6 · −4 −yer −6 · −4 −yer −6 −kural 1.
   Komut kelimesi "sade" ("gevşek" eski gevset setine düşüyordu): `/backtest 180 sade seri`, `sade seri 3 sene önce`, `sade kayık seri`. Rapor başlığı kaydırılmış
   mumlarda artık "15dk mumlar 5 / 10 dk kaydırılmış (veri 5dk)". MEXC sağlam testi kullanıcı iptal etti.
+- 23.10 11:55 SADE Binance (`sade seri`, 5 dönem; R / işlem / iş-ay / R-iş / düşüş / iyi): canlı +153.8 / 497 / 17 / 0.31 / 10.8 · −4 +148.7 / 524 · −4 −yer +138.5 / 739 / 25 /
+  0.19 / 17.2 (2/5) · **−4 −6 +170.7 / 689 / 23 / 0.25 / 15.7 (4/5)** · −4 −yer −6 +148.9 / 973 / 32 / 0.15 / 25.1 (3/5; D3 −0.7) · +−1 +125.7 / 1078 / 36. 2021-23 ve kayık bekleniyor.
