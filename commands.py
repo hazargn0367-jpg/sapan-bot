@@ -52,6 +52,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 dalga -> temastan önceki 12 mum büyük gövdeyle sürekli yön değiştiriyorsa girme (AXL örneği)
   /backtest 180 iki mum -> 2 mumlu temas her sıra (dip 1. ya da 2. mumda), iki mum EMA20'de döner, onay iki mumun en tepesinin üstü
   /backtest 180 trend -> ikinci strateji adayı: trend takibi (Donchian kırılımı 20/50/100, en likit 30-60 coin, günlük/4s)
+  /backtest 180 forex -> canlı kurallar forex / altın / endeks / petrolde (Dukascopy, 39 enstrüman), 15dk · 30dk · 1s · 2s · 4s ayrı, canlı + kurallarsız (+ "forex seri")
   /backtest 180 mexc -> canlı kurallar MEXC'teki bütün USDT vadeli coinlerde (~1000): bütün / Binance'te de olanlar / sadece MEXC'te olanlar (+ "mexc seri"; komisyon API %0.08)
   /backtest 180 bybit -> canlı kurallar Bybit'teki bütün USDT vadeli coinlerde; Binance'te olmayanlar ayrı (yeni işlemler)
   /backtest 180 bybit gelişim -> herhangi bir test Bybit verisiyle (canlı botun Binance coinlerinde, aynı coinler başka borsa verisi)
@@ -160,7 +161,9 @@ def start_backtest(text):
     if bybit_mode:
         args += ["--exchange", "bybit"]
     elif mexc_mode:
-        args += ["--exchange", "mexc"]   # 23.10: MEXC'teki bütün USDT vadeli coinler (veri MEXC'ten, kaydedilmez)   # veri Bybit'ten; başka set yazılmadıysa "bybit" seti (yeni / ortak coinler)
+        args += ["--exchange", "mexc"]   # (yorum yukarıda)
+    elif re.search(r"\bforex\b|\bfx\b", low):
+        args += ["--exchange", "fx"]   # 23.10: forex / metal / endeks (Dukascopy), 15dk-4s   # 23.10: MEXC'teki bütün USDT vadeli coinler (veri MEXC'ten, kaydedilmez)   # veri Bybit'ten; başka set yazılmadıysa "bybit" seti (yeni / ortak coinler)
     if re.search(r"\bkontrol\b", low):
         args += ["--compare", "kontrol"]   # 16.10 canlıya alınan gövde + düzeltme kuralı kontrolü
     elif re.search(r"\byeniden\b", low):
@@ -310,6 +313,8 @@ def start_backtest(text):
         args += ["--compare", "bybit"]
     if mexc_mode and "--compare" not in args and "--preset" not in args:
         args += ["--compare", "borsa"]
+    if "fx" in args and "--compare" not in args and "--preset" not in args:
+        args += ["--compare", "forex"]
     if re.search(r"\bseri\b", low) and "--compare" in args and "--seri" not in args:
         args += ["--seri", "2" if re.search(r"\beski\b", low) else "5"]
     if "fark" in low:

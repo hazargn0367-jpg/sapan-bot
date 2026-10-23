@@ -1146,3 +1146,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   0.00R/iş; −4 +8.2; −4 −yer +35.1 (4/5); −4 −6 −7.6 (1/5); −4 −yer −6 +30.2; +−1 +33.7; hepsi ~0R/iş). −4 −6 üç görünümde +17 / −8 / −11 → REDDEDİLDİ (2/3 kötü).
   Hiçbir gevşetme 3 görünümde sağlam değil; gevşetmeler işlem sayısını büyütüp işlem başı R'yi korur ya da düşürür, toplam piyasaya göre büyür/küçülür.
   Kaydırılmış mumlarda bütün varyantlar ~0R/iş → avantajın büyük kısmı standart Binance 15dk mumlarına bağlı. CANLI DEĞİŞMEDİ. 15.11 canlı sonucu belirleyici.
+- 23.10 16:30 "kodla": FOREX BACKTEST. fx.py (Dukascopy datafeed günlük BID_candles_min_1.bi5, LZMA, 24 bayt kayıt; sıra kontrolü (açılış/kapanış/düşük/yüksek,
+  tutmazsa açılış/yüksek/düşük/kapanış); fiyat ham tamsayı, adım 1 (hesaplar oran); 1dk → 15dk; ay önbelleği DATA_DIR/fx_cache). 39 enstrüman: 28 forex, XAU/XAG,
+  7 endeks (US500, NAS100, US30, DE40, UK100, JP225, FR40), 2 petrol. Maliyet taraf başına %0.006. COMPARE_SETS["forex"]: 15dk / 30dk / 1s / 2s / 4s × (canlı
+  kurallar, BASE_MIN_RISK_PCT %0.03 · temel kurallarsız). CSV'de grup. `/backtest 180 forex` (+ seri). Sahte veriyle uçtan uca çalıştı; gerçek Dukascopy
+  erişimi ve kayıt sırası sunucuda doğrulanacak (bu ortamdan ulaşılamıyor). İlk indirme ~30-60 dk.

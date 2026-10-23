@@ -35,6 +35,7 @@ import pandas as pd
 import archive
 import bybit
 import mexc
+import fx
 import config
 import charts
 import live_setups
@@ -53,7 +54,7 @@ FETCH_THREADS = 16  # aynı anda kaç coinin verisi çekilsin (arşiv dosyaları
 MAX_IN_FLIGHT = 20  # bellekte aynı anda en fazla kaç coinin ham verisi dursun
 BAN_WAIT = 600  # Binance IP engeli/sınırı en fazla bu kadar sn sürecekse beklenir, daha uzunsa backtest durur
 USE_ARCHIVE = True  # geçmiş veri Binance dosya arşivinden (API sınırı/engeli yok); --api ile kapatılır
-ALT_EX = {"bybit": bybit, "mexc": mexc}   # başka borsa verisiyle backtest (23.10: mexc)
+ALT_EX = {"bybit": bybit, "mexc": mexc, "fx": fx}   # başka borsa verisiyle backtest (23.10: mexc)
 EXCHANGE = "binance"  # --exchange bybit: mumlar ve coin listesi Bybit'ten (diske kaydedilmez)
 BINANCE_SET = set()   # Bybit testinde canlı botun Binance coinleri (bybit.norm adlarıyla)
 DEFAULT_COINS = "all"  # Bybit testinde "coins" anahtarı olmayan ayarlar: bybit seti dışında "binance" (aynı coinler)
@@ -1338,6 +1339,16 @@ def _gevsek(extra=None):
     ]
 COMPARE_SETS["gevsek"] = _gevsek()
 COMPARE_SETS["gevsek_k"] = [dict(c, tfs=["15m+5", "15m+10"], max_open=4) for c in _gevsek()]
+# 23.10 16:30 "kodla": FOREX (Dukascopy; forex 28 + metal 2 + endeks 7 + petrol 2). Canlı kurallar; "stop ≥ %0.5" forex'te her işlemi
+# eler → en az %0.03. Her zaman dilimi ayrı ayar (tfs), canlı + temel (kurallarsız). `/backtest 180 forex` (+ seri).
+_FXR = dict(BASE_MIN_RISK_PCT=0.03)
+_FX_TEMEL = dict(_YENI, **_FXR)
+for _, _off in _SAGLAM_OFF:
+    _FX_TEMEL.update(_off)
+COMPARE_SETS["forex"] = []
+for _tf, _ad in (("15m", "15dk"), ("30m", "30dk"), ("1h", "1 saat"), ("2h", "2 saat"), ("4h", "4 saat")):
+    COMPARE_SETS["forex"].append(C(f"{_ad} canlı kurallar", **dict(_YENI, **_FXR), tfs=[_tf]))
+    COMPARE_SETS["forex"].append(C(f"{_ad} temel (kurallarsız)", **_FX_TEMEL, tfs=[_tf]))
 COMPARE_SETS["borsa"] = [
     C("Bütün coinler", **_YENI, coins="all"),
     C("Sadece canlı botun Binance coinleri (aynı sinyaller)", **_YENI, coins="binance"),
@@ -1892,7 +1903,7 @@ def main():
     ap.add_argument("--stop-buf", type=float, default=0.0, help="stop payı (ATR)")
     ap.add_argument("--top", type=int, default=None, help="hacme göre ilk kaç coin (0 = hepsi; Binance 500, Bybit hepsi)")
     ap.add_argument("--trend", action="store_true", help="trend takibi (Donchian kırılımı) testi")
-    ap.add_argument("--exchange", default="binance", choices=["binance", "bybit", "mexc"], help="veri kaynağı borsa")
+    ap.add_argument("--exchange", default="binance", choices=["binance", "bybit", "mexc", "fx"], help="veri kaynağı borsa")
     ap.add_argument("--coins", default=None, choices=["all", "binance", "new"],
                     help="Bybit testinde hangi coinler (varsayılan: bybit setinde ayara göre, diğerlerinde binance)")
     ap.add_argument("--max-open", type=int, default=0, help="aynı anda en fazla açık işlem (0 = sınırsız)")
@@ -1903,7 +1914,7 @@ def main():
     args = ap.parse_args()
     global EXCHANGE, DEFAULT_COINS
     EXCHANGE = args.exchange
-    DEFAULT_COINS = args.coins or ("binance" if EXCHANGE in ALT_EX and args.compare not in ("bybit", "borsa") else "all")
+    DEFAULT_COINS = args.coins or ("binance" if EXCHANGE in ("bybit", "mexc") and args.compare not in ("bybit", "borsa") else "all")
     if args.top is None:
         args.top = 0 if EXCHANGE in ALT_EX else 500
     tfs = [t.strip() for t in args.tf.split(",") if t.strip()]
@@ -1969,7 +1980,15 @@ def main():
     drop_other_tf_cache()
     global USE_ARCHIVE
     exchanges.WEIGHT_SOFT_LIMIT = exchanges.BACKTEST_SOFT_LIMIT  # canlı taramaya pay bırak
-    if EXCHANGE in ALT_EX:
+    if EXCHANGE == "fx":
+        # Forex / metal / endeks / petrol (Dukascopy): Binance listesi yok, bütün enstrümanlar; maliyet taraf başına %0.006 (spread + komisyon)
+        USE_ARCHIVE = False
+        tr.FEE_TAKER = tr.FEE_MAKER = 0.00006
+        symbols, ticks = fx.top_symbols(args.top)
+        source = (f"Dukascopy ({len(symbols)} enstrüman: {len(fx.FX)} forex, {len(fx.METAL)} metal, {len(fx.INDEX)} endeks, "
+                  f"{len(fx.OIL)} petrol; 15dk BID mumları). Maliyet taraf başına %0.006 (spread + komisyon)")
+        log.info("Veri kaynağı: %s", source)
+    elif EXCHANGE in ALT_EX:
         X = ALT_EX[EXCHANGE]
         USE_ARCHIVE = False
         if EXCHANGE == "bybit":
@@ -2134,8 +2153,10 @@ def main():
                             new = new + run_retest(df, symbol, tf, tick, rtsets[_sig_key(cfg)], busy)
                     for r in new:
                         r["hacim_sirasi"] = rank.get(symbol, 0)
-                        if EXCHANGE in ALT_EX:
+                        if EXCHANGE in ("bybit", "mexc"):
                             r["binance_da"] = int(on_bn)
+                        elif EXCHANGE == "fx":
+                            r["grup"] = fx.GROUP.get(symbol, "")
                     results[cfg["ad"]] += new
                 if not args.compare:
                     for ex_sym, ex_tf, ex_when in EXAMPLES:
