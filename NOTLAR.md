@@ -1170,3 +1170,7 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   sayılmadı. trade_rules.PRIOR_TOUCH_TREND ("full" canlı / "ema50": başlangıç = EMA20<EMA50, SHORT ters). COMPARE_SETS["basla"]: canlı · ema50 (kalkış 1.5) ·
   ema50 (kalkış 1 ATR); "basla_k" kaydırılmış mumlar. `/backtest 180 başla seri` + `başla seri 3 sene önce` + `başla kayık seri`.
   Sentetik (8 seri, 5952 kontrol): "full" eski kodla aynı yol; ema50 her zaman full'un üst kümesi (2160 → 2339 geçiş, 0 ihlal). Canlı değişmedi.
+- 24.10 02:38 BAŞLA sonucu (`başla seri`, 4 dönem geldi May 26-Eki 26 / Eki 25-Nis 26 / May-Eki 25 / Kas 24-May 25): canlı +43.3 / +73.0 / +23.2 / +10.6
+  = +150.1 (427 iş) · EMA20<50 kalkış 1.5 ATR +38.4 / +77.9 / +22.6 / +13.4 = +152.3 (502 iş; 77 ek işlem toplam +1.0R, TP %19-33, 2/4 iyi) ·
+  EMA20<50 kalkış 1 ATR +115.8 (631 iş). Ek işlemler avantajsız → RED (kullanıcı onayladı). Kalkış ATR şartı gerekli (1 ATR bile −34R);
+  ATR'siz satır denenmedi. Canlı değişmedi.
