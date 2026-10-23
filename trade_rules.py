@@ -44,6 +44,8 @@ REQUIRE_PRIOR_TOUCH = False  # trend başladıktan sonra, tepeden önce en az bi
 TREND_AGE_MIN = 0            # >0 (23.10 testi): trend yaşı (temastan geriye EMA20>EMA50>EMA100 sırasının bozulmadan sürdüğü mum sayısı,
                              # trend_features'taki trend_yasi) en az bu kadar olmalı. 15dk'da 76 mum ≈ 19 saat. Genç trende girme.
 PRIOR_TOUCH_SKIP = ""        # 23.10 testi: kural 2 bu varyasyonda uygulanmaz ("reclaim" / "classic" / "both"); "" = hepsinde uygulanır
+PRIOR_TOUCH_TREND = "full"   # 24.10 testi: kural 2'de trend başlangıcı. "full" = EMA20>50>100 sırası (canlı), "ema50" = sadece
+                             # EMA20>EMA50 (SHORT ters) — EMA50 henüz EMA100'ü geçmeden olan temaslar da teyit sayılır (BMTUSDT 24.10 00:45)
 PRIOR_TOUCH_SEP_ATR = 0.0    # >0: kural 2'de "kalkış" = fiyatın EMA20'den bu kadar ATR ayrıldığı ilk mum (0: tamamen
                              # üstünde olduğu ilk mum). Yataydan tek dev mumla başlayan trendde yataydaki temaslar sayılmaz
                              # (kullanıcı 15.10 17:28, CARVUSDT 05.10 07:45)
@@ -209,6 +211,8 @@ def prior_touch_ok(df, i, side, sep_atr=None):
     H, L = df["High"].values, df["Low"].values
 
     def aligned(j):
+        if PRIOR_TOUCH_TREND == "ema50":
+            return E20[j] > E50[j] if long else E20[j] < E50[j]
         return (E20[j] > E50[j] > E100[j]) if long else (E20[j] < E50[j] < E100[j])
 
     # Trendin başladığı mum: dizilimin kesintisiz sürdüğü en eski mum

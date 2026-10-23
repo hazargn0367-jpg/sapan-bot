@@ -815,7 +815,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
               "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW", "STOP_MID_CONF_ATR", "CLOSE_STOP_HARD_R",
-              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY", "CANCEL_MID_FRAC", "CANCEL_MID_SAME", "PRIOR_TOUCH_SKIP", "TREND_AGE_MIN"]
+              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY", "CANCEL_MID_FRAC", "CANCEL_MID_SAME", "PRIOR_TOUCH_SKIP", "TREND_AGE_MIN", "PRIOR_TOUCH_TREND"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1388,6 +1388,15 @@ COMPARE_SETS["teyit2"] = [
     C("Kural 2 klasikte yok (teyitsiz ilk temasta klasiğe girilir)", **dict(_YENI, PRIOR_TOUCH_SKIP="classic")),
     C("Kural 2 hiç yok", **dict(_YENI, PRIOR_TOUCH_SKIP="both")),
 ]
+# Kural 2 trend başlangıcı (kullanıcı 24.10 02:28, BMTUSDT 24.10 00:45 SHORT "EMA20 teyidi var, böyle işlemler elenmesin"):
+# teyit teması EMA50 henüz EMA100'ü geçmeden olmuştu → sayılmıyordu. Varyantlar: başlangıç = EMA20<EMA50 (SHORT) olduğu an.
+# `/backtest 180 başla seri` + `başla seri 3 sene önce` + `başla kayık seri`.
+COMPARE_SETS["basla"] = [
+    C("Canlı ayar (teyit EMA20>50>100 sırasından sonra)", **_YENI),
+    C("Teyit EMA20>EMA50'den sonra (kalkış 1.5 ATR)", **dict(_YENI, PRIOR_TOUCH_TREND="ema50")),
+    C("Teyit EMA20>EMA50'den sonra (kalkış 1 ATR)", **dict(_YENI, PRIOR_TOUCH_TREND="ema50", PRIOR_TOUCH_SEP_ATR=1.0)),
+]
+COMPARE_SETS["basla_k"] = [dict(c, tfs=["15m+5", "15m+10"], max_open=4) for c in COMPARE_SETS["basla"]]   # kaydırılmış mumlar
 COMPARE_SETS["igne2"] = [
     C("Canlı ayar (stop mum içinde)", **_YENI),
     C("Kapanışta stop, sert stop 1.5R", **dict(_YENI, CLOSE_STOP_HARD_R=1.5)),

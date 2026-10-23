@@ -1162,3 +1162,11 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 23.10 18:35 YENİDEN GİRİŞ (3. kez, bugünkü kurallar, `yeniden seri` 5 dönem May 24 – Eki 26): canlı 18.9/8.3/21.7/73.9/41.1 = +164.0R (mom +251.0) ·
   1. mumda yeniden giriş +155.8 (mom +258.4; 2/5 dönem iyi) · ikincide erken yok +137.6 · 2 mum +150.3. 140 yeniden giriş: 32 TP / 64 stop / 44 erken,
   ikinci bacak -12.0R (dönemler +0.5 / +17.1 / -10.9 / -5.2 / -13.6). Momentum farkı (+7R) tek dönemden. TP oranı %34 → %41 ama R düşüyor. RED (3/3 test).
+- 24.10 01:5x BASAMAKLI RİSK (son 6 ay CSV backtest_20261023_1534, 300$ başlangıç, momentum 3x/0.5x): sabit 15$ 1.526$ (düşüş %15) · basamaklı
+  (<500 15$ / 500 25$ / 750 35$ / 1.000 50$ / 1.500 75$, bakiye düşerse 1R de iner) 4.245$ (%28) · bakiye÷25 4.637$ (%51) · ÷20 7.547$ (%60).
+  Takvimle artış (her ay +15$) +3.559$ ama düşüş −1.315$ → red. Kullanıcı: 15.11'de canlı backtest'e yakınsa basamaklıya geçilecek.
+- 24.10 02:30 "kodla" (BMTUSDT 24.10 00:45 SHORT, /temas "trend teyidi yok": kullanıcı "EMA20 teyidi var, böyle işlemler elenmesin"):
+  kural 2'de trend başlangıcı EMA20<50<100 sırasının başladığı mumdu; teyit teması (~23.10 14:00) EMA50 henüz EMA100'ün altına inmeden olduğu için
+  sayılmadı. trade_rules.PRIOR_TOUCH_TREND ("full" canlı / "ema50": başlangıç = EMA20<EMA50, SHORT ters). COMPARE_SETS["basla"]: canlı · ema50 (kalkış 1.5) ·
+  ema50 (kalkış 1 ATR); "basla_k" kaydırılmış mumlar. `/backtest 180 başla seri` + `başla seri 3 sene önce` + `başla kayık seri`.
+  Sentetik (8 seri, 5952 kontrol): "full" eski kodla aynı yol; ema50 her zaman full'un üst kümesi (2160 → 2339 geçiş, 0 ihlal). Canlı değişmedi.
