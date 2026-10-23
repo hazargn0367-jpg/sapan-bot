@@ -1102,3 +1102,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   (3/5 iyi) · ≥76 +105.6 / 245 / %37.1 / 7.7 / 13.7 · ≥100 +89.0 / 172 / %39.5 / 6.0 / 14.8 · ≥76 + erken çıkışsız +107.0 / 244 / %47.5 / 8.9 · erken çıkışsız
   +135.8 / 483 / %42.7 / 15.0. Gerçek backtest CSV tahminiyle birebir (aynı işlemler). TP% ve R/iş artıyor ama toplam düşüyor; ≥60 kazanç/düşüş oranında en iyi
   (aynı düşüşe göre risk ~1.4x → ~+%25). Sınav: `yaş seri 3 sene önce` (2021-2023) bekleniyor.
+- 23.10 03:05 YAŞ 3 SENE ÖNCE (hiç bakılmamış 5 dönem May 21 – Eki 23, 37-53 coin): canlı −7.6 / −2.8 / −16.3 / +1.8 / +0.2 = −24.8R (193 iş, TP %18) ·
+  ≥60 −11.3 (4/5 iyi) · ≥76 −5.3 (4/5) · ≥100 −5.7 (5/5) · ≥76 + erken çıkışsız −17.3 (2/5) · erken çıkışsız −55.1 (1/5, düşüş 26R). Sistem 2021-23'te eksi.
+  10 dönem toplam: canlı +123.3 · ≥60 +119.7 (7/10 iyi, işlem −%34) · ≥76 +100.3 (5/10) · ≥100 +83.3. Boyut (CSV): ≥60 genç 0.5x yaşlı 1.25x +151.7 ama düşüş 16.7 → 20.4
+  (kâr/düşüş aynı). SONUÇ: yaş filtresi zararı azaltıyor, TP%/R-iş artıyor, toplam kâr ~aynı, işlem az. ERKEN ÇIKIŞI KALDIRMAK REDDEDİLDİ (dönem dışında çok kötü).
+  TP %40-45 hedefi kalıcı şekilde tutmuyor (sadece erken çıkışsızla, o da dönem dışında bozuk). Kullanıcıya seçenek: ≥60 (aynı kâr, az işlem, %37 TP) ya da canlı.
