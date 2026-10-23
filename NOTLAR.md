@@ -1174,3 +1174,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   = +150.1 (427 iş) · EMA20<50 kalkış 1.5 ATR +38.4 / +77.9 / +22.6 / +13.4 = +152.3 (502 iş; 77 ek işlem toplam +1.0R, TP %19-33, 2/4 iyi) ·
   EMA20<50 kalkış 1 ATR +115.8 (631 iş). Ek işlemler avantajsız → RED (kullanıcı onayladı). Kalkış ATR şartı gerekli (1 ATR bile −34R);
   ATR'siz satır denenmedi. Canlı değişmedi.
+- 24.10 02:45 "kodla": PİRAMİT / EKLEME (kullanıcı elle ekliyor, sistematik hiç ölçülmemişti). trade_rules.ADD_AT_R / ADD_RISK_R + _pyramid (simulate sonrası):
+  girişten çıkışa kadar fiyat dolum ± ADD_AT_R × risk'e gelirse ADD_RISK_R kadar risk eklenir (stop emri, boşlukta açılış), stop / TP / çıkış ana işlemle aynı
+  fiyat (canlı _resize gibi); aynı mumda ekleme + stop → temkinli eklendi-sonra-stop; komisyon ekleme taker. CSV ekleme, ekleme_R, ana_R; raporda "➕ Ekleme N".
+  COMPARE_SETS["ekle"]: canlı · +0.5R'de 1R · +1R'de 1R · +1.5R'de 1R · +1R'de 0.5R; "ekle_k" kaydırılmış. `/backtest 180 ekle seri` + `ekle seri 3 sene önce` +
+  `ekle kayık seri` (komut sırası düzeltildi: "başla/ekle kayık" önce kayık setine düşüyordu). Ön tahmin (başla CSV'leri, mfe ile): +0.5R +39…+75R, +1R +10…+44R /
+  4 dönem. Sentetik: ana R birebir, elle hesap (TP +0.5645R, stop −1.05R) doğru.

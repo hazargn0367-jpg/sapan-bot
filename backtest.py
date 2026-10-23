@@ -501,6 +501,8 @@ def run_df(df, symbol, tf, tick, signals=None, with_ctx=True, trades_only=False,
                     row["cikis_turu"] = "kâr kilidi"   # BE_TRIGGER'a gelip kâra çekilen stoptan çıktı
                 elif r["status"] == "be":
                     row["cikis_turu"] = "başabaş stop"   # 1R'ye gelip stop girişe çekildikten sonra girişten çıktı
+                if r.get("add_bar") is not None:   # piramit: R ana işlem + ekleme
+                    row.update(ekleme=fmt_time(ts[r["add_bar"]]), ekleme_R=round(r["r_add"], 3), ana_R=round(r["r_base"], 3))
                 if r.get("reentry"):   # erken çıkıştan sonra yeniden giriş: R iki bacağın toplamı
                     row.update(yeniden_giris=fmt_time(ts[r["reentry_bar"]]), ilk_bacak_R=round(r["r_first"], 3))
                 row.update(cikis_zamani=fmt_time(ts[r["exit_bar"]]), cikis=r["exit"],
@@ -815,7 +817,7 @@ PARAM_KEYS = ["RR", "BE_TRIGGER", "FILTERS", "MIN_ATR_MULT", "WICK_MAX_BODY",
               "CHOP_BARS", "CHOP_FLIPS_MIN", "CHOP_BODY_ATR", "BODY_AVG_MAX_ATR", "CORR_BARS_MAX",
               "RECLAIM_CLOSE_MIN_ATR", "TP_BIG_CONF_ATR", "TP_BIG_RR", "BE_LOCK_R",
               "REENTRY_BARS", "REENTRY_EARLY", "HTF_MODE", "STOP_AT_TOUCH", "ENTRY_EARLY", "ENTRY_WINDOW", "STOP_MID_CONF_ATR", "CLOSE_STOP_HARD_R",
-              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY", "CANCEL_MID_FRAC", "CANCEL_MID_SAME", "PRIOR_TOUCH_SKIP", "TREND_AGE_MIN", "PRIOR_TOUCH_TREND"]
+              "RR_RECLAIM", "LIMIT_ENTRY_FRAC", "LIMIT_KEEP_TP", "LIMIT_WINDOW", "LIMIT_EARLY", "CANCEL_MID_FRAC", "CANCEL_MID_SAME", "PRIOR_TOUCH_SKIP", "TREND_AGE_MIN", "PRIOR_TOUCH_TREND", "ADD_AT_R", "ADD_RISK_R"]
 DEFAULTS = {k: getattr(tr, k) for k in PARAM_KEYS}
 
 
@@ -1397,6 +1399,16 @@ COMPARE_SETS["basla"] = [
     C("Teyit EMA20>EMA50'den sonra (kalkış 1 ATR)", **dict(_YENI, PRIOR_TOUCH_TREND="ema50", PRIOR_TOUCH_SEP_ATR=1.0)),
 ]
 COMPARE_SETS["basla_k"] = [dict(c, tfs=["15m+5", "15m+10"], max_open=4) for c in COMPARE_SETS["basla"]]   # kaydırılmış mumlar
+# Piramit / ekleme (kullanıcı 24.10 02:45 "kodla"): fiyat +X R lehte gidince 1R daha (stop/TP ana işlemle aynı fiyat, canlıdaki
+# elle ekleme + autotrade._resize gibi). `/backtest 180 ekle seri` + `ekle seri 3 sene önce` + `ekle kayık seri`.
+COMPARE_SETS["ekle"] = [
+    C("Canlı ayar (ekleme yok)", **_YENI),
+    C("+0.5R'de 1R ekle", **dict(_YENI, ADD_AT_R=0.5, ADD_RISK_R=1.0)),
+    C("+1R'de 1R ekle", **dict(_YENI, ADD_AT_R=1.0, ADD_RISK_R=1.0)),
+    C("+1.5R'de 1R ekle", **dict(_YENI, ADD_AT_R=1.5, ADD_RISK_R=1.0)),
+    C("+1R'de 0.5R ekle", **dict(_YENI, ADD_AT_R=1.0, ADD_RISK_R=0.5)),
+]
+COMPARE_SETS["ekle_k"] = [dict(c, tfs=["15m+5", "15m+10"], max_open=4) for c in COMPARE_SETS["ekle"]]   # kaydırılmış mumlar
 COMPARE_SETS["igne2"] = [
     C("Canlı ayar (stop mum içinde)", **_YENI),
     C("Kapanışta stop, sert stop 1.5R", **dict(_YENI, CLOSE_STOP_HARD_R=1.5)),
@@ -1728,6 +1740,8 @@ def tp_stop_line(t):
     re_n = int(t["yeniden_giris"].notna().sum()) if "yeniden_giris" in t else 0
     if re_n:
         parts.append(f"🔁 Yeniden giriş {re_n}")
+    if "ekleme_R" in t and t["ekleme_R"].notna().any():
+        parts.append(f"➕ Ekleme {int(t['ekleme_R'].notna().sum())} ({float(t['ekleme_R'].sum()):+.1f}R)")
     if early:
         parts.append(f"↩️ Erken çıkış {early}")
     if other:

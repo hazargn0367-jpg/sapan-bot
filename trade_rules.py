@@ -181,6 +181,12 @@ BE_LOCK_R = 0.0        # >0: BE_TRIGGER'a gelince stop girişe değil girişin b
 # yeniden geçerse aynı giriş / stop / TP ile bir kez daha girilir. İki bacağın R'si toplanır.
 REENTRY_BARS = 0       # >0: erken çıkıştan sonra kaç mum boyunca yeniden giriş emri bekler
 REENTRY_EARLY = True   # yeniden girişte de erken çıkış kuralı (ilk FAILED_ENTRY_BARS mumda girişin gerisinde kapanış)
+# Piramit / ekleme (24.10 testi; kullanıcı elle ekliyor, sistematik hiç ölçülmemişti): fiyat dolumdan ADD_AT_R × risk lehte
+# gidince aynı yönde ADD_RISK_R kadar risk eklenir (stop emri, o seviyede dolum; boşlukta açılış). Eklenen kısmın stopu ve TP'si
+# ana işlemle AYNI fiyat (canlıdaki autotrade._resize gibi), çıkış da aynı (stop / TP / erken çıkış). Aynı mumda ekleme ve stop
+# → temkinli: eklendi sonra stop. R = ana işlem + ekleme (ekleme riski ana R cinsinden ADD_RISK_R).
+ADD_AT_R = 0.0         # >0: ekleme seviyesi (ana riskin katı, ör. 1.0 = +1R)
+ADD_RISK_R = 1.0       # eklenen kısmın riski (ana R cinsinden; stop orijinal stopta olduğu için adet buna göre küçülür)
 RISK_USD = 15.0        # 1R = kaç dolar (backtest raporlarında; canlı/oto 1R ile aynı: 15.10 15$, 20.10 20$, 20.10 18:06 15$)
 FEE_TAKER = 0.0005     # Binance vadeli piyasa emri komisyonu (%0.05)
 FEE_MAKER = 0.0002     # Binance vadeli limit emri komisyonu (%0.02)
@@ -661,7 +667,40 @@ def simulate(df, i, side, tick, mode=None):
     if (REENTRY_BARS > 0 and res.get("status") == "be" and res.get("early_exit") and not res.get("early_stop")
             and not res.get("time_exit") and "exit_bar" in res):
         res = _reentry(df, res, side)
+    if (ADD_AT_R > 0 and res.get("status") in ("win", "loss", "be") and "exit_bar" in res and "entry_bar" in res
+            and not res.get("reentry")):
+        res = _pyramid(df, res, side)
     return res
+
+
+def _pyramid(df, res, side):
+    """Ekleme (piramit): girişten çıkışa kadar fiyat dolum ± ADD_AT_R × risk seviyesine gelirse ADD_RISK_R kadar risk eklenir.
+    Eklenen kısım ana işlemle aynı stop / TP / çıkış fiyatından kapanır. Ekleme stop emriyle (taker), boşlukta mum açılışında."""
+    O, H, L = df["Open"].values, df["High"].values, df["Low"].values
+    long = side == "LONG"
+    fill, risk, stop = res["fill"], res["risk"], res["stop"]
+    k_in, x, exitp, status = res["entry_bar"], res["exit_bar"], res["exit"], res["status"]
+    level = fill + ADD_AT_R * risk if long else fill - ADD_AT_R * risk
+    k_add = None
+    for k in range(k_in, x + 1):
+        if (H[k] >= level) if long else (L[k] <= level):
+            k_add = k
+            break
+    if k_add is None:
+        return res
+    add_fill = level
+    if k_add > k_in and ((O[k_add] > level) if long else (O[k_add] < level)):
+        add_fill = O[k_add]   # mum seviyenin ötesinde açtı: açılışta dolum
+    dist = (add_fill - stop) if long else (stop - add_fill)
+    if dist <= 0:
+        return res
+    q = ADD_RISK_R * risk / dist   # ana işlemin adedine göre eklenen adet (riski ADD_RISK_R)
+    gross = q * ((exitp - add_fill) if long else (add_fill - exitp)) / risk
+    fees = q * (add_fill * FEE_TAKER + exitp * (FEE_MAKER if status == "win" else FEE_TAKER)) / risk
+    out = dict(res)
+    out.update(add_bar=k_add, add_fill=add_fill, add_q=q, r_add=gross - fees, r_base=res["r_net"],
+               r_gross=res["r_gross"] + gross, r_net=res["r_net"] + gross - fees)
+    return out
 
 
 def _reentry(df, res, side):

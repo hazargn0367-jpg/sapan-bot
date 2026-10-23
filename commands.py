@@ -51,6 +51,7 @@ Telegram komutları (bot arka planda dinler):
   /backtest 180 temel seri -> herhangi bir karşılaştırma testinin sonuna "seri" yazılırsa 5 dönem arka arkaya çalışır, sonunda özet
   /backtest 180 temel -> temas tanımının temel ayarları: stoch 40/60 · stoch yok · ters mum 3/4 · tepe 45 mum · tolerans %0.15
   /backtest 180 dalga -> temastan önceki 12 mum büyük gövdeyle sürekli yön değiştiriyorsa girme (AXL örneği)
+  /backtest 180 ekle seri -> piramit: fiyat +0.5 / 1 / 1.5R lehte gidince 1R (ya da 0.5R) ekle, stop/TP aynı fiyat (+ "3 sene önce", "kayık")
   /backtest 180 başla seri -> kural 2: teyit teması EMA20>EMA50 olduğu andan sayılır (EMA100 beklenmez), kalkış 1.5 / 1 ATR (+ "3 sene önce", "kayık")
   /backtest 180 iki mum -> 2 mumlu temas her sıra (dip 1. ya da 2. mumda), iki mum EMA20'de döner, onay iki mumun en tepesinin üstü
   /backtest 180 trend -> ikinci strateji adayı: trend takibi (Donchian kırılımı 20/50/100, en likit 30-60 coin, günlük/4s)
@@ -200,12 +201,14 @@ def start_backtest(text):
         args += ["--compare", "gevsek_k" if re.search(r"\bkay[ıi]k\b", low) else "gevsek"]
     elif re.search(r"\bsa[gğ]lam\b", low):   # 23.10: sağlamlık süzgeci (kurallar tek tek kalkar); "kayık" ile kaydırılmış mumlarda
         args += ["--compare", "saglam_k" if re.search(r"\bkay[ıi]k\b", low) else "saglam"]
+    elif re.search(r"\bekle\b", low):   # 24.10: piramit — +0.5 / 1 / 1.5R'de 1R ekleme; "kayık" ile kaydırılmış mumlarda
+        args += ["--compare", "ekle_k" if re.search(r"\bkay[ıi]k\b", low) else "ekle"]
+    elif re.search(r"\bba[sş]la\b", low):   # 24.10: kural 2'de trend başlangıcı EMA20>EMA50 (EMA100 beklenmez); "kayık" ile kaydırılmış mumlarda
+        args += ["--compare", "basla_k" if re.search(r"\bkay[ıi]k\b", low) else "basla"]
     elif re.search(r"\bkay[ıi]k\b", low):   # 23.10: 5 / 10 dk kaydırılmış 15dk mumlar (işlem sayısı)
         args += ["--compare", "kayik"]
     elif re.search(r"\bya[şs]\b", low):   # 23.10: trend yaşı (genç trende girme) + erken çıkışsız
         args += ["--compare", "yas"]
-    elif re.search(r"\bba[sş]la\b", low):   # 24.10: kural 2'de trend başlangıcı EMA20>EMA50 (EMA100 beklenmez); "kayık" ile kaydırılmış mumlarda
-        args += ["--compare", "basla_k" if re.search(r"\bkay[ıi]k\b", low) else "basla"]
     elif re.search(r"\bilk\b", low):   # 23.10: teyitsiz ilk temas: kural 2 sadece dönüşte / klasikte / hiç yok
         args += ["--compare", "teyit2"]
     elif "teyit" in low:
