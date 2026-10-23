@@ -1159,3 +1159,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - 23.10 18:30 RİSK KARARI: bakiye yüzdesi denendi (son 6 ay, 300$ başlangıç, momentum 3x/0.5x; scratchpad tp/bil.py): sabit 15$ 1.493$ (düşüş %15) ·
   %3 2.235$ (%41) · %3 + 2x 1.406$ (%31) · %5 5.985$ (%60). Yüzde reddedildi. Kullanıcı: 1R = 15$ kalsın, bakiye 500$'a çıkınca 1R = 25$
   (kademeli sabit: 1.000$ → 50$ önerildi). 15-20 gerçek işlemden sonra backtestle karşılaştırılacak.
+- 23.10 18:35 YENİDEN GİRİŞ (3. kez, bugünkü kurallar, `yeniden seri` 5 dönem May 24 – Eki 26): canlı 18.9/8.3/21.7/73.9/41.1 = +164.0R (mom +251.0) ·
+  1. mumda yeniden giriş +155.8 (mom +258.4; 2/5 dönem iyi) · ikincide erken yok +137.6 · 2 mum +150.3. 140 yeniden giriş: 32 TP / 64 stop / 44 erken,
+  ikinci bacak -12.0R (dönemler +0.5 / +17.1 / -10.9 / -5.2 / -13.6). Momentum farkı (+7R) tek dönemden. TP oranı %34 → %41 ama R düşüyor. RED (3/3 test).
