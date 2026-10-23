@@ -73,7 +73,7 @@ STATUS_TR = {
     "atr": "Stop mesafesi 1.5 ATR'den büyük",
     "atr_min": "Stop mesafesi ATR alt sınırının altında",
     "wick": "Onay mumunun ters iğnesi uzun",
-    "no_prior_touch": "Trend teyidi yok (önceden EMA20 teması yok)",
+    "no_prior_touch": "Trend teyidi yok: EMA20'den 1.5 ATR koptuktan sonra tepeye kadar temas olmamış (ilk geri çekilme)",
     "dirty_pivot": "Son tepe/dip temiz değil (destek/direnç oluşmuş)",
     "touch_body": "Temas mumu fitil mumu değil (gövdeyle değmiş)",
     "quiet": "Temas 03:00-07:00 TR arasında",
@@ -1349,6 +1349,19 @@ COMPARE_SETS["forex"] = []
 for _tf, _ad in (("15m", "15dk"), ("30m", "30dk"), ("1h", "1 saat"), ("2h", "2 saat"), ("4h", "4 saat")):
     COMPARE_SETS["forex"].append(C(f"{_ad} canlı kurallar", **dict(_YENI, **_FXR), tfs=[_tf]))
     COMPARE_SETS["forex"].append(C(f"{_ad} temel (kurallarsız)", **_FX_TEMEL, tfs=[_tf]))
+# 23.10 17:23 "kodla": işlem sayısı — kural 4 kalkar (sağlam testinde etkisiz) ve/veya aynı anda en fazla 3 / 4 işlem.
+# "açık kayık": aynı ayarlar +5 / +10 dk kaydırılmış mumlarda (iki dizi → işlem sınırı 2 katı).
+def _acik():
+    return [
+        C("Canlı ayar (en fazla 2)", **_YENI),
+        C("− kural 4", **dict(_YENI, **_K4)),
+        C("En fazla 3 işlem", **dict(_YENI, max_open=3)),
+        C("En fazla 4 işlem", **dict(_YENI, max_open=4)),
+        C("− kural 4 + en fazla 3", **dict(_YENI, **_K4, max_open=3)),
+        C("− kural 4 + en fazla 4", **dict(_YENI, **_K4, max_open=4)),
+    ]
+COMPARE_SETS["acik"] = _acik()
+COMPARE_SETS["acik_k"] = [dict(c, tfs=["15m+5", "15m+10"], max_open=2 * c["max_open"]) for c in _acik()]
 COMPARE_SETS["borsa"] = [
     C("Bütün coinler", **_YENI, coins="all"),
     C("Sadece canlı botun Binance coinleri (aynı sinyaller)", **_YENI, coins="binance"),

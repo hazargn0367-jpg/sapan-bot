@@ -7,7 +7,7 @@ REASONS = {
     "atr": "Stop mesafesi 1.5 ATR'den büyük",
     "atr_min": "Stop mesafesi ATR alt sınırının altında",
     "wick": "Onay mumunun ters iğnesi uzun",
-    "no_prior_touch": "Trend teyidi yok (önceden EMA20 teması yok)",
+    "no_prior_touch": "Trend teyidi yok: EMA20'den 1.5 ATR koptuktan sonra tepeye kadar temas olmamış (ilk geri çekilme)",
     "dirty_pivot": "Son tepe/dip temiz değil (destek/direnç oluşmuş)",
     "touch_body": "Temas mumu fitil mumu değil (gövdeyle değmiş)",
     "quiet": "Temas 03:00-07:00 TR arasında",
