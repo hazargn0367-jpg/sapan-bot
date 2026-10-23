@@ -1584,6 +1584,13 @@ COMPARE_SETS["yeniden"] = [
     C("4 mumda yeniden giriş, ikincide erken çıkış yok", **dict(_CANLI_SON, REENTRY_BARS=4, REENTRY_EARLY=False)),
     C("8 mumda yeniden giriş, ikincide erken çıkış yok", **dict(_CANLI_SON, REENTRY_BARS=8, REENTRY_EARLY=False)),
 ]
+# 23.10 18:14 "kodla" (kullanıcı: erken çıkıştan 1 mum sonra fiyat girişe gelirse yeniden gir): bugünkü canlı kurallarla (_YENI).
+COMPARE_SETS["yeniden"] = [
+    C("Canlı ayar", **_YENI),
+    C("Erken çıkıştan sonraki 1. mumda yeniden giriş", **dict(_YENI, REENTRY_BARS=1)),
+    C("1. mumda yeniden giriş, ikincide erken çıkış yok", **dict(_YENI, REENTRY_BARS=1, REENTRY_EARLY=False)),
+    C("2 mum içinde yeniden giriş", **dict(_YENI, REENTRY_BARS=2)),
+]
 COMPARE_SETS["basabas2"] = [
     C("Canlı ayar (başabaş yok)", **_CANLI_SON),
     C("+ 1R kârda stop girişe", **dict(_CANLI_SON, BE_TRIGGER=1.0)),

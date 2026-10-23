@@ -21,7 +21,7 @@ Telegram komutları (bot arka planda dinler):
                         + temiz trend filtreleri karşılaştırması ('dönüş temiz' yazılırsa dönüş varyasyonuyla)
   /backtest 180 dönüş temiz -> DÖNÜŞ varyasyonu 6 ay: temiz trend filtreleri + aday kurallar + TP/stop fark analizi
   /backtest 30 canlı erken 2 sene önce -> canlı ayar + erken çıkış (2 mum), 2 yıl önceki 30 gün, bütün işlemler PDF
-  /backtest 180 yeniden seri -> erken çıkıştan sonra 4 / 8 mum içinde giriş seviyesi yeniden geçilirse tekrar gir (+ "yeniden eski seri")
+  /backtest 180 yeniden seri -> erken çıkıştan sonraki 1. mumda (ya da 2 mum içinde) giriş seviyesi yeniden geçilirse tekrar gir, bugünkü kurallar (+ "yeniden seri 3 sene önce")
   /backtest 180 kilit seri -> TP 2.2'de kapatmak yerine stop +1.8 / +1.5R'ye (kâr kilidi), hedef 3 / 4 / 5R (+ "kilit eski seri")
   /backtest 180 hedef seri -> onay mumu büyükse (gövde ≥ 0.5 / 0.65 ATR) TP 2.5 / 3, diğerleri 2.2
   /backtest 180 hedef eski seri -> aynı test hiç bakılmamış 2 eski dönemde (önceki5 + önceki6, 2023-2024); "eski" her testte çalışır
