@@ -1156,3 +1156,6 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
 - Canlı: 497 işlem, +166.4R (mom +252.9R, ayda 8.4R). − kural 4: 524 işlem (+%5), +161.2R (mom +253.8R); düz 1/5, mom 3/5 dönem daha iyi.
 - En fazla 3 = en fazla 4: sadece +6 işlem (30 ayda), −3R. MAX_OPEN 2 neredeyse hiç dolmuyor → sınır darboğaz değil.
 - Sonuç: işlem sayısı sınırlardan değil kurulum azlığından düşük. 2021-23 / kayık testine gerek görülmedi.
+- 23.10 18:30 RİSK KARARI: bakiye yüzdesi denendi (son 6 ay, 300$ başlangıç, momentum 3x/0.5x; scratchpad tp/bil.py): sabit 15$ 1.493$ (düşüş %15) ·
+  %3 2.235$ (%41) · %3 + 2x 1.406$ (%31) · %5 5.985$ (%60). Yüzde reddedildi. Kullanıcı: 1R = 15$ kalsın, bakiye 500$'a çıkınca 1R = 25$
+  (kademeli sabit: 1.000$ → 50$ önerildi). 15-20 gerçek işlemden sonra backtestle karşılaştırılacak.
