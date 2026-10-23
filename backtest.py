@@ -327,13 +327,13 @@ def to_30m(df15):
     return resample_tf(df15, 30)
 
 
-def resample_tf(df15, minutes):
+def resample_tf(df15, minutes, offset_min=0):
     """Temel mumları (15dk) Binance'in 30dk / 1s / 4s mumlarıyla aynı şekilde birleştirir (UTC 00:00'dan hizalı).
     Eksik parçası olan mum (coin yeni listelenmiş ya da veri boşluğu) atılır."""
     base_min = BAR_MS // 60000
     d = df15.copy()
     d.index = pd.to_datetime(d["timestamp"], unit="ms", utc=True)
-    g = d.resample(f"{minutes}min", origin="epoch", label="left")
+    g = d.resample(f"{minutes}min", origin="epoch", offset=f"{offset_min}min", label="left")
     out = pd.DataFrame({
         "Open": g["Open"].first(), "High": g["High"].max(),
         "Low": g["Low"].min(), "Close": g["Close"].last(), "n": g["Open"].count(),
@@ -1290,6 +1290,15 @@ COMPARE_SETS["coklu"] = [
 ]
 # 23.10 02:12 "kodla" (BANKUSDT 19.09 örneği: dümdüz çıkıştan sonraki ilk temas kural 2'ye takıldı): kural 2 sadece bir varyasyonda kalkar
 # 23.10 02:41 "kodla": trend yaşı (CSV analizi, 7 dönem: yaş ≥ 76 mum 6/7 dönemde daha iyi, TP %37 vs %26; genç trend 3 dönemde zarar)
+# 23.10 03:14 "kodla" (kullanıcı: ayda 10R için işlem sayısı 2 katı): aynı kurallar 5 / 10 dk kaydırılmış 15dk mumlarda
+# (:05/:20/:35/:50 ve :10/:25/:40/:55 başlangıçlı). Veri 5dk; coinde tek işlem; toplu sinyal her dizide ayrı.
+COMPARE_SETS["kayik"] = [
+    C("Canlı ayar (normal 15dk mumlar)", **_YENI, tfs=["15m"]),
+    C("Sadece +5 dk kaydırılmış 15dk", **_YENI, tfs=["15m+5"]),
+    C("Sadece +10 dk kaydırılmış 15dk", **_YENI, tfs=["15m+10"]),
+    C("Üçü birlikte (en fazla 2 işlem)", **_YENI, tfs=["15m", "15m+5", "15m+10"]),
+    C("Üçü birlikte (en fazla 4 işlem)", **dict(_YENI, max_open=4), tfs=["15m", "15m+5", "15m+10"]),
+]
 COMPARE_SETS["yas"] = [
     C("Canlı ayar", **_YENI),
     C("Trend yaşı ≥ 60 mum (15 saat)", **dict(_YENI, TREND_AGE_MIN=60)),
@@ -1865,6 +1874,9 @@ def main():
             configs = [dict(c, tfs=c.get("tfs") or list(tfs)) for c in configs]
             for c in configs:
                 tfs += [t for t in c["tfs"] if t not in tfs]
+            if any("+" in t for t in tfs) and BASE_TF != "5m":
+                # Kaydırılmış 15dk mumlar (23.10): veri 5dk indirilir, bütün 15dk dizileri (kaymasız dahil) 5dk'dan üretilir
+                set_base_tf("5m")
             WARMUP_FACTOR = max(WARMUP_FACTOR, max(config.tf_minutes(t) for t in tfs) // (BAR_MS // 60000))
     elif args.preset == "donus":
         import live_setups
@@ -2015,7 +2027,7 @@ def main():
             n_ok += 1
             tick = ticks.get(symbol, 0.0)
             for tf in tfs:
-                df = prepare(df15 if tf == BASE_TF else resample_tf(df15, config.tf_minutes(tf)))
+                df = prepare(df15 if tf == BASE_TF else resample_tf(df15, config.tf_minutes(tf), config.tf_offset(tf)))
                 if use_htf and tf == BASE_TF:
                     add_htf(df)
                 if tf in btc_close and symbol != "BTCUSDT":
@@ -2082,7 +2094,7 @@ def main():
     try:
         b15 = load_15m("BTCUSDT", args.days, args.ago)
         for tf in tfs:
-            b = b15 if tf == BASE_TF else resample_tf(b15, config.tf_minutes(tf))
+            b = b15 if tf == BASE_TF else resample_tf(b15, config.tf_minutes(tf), config.tf_offset(tf))
             btc_close[tf] = pd.Series(b["Close"].values, index=b["timestamp"].values)
         del b15
     except BinanceBlocked:

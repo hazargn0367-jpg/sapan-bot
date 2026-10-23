@@ -1107,3 +1107,8 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   10 dönem toplam: canlı +123.3 · ≥60 +119.7 (7/10 iyi, işlem −%34) · ≥76 +100.3 (5/10) · ≥100 +83.3. Boyut (CSV): ≥60 genç 0.5x yaşlı 1.25x +151.7 ama düşüş 16.7 → 20.4
   (kâr/düşüş aynı). SONUÇ: yaş filtresi zararı azaltıyor, TP%/R-iş artıyor, toplam kâr ~aynı, işlem az. ERKEN ÇIKIŞI KALDIRMAK REDDEDİLDİ (dönem dışında çok kötü).
   TP %40-45 hedefi kalıcı şekilde tutmuyor (sadece erken çıkışsızla, o da dönem dışında bozuk). Kullanıcıya seçenek: ≥60 (aynı kâr, az işlem, %37 TP) ya da canlı.
+- 23.10 03:09 kullanıcı: "işlem sayısı düşecek ama kâr sabit kalacak, anlamı yok; TP'yi boşver, işlem sayısını artır, ayda en az 10R". Hesap: 10R = ~33 iş/ay × 0.3R
+  (şu an ~16). Momentum (10 dönem CSV): 2024-26 ayda 7.6R (sabit 4.9), 2021-23 −0.3R (sabit −0.8). Komisyon ort 0.09R/iş (682 işte 61R).
+- 23.10 03:14 "kodla": KAYDIRILMIŞ 15dk MUMLAR. config.tf_offset ("15m+5" = :05/:20/:35/:50 başlangıçlı), backtest.resample_tf(offset_min), set'te "+"lı dilim
+  varsa veri 5dk (set_base_tf("5m"), bütün 15dk dizileri 5dk'dan). COMPARE_SETS["kayik"]: normal · +5 · +10 · üçü (2 işlem) · üçü (4 işlem); coinde tek işlem.
+  `/backtest 180 kayık seri` (+ `kayık seri 3 sene önce`). Amaç: (1) işlem sayısı, (2) kurallar standart mum saatine ezber mi sınaması.
