@@ -1186,3 +1186,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Ekleme = kaldıraç: sistem kazanırken büyütüyor, kaybederken zararı büyütüyor. RED (sistematik). CSV'de momentum durumuna göre +1R eklemeleri:
   3x durumunda 2024-26 47 ekleme +15.2R, 2021-23 7 ekleme +2.4R · 1x +26.9 / −12.2 · 0.5x +13.8 / −3.1 → ekleme sadece kazanç serisinde (3x) iki dönemde de
   artı (eski dönem örneği çok küçük; sonradan bakılarak bulundu). Kullanıcının elle kuralı (sadece 1x / 0.5x'e ekle) eski dönemde zararlı grup. Kayık testi gereksiz.
+- 24.10 18:10 "kodla": /oto'ya GERÇEK İŞLEM ÖZETİ (autotrade.summary_lines, auto_trades.json'daki kapanmış kayıtlar): işlem sayısı, ✅ TP · ❌ Stop · ↩️ Erken ·
+  ✋ elle/diğer (bot TP emri dolmadan kapanan pozisyonu "stop" kaydediyor → kârlıysa elle/diğer), kazanan %, toplam R (1R = RISK_USD) ve $, işlem başı R, en iyi /
+  en kötü, risk çarpanına göre (3x / 1x / 0.5x) $, elle ekleme yapılanlar (risk_usd > planlanan × 1.05). Kayıtlar Hetzner'e taşınınca (22.10) sıfırdan başladı.
+  Örnekler (24.10): NEAR SHORT erken çıkış (14:45 mumu 4.498 > giriş 4.492, kural doğru; elle ekleme 43$ risk → −8.53$), sonra TP'ye gitti; kullanıcı elle
+  girip 1R'de +40$ kapattı. KSM 0.5x + elle ekleme TP. Sabah 09:14 yeniden başlama = Ubuntu apt-daily-upgrade/needrestart → /etc/needrestart/conf.d/sapan-bot.conf
+  ($nrconf{override_rc}{qr(^sapan-bot)} = 0) ile kapatıldı (kullanıcı sunucuda yaptı).

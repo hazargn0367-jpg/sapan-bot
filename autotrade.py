@@ -872,6 +872,63 @@ def _perm_check():
     return bad, line
 
 
+def summary_lines(recs=None, since=None):
+    """Kapanmış gerçek otomatik işlemlerin özeti (24.10, kullanıcı: "kâr / stop oranı yazsın"). R = 1R (RISK_USD) ölçüsünde
+    gerçek $ / RISK_USD; elle ekleme / elle kapatma dahil (borsadaki gerçek sonuç). TP / erken çıkış kaydından, diğer kapanışlar
+    zararlıysa stop, kârlıysa "elle / diğer" sayılır (bot TP emri dolmadan kapanan pozisyonu "stop" diye kaydediyor)."""
+    recs = trades() if recs is None else recs
+    done = [x for x in recs.values() if x.get("status") == "closed" and x.get("pnl") is not None
+            and (since is None or float(x.get("closed", 0)) >= since)]
+    if not done:
+        return ["📊 Gerçek işlemler: henüz kapanan işlem yok"]
+    done.sort(key=lambda x: float(x.get("closed", 0)))
+
+    def kind(x):
+        k = x.get("exit_kind", "")
+        if k == "TP":
+            return "tp"
+        if k == "erken çıkış":
+            return "early"
+        return "stop" if float(x["pnl"]) < 0 else "other"
+
+    def block(xs):
+        n = len(xs)
+        usd = sum(float(x["pnl"]) for x in xs)
+        c = {k: sum(1 for x in xs if kind(x) == k) for k in ("tp", "stop", "early", "other")}
+        wins = sum(1 for x in xs if float(x["pnl"]) > 0)
+        parts = [f"✅ TP {c['tp']}", f"❌ Stop {c['stop']}", f"↩️ Erken {c['early']}"]
+        if c["other"]:
+            parts.append(f"✋ Elle/diğer kârda {c['other']}")
+        return n, usd, wins, " · ".join(parts)
+
+    first = time.strftime("%d.%m", time.gmtime(float(done[0].get("created", done[0]["closed"])) + TZ_OFFSET))
+    n, usd, wins, parts = block(done)
+    r = usd / RISK_USD if RISK_USD else 0.0
+    lines = [f"📊 <b>Gerçek işlemler</b> (ilk işlem {first}, toplam {n}): {parts}",
+             f"  Kazanan {wins}/{n} (%{100 * wins / n:.0f}) · {'🟢' if usd > 0 else '🔴'} <b>{r:+.2f}R ({usd:+.2f}$)</b> · "
+             f"işlem başı {r / n:+.2f}R"]
+    best = max(done, key=lambda x: float(x["pnl"]))
+    worst = min(done, key=lambda x: float(x["pnl"]))
+    lines.append(f"  En iyi {html.escape(best['symbol'])} {float(best['pnl']):+.2f}$ · "
+                 f"en kötü {html.escape(worst['symbol'])} {float(worst['pnl']):+.2f}$")
+    groups = {}
+    for x in done:
+        m = float(x.get("risk_mult", 1.0) or 1.0)
+        groups.setdefault(m, []).append(x)
+    if len(groups) > 1 or 1.0 not in groups:
+        g = []
+        for m in sorted(groups, reverse=True):
+            xs = groups[m]
+            u = sum(float(x["pnl"]) for x in xs)
+            g.append(f"{m:g}x: {len(xs)} işlem {u:+.2f}$")
+        lines.append("  Risk çarpanına göre: " + " · ".join(g))
+    added = [x for x in done if float(x.get("risk_usd", 0)) > RISK_USD * float(x.get("risk_mult", 1.0) or 1.0) * 1.05]
+    if added:
+        u = sum(float(x["pnl"]) for x in added)
+        lines.append(f"  Elle ekleme yapılanlar: {len(added)} işlem {u:+.2f}$")
+    return lines
+
+
 def status_text():
     if api is None:
         return ("🤖 Otomatik işlem: <b>kurulmamış</b>. Render → Environment'a BINANCE_API_KEY ve "
@@ -901,6 +958,10 @@ def status_text():
                      + ("giriş bekliyor" if x["status"] == "pending" else f"açık ({_fmt(x['fill'] or 0)})"))
     days = s.get("days", {})
     lines.append(f"Bugün: {days.get(_today(), 0.0):+.2f}R · Son 30 gün: {sum(days.values()):+.2f}R")
+    try:
+        lines.extend(summary_lines())
+    except Exception as e:   # özet bozulsa da /oto çalışsın
+        log.warning("OTO özet hatası: %s", e)
     m, tot, n = risk_mult()
     lines.append(f"Sıradaki işlemin riski: {RISK_USD * m:g}$ ({mult_text(m, tot, n)}; artıda {MOMENTUM_UP:g}x, "
                  f"ekside {MOMENTUM_DOWN:g}x)")
