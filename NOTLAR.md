@@ -1180,3 +1180,9 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   COMPARE_SETS["ekle"]: canlı · +0.5R'de 1R · +1R'de 1R · +1.5R'de 1R · +1R'de 0.5R; "ekle_k" kaydırılmış. `/backtest 180 ekle seri` + `ekle seri 3 sene önce` +
   `ekle kayık seri` (komut sırası düzeltildi: "başla/ekle kayık" önce kayık setine düşüyordu). Ön tahmin (başla CSV'leri, mfe ile): +0.5R +39…+75R, +1R +10…+44R /
   4 dönem. Sentetik: ana R birebir, elle hesap (TP +0.5645R, stop −1.05R) doğru.
+- 24.10 03:0x EKLE sonucu. 5 dönem (May 24 – Eki 26): canlı +168.2R (düşüş 10.8; mom 246.7 / 16.6) · +0.5R'de 1R +245.5 (19.4; mom 362.5 / 34.3) ·
+  +1R'de 1R +223.8 (12.9; mom 324.5 / 25.9) · +1.5R +196.5 · +1R'de 0.5R +196.0 → hepsi 5/5 iyi; ama +0.5R kaldıraçtan farksız (aynı kâr 1R×1.46 ile daha az düşüş),
+  +1R biraz daha verimli. 3 SENE ÖNCE (May 21 – Eki 23, 191 iş): canlı −20.6 · +0.5R −41.4 · +1R −33.6 (5/5 dönem kötü, düşüş 29.2 → 41.5) · +1.5R −30.6 · 0.5R −27.1.
+  Ekleme = kaldıraç: sistem kazanırken büyütüyor, kaybederken zararı büyütüyor. RED (sistematik). CSV'de momentum durumuna göre +1R eklemeleri:
+  3x durumunda 2024-26 47 ekleme +15.2R, 2021-23 7 ekleme +2.4R · 1x +26.9 / −12.2 · 0.5x +13.8 / −3.1 → ekleme sadece kazanç serisinde (3x) iki dönemde de
+  artı (eski dönem örneği çok küçük; sonradan bakılarak bulundu). Kullanıcının elle kuralı (sadece 1x / 0.5x'e ekle) eski dönemde zararlı grup. Kayık testi gereksiz.
