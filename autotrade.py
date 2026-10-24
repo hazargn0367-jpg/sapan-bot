@@ -566,7 +566,8 @@ def _early_exit(rec):
     api.new_order(symbol=sym, type="MARKET", quantity=_q(qty, f["mstep"]), **_side_params(side, closing=True))
     _cleanup_orders(rec)
     rec["exit_kind"] = "erken çıkış"
-    _finish(rec)
+    rec["closing"] = True
+    _finish(rec)   # tamamlanmazsa check_once (pozisyon 0) sonraki döngülerde bitirir
 
 
 def _cleanup_orders(rec):
@@ -605,6 +606,7 @@ def _protect(rec, qty):
                 api.new_order(symbol=sym, type="MARKET", quantity=_q(qty, f["mstep"]), **_side_params(side, closing=True))
                 _cleanup_orders(rec)
                 rec["exit_kind"] = "stop konamadı, hemen kapatıldı"
+                rec["closing"] = True
                 _finish(rec)
                 _say(f"⚠️ {html.escape(sym)}: stop emri konamadı ({html.escape(str(e))[:150]}), "
                      f"pozisyon güvenlik için kapatıldı")
@@ -680,22 +682,59 @@ def _resize(rec, qty):
          f"Stop {_fmt(rec['stop'])} ve {tp_txt} bütün pozisyona taşındı. Bu işlemin riski artık ~{rec['risk_usd']:.2f}$.")
 
 
+FINISH_TRIES = int(os.environ.get("AUTO_FINISH_TRIES", "6"))   # kapanış dolumu geçmişe düşene kadar en fazla kaç döngü beklenir
+
+
+def _fills(rec, end_ms=None):
+    """İşlemin Binance dolumları: (net kâr-zarar dahil realizedPnl toplamı, komisyon $, açılış adedi, kapanış adedi).
+    24.10 KSM hatası: pozisyon 0 görünür görünmez okununca TP dolumu henüz userTrades'te yoktu (sadece giriş komisyonu, −1.18$
+    yazıldı; gerçek +27.53$). Kapanış adedi açılış adedini tutmuyorsa sonuç eksik demektir. end_ms: bu andan sonraki dolumlar
+    sayılmaz (sonradan düzeltmede aynı coinde açılan başka işlem / elle işlem karışmasın)."""
+    sym = rec["symbol"]
+    since = rec["created"] * 1000 - 2000   # aynı coinde aynı anda tek işlem: giriş emrinden sonraki dolumlar bu işlemin
+    open_side = "BUY" if rec["side"] == "LONG" else "SELL"
+    pnl = fee = q_open = q_close = 0.0
+    bnb = None
+    for tr_ in api.user_trades(sym, since):
+        if end_ms is not None and int(tr_.get("time", 0)) > end_ms:
+            continue
+        ps = tr_.get("positionSide", "BOTH")
+        if ps not in ("BOTH", rec["side"]):
+            continue   # çift yön modunda öbür yönün dolumu
+        pnl += float(tr_.get("realizedPnl", 0))
+        q = abs(float(tr_.get("qty", 0)))
+        if tr_.get("side") == open_side:
+            q_open += q
+        else:
+            q_close += q
+        c = float(tr_.get("commission", 0))
+        asset = tr_.get("commissionAsset", "USDT")
+        if asset == "USDT":
+            fee += c
+        elif asset == "BNB":
+            bnb = bnb or api.price("BNBUSDT")
+            fee += c * bnb
+    return pnl, fee, q_open, q_close
+
+
+def _complete(q_open, q_close):
+    return q_open > 0 and q_close >= q_open * 0.999
+
+
 def _finish(rec):
-    """Pozisyon kapandı: gerçek kâr-zararı (komisyon dahil) hesapla, bildir."""
+    """Pozisyon kapandı: gerçek kâr-zararı (komisyon dahil) hesapla, bildir. Kapanış dolumları henüz geçmişte yoksa
+    False döner (kayıt açık kalır, sonraki döngüde yeniden denenir; FINISH_TRIES sonra eksik de olsa kapatılır)."""
     sym = rec["symbol"]
     pnl, fee = 0.0, 0.0
     try:
-        since = rec["created"] * 1000 - 2000   # aynı coinde aynı anda tek işlem: giriş emrinden sonraki dolumlar bu işlemin
-        bnb = None
-        for tr_ in api.user_trades(sym, since):
-            pnl += float(tr_.get("realizedPnl", 0))
-            c = float(tr_.get("commission", 0))
-            asset = tr_.get("commissionAsset", "USDT")
-            if asset == "USDT":
-                fee += c
-            elif asset == "BNB":
-                bnb = bnb or api.price("BNBUSDT")
-                fee += c * bnb
+        pnl, fee, q_open, q_close = _fills(rec)
+        if not _complete(q_open, q_close):
+            rec["finish_tries"] = rec.get("finish_tries", 0) + 1
+            if rec["finish_tries"] < FINISH_TRIES:
+                log.info("OTO %s kapanış dolumu henüz yok (%g / %g), bekleniyor", sym, q_close, q_open)
+                return False
+            rec["pnl_incomplete"] = True
+            log.warning("OTO %s kapanış dolumu bulunamadı (%g / %g), eksik sonuçla kapatılıyor", sym, q_close, q_open)
     except Exception as e:
         log.warning("OTO %s kâr-zarar okunamadı: %s", sym, e)
     net = pnl - fee
@@ -714,8 +753,65 @@ def _finish(rec):
          f"(risk {risk_usd:g}$ = {risk_usd / RISK_USD if RISK_USD else 1:g}x{own}, komisyon {fee:.3f}$). "
          f"Bugün toplam {day:+.2f}R ({day * RISK_USD:+.2f}$).\n"
          f"Sıradaki işlemin riski: {RISK_USD * nm:g}$ ({mult_text(nm, ntot, nn)}).")
+    if rec.get("pnl_incomplete"):
+        _say(f"⚠️ {html.escape(sym)}: kapanış dolumu Binance geçmişinde bulunamadı, bu sonuç eksik olabilir. "
+             f"Bot yeniden başlayınca kayıt Binance'ten yeniden okunup düzeltilir.")
     if day <= -DAILY_LOSS_R:
         _say(f"⛔ Bugün {day:+.2f}R: günlük zarar sınırı (-{DAILY_LOSS_R:g}R) doldu, yarına kadar yeni işlem açılmayacak.")
+    return True
+
+
+def _day_key(ts):
+    return time.strftime("%Y-%m-%d", time.gmtime(float(ts) + TZ_OFFSET))
+
+
+def repair_recent(hours=48):
+    """Açılışta: son `hours` saatte kapanan kayıtların kâr-zararını Binance'ten (kapanıştan 60 sn sonrasına kadar) yeniden oku,
+    farklıysa pnl / r / günlük toplamı düzelt (24.10 KSM: −1.18$ yazılmıştı, gerçek +27.53$). Momentum çarpanı rec["r"]'den
+    hesaplandığı için o da düzelir. Sonuç eksikse (kapanış dolumu yine yok) dokunulmaz."""
+    if api is None:
+        return []
+    fixed = []
+    with _lock:
+        t = trades()
+        s = state()
+        days = s.setdefault("days", {})
+        now = time.time()
+        for key, rec in t.items():
+            if rec.get("status") != "closed" or not rec.get("closed") or rec.get("pnl") is None:
+                continue
+            if now - float(rec["closed"]) > hours * 3600:
+                continue
+            try:
+                pnl, fee, q_open, q_close = _fills(rec, end_ms=int(float(rec["closed"]) * 1000) + 60000)
+            except Exception as e:
+                log.warning("OTO düzeltme %s okunamadı: %s", rec["symbol"], e)
+                continue
+            if not _complete(q_open, q_close):
+                continue
+            net = pnl - fee
+            old = float(rec["pnl"])
+            if abs(net - old) < 0.02:
+                if rec.pop("pnl_incomplete", None):
+                    fixed.append(None)
+                continue
+            risk_usd = float(rec.get("risk_usd", 1.0))
+            rec.update(pnl=round(net, 4), r=round(net / risk_usd if risk_usd else 0.0, 3), repaired=time.time())
+            rec.pop("pnl_incomplete", None)
+            dk = _day_key(rec["closed"])
+            if dk in days and RISK_USD:
+                days[dk] = round(days[dk] + (net - old) / RISK_USD, 3)
+            fixed.append((rec["symbol"], rec["side"], old, net))
+        if fixed:
+            _save_trades(t)
+            _save("auto_state.json", s)
+    fixed = [f for f in fixed if f]
+    for sym, side, old, net in fixed:
+        _say(f"♻️ {side} {html.escape(sym)} kaydı Binance'e göre düzeltildi: {old:+.2f}$ → <b>{net:+.2f}$</b>")
+    if fixed:
+        m, tot, n = risk_mult()
+        _say(f"Sıradaki işlemin riski: {RISK_USD * m:g}$ ({mult_text(m, tot, n)}).")
+    return fixed
 
 
 # ------------------------------------------------------------------ izleme döngüsü
@@ -739,23 +835,25 @@ def check_once():
                     elif time.time() - rec["created"] > 4 * config.tf_minutes(rec.get("tf", "15m")) * 60 + 120:
                         _cancel_entry(rec, "giriş penceresi doldu")   # canlı takip kaçırırsa yedek
                         changed = True
-                elif qty > 0 and rec.get("sl_algo") and rec["qty"] != _q(qty, _filters(sym)["step"]):
+                elif qty > 0 and not rec.get("closing") and rec.get("sl_algo") and rec["qty"] != _q(qty, _filters(sym)["step"]):
                     changed = True
                     _resize(rec, qty)       # kullanıcı elle ekleme / azaltma yaptı: stop ve TP bütün pozisyona
-                elif qty > 0 and (not rec.get("sl_algo") or (not rec.get("tp_order") and rec.get("tp_tries", 0) < 5)):
+                elif qty > 0 and not rec.get("closing") and (not rec.get("sl_algo") or (not rec.get("tp_order") and rec.get("tp_tries", 0) < 5)):
                     changed = True
                     _protect(rec, qty)      # önceki deneme bağlantı hatasıyla yarım kaldı
-                elif qty <= 0:
-                    kind = "stop"
-                    if rec.get("tp_order"):
-                        try:
-                            if api.get_order(sym, rec["tp_cid"]).get("status") == "FILLED":
-                                kind = "TP"
-                        except BinanceError:
-                            pass
-                    _cleanup_orders(rec)
-                    rec["exit_kind"] = kind
-                    _finish(rec)
+                elif qty <= 0 or rec.get("closing"):   # kapanıyor: aynı coinde yeni (elle) pozisyon bu kayda karışmasın
+                    if not rec.get("closing"):
+                        kind = "stop"
+                        if rec.get("tp_order"):
+                            try:
+                                if api.get_order(sym, rec["tp_cid"]).get("status") == "FILLED":
+                                    kind = "TP"
+                            except BinanceError:
+                                pass
+                        _cleanup_orders(rec)
+                        rec["exit_kind"] = kind
+                        rec["closing"] = True
+                    _finish(rec)   # kapanış dolumu henüz geçmişte yoksa kayıt açık kalır, sonraki döngüde yeniden
                     changed = True
             except BinanceError as e:
                 if e.code == -418:
@@ -768,6 +866,10 @@ def check_once():
 
 
 def _loop():
+    try:
+        repair_recent()
+    except Exception as e:
+        log.exception("OTO kayıt düzeltme hatası: %s", e)
     while True:
         try:
             if any(x["status"] in ("pending", "open") for x in trades().values()):

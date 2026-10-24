@@ -1192,3 +1192,10 @@ Hacmi en yüksek 200 coin, 15dk, 1:2 (13.10 21:00 sonrası testler 500 coin):
   Örnekler (24.10): NEAR SHORT erken çıkış (14:45 mumu 4.498 > giriş 4.492, kural doğru; elle ekleme 43$ risk → −8.53$), sonra TP'ye gitti; kullanıcı elle
   girip 1R'de +40$ kapattı. KSM 0.5x + elle ekleme TP. Sabah 09:14 yeniden başlama = Ubuntu apt-daily-upgrade/needrestart → /etc/needrestart/conf.d/sapan-bot.conf
   ($nrconf{override_rc}{qr(^sapan-bot)} = 0) ile kapatıldı (kullanıcı sunucuda yaptı).
+- 24.10 19:16 HATA + "kodla": KSM SHORT (0.5x + elle ekleme, 605.1 adet, ort 3.8992) TP 3.8513'te doldu, Binance +27.53$; bot −1.18$ yazdı (sadece iki giriş
+  komisyonu): pozisyon 0 görülünce userTrades hemen okundu, TP dolumu henüz geçmişte yoktu. Sonuç: momentum 3x yerine 0.5x, /oto özeti ve günlük R yanlış.
+  Düzeltme (autotrade): _fills (realizedPnl + komisyon + açılış/kapanış adedi, çift yönde positionSide süzgeci, end_ms) · _finish kapanış adedi açılışı tutana kadar
+  kaydı açık bırakır ("closing", FINISH_TRIES=6 döngü ≈ 30 sn), tutmazsa eksik sonuçla kapatıp uyarır (pnl_incomplete) · closing kayıt aynı coinde yeni (elle)
+  pozisyonla _resize / _protect'e girmez · repair_recent (açılışta, son 48 saat): kapanıştan 60 sn sonrasına kadarki dolumlarla yeniden hesap, farklıysa pnl / r /
+  o günün R'si düzeltilir, "♻️ … düzeltildi" + sıradaki risk mesajı. Sahte Binance testi: 3 döngü bekledi, dolum gelince +27.34$ TP; hiç gelmezse 6. döngüde
+  eksik + uyarı; düzeltme +27.34$, gün R +1.90, sonraki işlemin dolumu (+600 sn) sayılmadı, ikinci çalıştırmada değişiklik yok. NEAR (−8.53 / Binance −8.54) doğruydu.
